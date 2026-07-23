@@ -3,8 +3,8 @@
   sources:
     - id: fastedge-sdk-js
       ref: main
-      commit: b78b2a80317bb632af88010816d3e54afd3bd72d
-      updated: 2026-06-16
+      commit: 81145a9a43ec499240c687bd49376ab20c72b11c
+      updated: 2026-07-23
 -->
 
 ---
@@ -128,3 +128,46 @@ getEnv(name: string): string | null
 
 - `examples/headers/src/index.js`
 - `examples/headers/package.json`
+
+## Source Material
+
+### FILE: examples/headers/src/index.js
+
+```js
+import { getEnv } from 'fastedge::env';
+
+async function eventHandler(event) {
+  const request = event.request;
+
+  const customEnvVariable = getEnv('MY_CUSTOM_ENV_VAR') ?? '';
+
+  const responseHeaders = new Headers(request.headers);
+  responseHeaders.set('my-custom-header', customEnvVariable);
+
+  return new Response('Returned all headers with a custom header added', {
+    headers: responseHeaders,
+  });
+}
+
+addEventListener('fetch', (event) => {
+  event.respondWith(eventHandler(event));
+});
+```
+
+
+### FILE: examples/headers/package.json
+
+```json
+{
+  "name": "fastedge-example-headers",
+  "version": "1.0.0",
+  "description": "FastEdge JS example: header manipulation with env vars",
+  "type": "module",
+  "scripts": {
+    "build": "fastedge-build src/index.js dist/headers.wasm"
+  },
+  "dependencies": {
+    "@gcoredev/fastedge-sdk-js": "^2.3.0"
+  }
+}
+```

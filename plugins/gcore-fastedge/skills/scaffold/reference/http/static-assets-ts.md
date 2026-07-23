@@ -3,8 +3,8 @@
   sources:
     - id: fastedge-sdk-js
       ref: main
-      commit: b78b2a80317bb632af88010816d3e54afd3bd72d
-      updated: 2026-06-16
+      commit: 81145a9a43ec499240c687bd49376ab20c72b11c
+      updated: 2026-07-23
 -->
 
 ---
@@ -172,7 +172,7 @@ export { JsxContent };
  */
 
 const staticAssetManifest = {
-  '/index.css': { assetKey: '/index.css', contentType: 'text/css', isText: true, fileInfo: { size: 469, hash: '33301f457d01b81b22d448a9d7d4731de3da9e7618a7b15dfc6b688677d246f1', lastModifiedTime: 1775648879, assetPath: './styles/index.css' }, lastModifiedTime: 1775648879, type: 'wasm-inline' },
+  '/index.css': { assetKey: '/index.css', contentType: 'text/css', isText: true, fileInfo: { size: 469, hash: '33301f457d01b81b22d448a9d7d4731de3da9e7618a7b15dfc6b688677d246f1', lastModifiedTime: 1777556341, assetPath: './styles/index.css' }, lastModifiedTime: 1777556341, type: 'wasm-inline' },
 };
 
 export { staticAssetManifest };
@@ -187,8 +187,8 @@ export { staticAssetManifest };
  */
 
 const staticAssetManifest = {
-  '/gcore.png': { assetKey: '/gcore.png', contentType: 'image/png', isText: false, fileInfo: { size: 40261, hash: 'af4a1427e9072e0a17ea2d74cfb47082db334a9ca4b1747cf1cd45e78c0f8c84', lastModifiedTime: 1775648879, assetPath: './images/gcore.png' }, lastModifiedTime: 1775648879, type: 'wasm-inline' },
-  '/home.png': { assetKey: '/home.png', contentType: 'image/png', isText: false, fileInfo: { size: 1502064, hash: '14fcd7ae0ab7080ddec2d1fa1af265432e93bd662f5f714512b3fda3157a4825', lastModifiedTime: 1775648879, assetPath: './images/home.png' }, lastModifiedTime: 1775648879, type: 'wasm-inline' },
+  '/gcore.png': { assetKey: '/gcore.png', contentType: 'image/png', isText: false, fileInfo: { size: 40261, hash: 'af4a1427e9072e0a17ea2d74cfb47082db334a9ca4b1747cf1cd45e78c0f8c84', lastModifiedTime: 1777556341, assetPath: './images/gcore.png' }, lastModifiedTime: 1777556341, type: 'wasm-inline' },
+  '/home.png': { assetKey: '/home.png', contentType: 'image/png', isText: false, fileInfo: { size: 1502064, hash: '14fcd7ae0ab7080ddec2d1fa1af265432e93bd662f5f714512b3fda3157a4825', lastModifiedTime: 1777556341, assetPath: './images/home.png' }, lastModifiedTime: 1777556341, type: 'wasm-inline' },
 };
 
 export { staticAssetManifest };
@@ -203,7 +203,7 @@ export { staticAssetManifest };
  */
 
 const staticAssetManifest = {
-  '/index.html': { assetKey: '/index.html', contentType: 'text/html', isText: true, fileInfo: { size: 1010, hash: 'cae9bcf1c0af05f33b86d27874b7765ed33c52e8ab9ca1c26655db917273ef4d', lastModifiedTime: 1775648879, assetPath: './templates/index.html' }, lastModifiedTime: 1775648879, type: 'wasm-inline' },
+  '/index.html': { assetKey: '/index.html', contentType: 'text/html', isText: true, fileInfo: { size: 1010, hash: 'cae9bcf1c0af05f33b86d27874b7765ed33c52e8ab9ca1c26655db917273ef4d', lastModifiedTime: 1777556341, assetPath: './templates/index.html' }, lastModifiedTime: 1777556341, type: 'wasm-inline' },
 };
 
 export { staticAssetManifest };
@@ -312,10 +312,10 @@ footer a {
   "license": "ISC",
   "dependencies": {
     "@gcoredev/fastedge-sdk-js": "^2.3.0",
-    "hono": "^4.11.9"
+    "hono": "^4.12.25"
   },
   "devDependencies": {
-    "npm-run-all2": "^8.0.4"
+    "npm-run-all2": "^9.0.2"
   }
 }
 ```
@@ -348,8 +348,8 @@ Additions over `http-base`:
 | Package | Type | Version |
 |---|---|---|
 | `@gcoredev/fastedge-sdk-js` | runtime | `^2.3.0` |
-| `hono` | runtime | `^4.11.9` |
-| `npm-run-all2` | devDependency | `^8.0.4` |
+| `hono` | runtime | `^4.12.25` |
+| `npm-run-all2` | devDependency | `^9.0.2` |
 
 ## Key API Patterns
 

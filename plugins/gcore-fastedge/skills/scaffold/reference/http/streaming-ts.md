@@ -3,8 +3,8 @@
   sources:
     - id: fastedge-sdk-js
       ref: main
-      commit: b78b2a80317bb632af88010816d3e54afd3bd72d
-      updated: 2026-06-16
+      commit: 81145a9a43ec499240c687bd49376ab20c72b11c
+      updated: 2026-07-23
 -->
 
 ---
@@ -114,3 +114,51 @@ Entry point: `src/index.js`. Output: `dist/streaming.wasm`. Requires `@gcoredev/
 - deploy skill reference
 - fastedge-build CLI reference
 - FastEdge-sdk-js SDK reference
+
+## Source Material
+
+### FILE: examples/streaming/src/index.js
+
+```js
+function app(event) {
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      for (let i = 0; i < 5; i++) {
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((resolve) => { setTimeout(resolve, 200); });
+        controller.enqueue(encoder.encode(`chunk ${i}\n`));
+      }
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    status: 200,
+    headers: { 'content-type': 'text/plain; charset=utf-8' },
+  });
+}
+
+addEventListener('fetch', (event) => {
+  event.respondWith(app(event));
+});
+```
+
+
+### FILE: examples/streaming/package.json
+
+```json
+{
+  "name": "fastedge-example-streaming",
+  "version": "1.0.0",
+  "description": "FastEdge JS example: streaming response with ReadableStream",
+  "type": "module",
+  "scripts": {
+    "build": "fastedge-build src/index.js dist/streaming.wasm"
+  },
+  "dependencies": {
+    "@gcoredev/fastedge-sdk-js": "^2.2.2"
+  }
+}
+```

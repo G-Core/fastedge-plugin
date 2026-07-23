@@ -3,8 +3,8 @@
   sources:
     - id: fastedge-sdk-js
       ref: main
-      commit: b78b2a80317bb632af88010816d3e54afd3bd72d
-      updated: 2026-06-16
+      commit: 81145a9a43ec499240c687bd49376ab20c72b11c
+      updated: 2026-07-23
 -->
 
 ---
@@ -127,3 +127,47 @@ Build script from `package.json`:
 - fastedge-sdk-js SDK reference
 - FastEdge app configuration (store attachment)
 - BUILD_CLI reference (fastedge-build options)
+
+## Source Material
+
+### FILE: examples/kv-store-basic/src/index.js
+
+```js
+import { KvStore } from 'fastedge::kv';
+
+async function eventHandler(event) {
+  try {
+    const myStore = KvStore.open('kv-store-name-as-defined-on-app');
+    const entry = await myStore.getEntry('key');
+
+    if (entry === null) {
+      return new Response('Key not found', { status: 404 });
+    }
+
+    return new Response(`The KV Store responded with: ${await entry.text()}`);
+  } catch (error) {
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+}
+
+addEventListener('fetch', (event) => {
+  event.respondWith(eventHandler(event));
+});
+```
+
+### FILE: examples/kv-store-basic/package.json
+
+```json
+{
+  "name": "fastedge-example-kv-store-basic",
+  "version": "1.0.0",
+  "description": "FastEdge JS example: simple KV Store get operation",
+  "type": "module",
+  "scripts": {
+    "build": "fastedge-build src/index.js dist/kv-store-basic.wasm"
+  },
+  "dependencies": {
+    "@gcoredev/fastedge-sdk-js": "^2.3.0"
+  }
+}
+```

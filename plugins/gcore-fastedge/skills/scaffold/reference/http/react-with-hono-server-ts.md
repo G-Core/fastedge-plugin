@@ -3,8 +3,8 @@
   sources:
     - id: fastedge-sdk-js
       ref: main
-      commit: b78b2a80317bb632af88010816d3e54afd3bd72d
-      updated: 2026-06-16
+      commit: 81145a9a43ec499240c687bd49376ab20c72b11c
+      updated: 2026-07-23
 -->
 
 ---
@@ -35,7 +35,7 @@ Over `http-base`, add the following to `package.json`.
 **Runtime dependencies:**
 ```json
 "@gcoredev/fastedge-sdk-js": "^2.3.0",
-"hono": "^4.9.8",
+"hono": "^4.12.25",
 "react": "^19.1.1",
 "react-dom": "^19.1.1"
 ```
@@ -43,7 +43,7 @@ Over `http-base`, add the following to `package.json`.
 **Dev dependencies:**
 ```json
 "@eslint/js": "^9.36.0",
-"@hono/node-server": "^1.19.5",
+"@hono/node-server": "^1.19.14",
 "@types/node": "^24.6.0",
 "@types/react": "^19.1.16",
 "@types/react-dom": "^19.1.9",
@@ -52,12 +52,12 @@ Over `http-base`, add the following to `package.json`.
 "eslint-plugin-react-hooks": "^5.2.0",
 "eslint-plugin-react-refresh": "^0.4.22",
 "globals": "^16.4.0",
-"npm-run-all2": "^8.0.4",
+"npm-run-all2": "^9.0.2",
 "ts-node": "^10.9.2",
-"tsx": "^4.20.6",
+"tsx": "^4.22.4",
 "typescript": "~5.9.3",
 "typescript-eslint": "^8.45.0",
-"vite": "^7.1.7"
+"vite": "^8.1.0"
 ```
 
 ---
@@ -125,13 +125,13 @@ Script semantics:
   },
   "dependencies": {
     "@gcoredev/fastedge-sdk-js": "^2.3.0",
-    "hono": "^4.9.8",
+    "hono": "^4.12.25",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
-    "@hono/node-server": "^1.19.5",
+    "@hono/node-server": "^1.19.14",
     "@types/node": "^24.6.0",
     "@types/react": "^19.1.16",
     "@types/react-dom": "^19.1.9",
@@ -140,12 +140,12 @@ Script semantics:
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.22",
     "globals": "^16.4.0",
-    "npm-run-all2": "^8.0.4",
+    "npm-run-all2": "^9.0.2",
     "ts-node": "^10.9.2",
-    "tsx": "^4.20.6",
+    "tsx": "^4.22.4",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.45.0",
-    "vite": "^7.1.7"
+    "vite": "^8.1.0"
   }
 }
 ```
@@ -798,11 +798,11 @@ export { config };
  */
 
 const staticAssetManifest = {
-  '/assets/index-COcDBgFa.css': { assetKey: '/assets/index-COcDBgFa.css', contentType: 'text/css', isText: true, fileInfo: { size: 1381, hash: '053fffbd3cb2f092a85d67a83459e078b9fe405f2da931b9d21d03d6a853bf34', lastModifiedTime: 1779197809, assetPath: './dist/assets/index-COcDBgFa.css' }, lastModifiedTime: 1779197809, type: 'wasm-inline' },
-  '/assets/index-DjqI1cle.js': { assetKey: '/assets/index-DjqI1cle.js', contentType: 'application/javascript', isText: true, fileInfo: { size: 195714, hash: '7b7102e112107e13c808d2d82ce9df83bcb9199808112cd2bbf4b35048e17aaa', lastModifiedTime: 1779197809, assetPath: './dist/assets/index-DjqI1cle.js' }, lastModifiedTime: 1779197809, type: 'wasm-inline' },
-  '/assets/react-CHdo91hT.svg': { assetKey: '/assets/react-CHdo91hT.svg', contentType: 'image/svg+xml', isText: true, fileInfo: { size: 4126, hash: '35ef61ed53b323ae94a16a8ec659b3d0af3880698791133f23b084085ab1c2e5', lastModifiedTime: 1779197809, assetPath: './dist/assets/react-CHdo91hT.svg' }, lastModifiedTime: 1779197809, type: 'wasm-inline' },
-  '/index.html': { assetKey: '/index.html', contentType: 'text/html', isText: true, fileInfo: { size: 463, hash: '96073e01ae8aa8a822a0c5960219ede99df8839186cc3598da3dad7a46b134ee', lastModifiedTime: 1779197809, assetPath: './dist/index.html' }, lastModifiedTime: 1779197809, type: 'wasm-inline' },
-  '/vite.svg': { assetKey: '/vite.svg', contentType: 'image/svg+xml', isText: true, fileInfo: { size: 1497, hash: '4a748afd443918bb16591c834c401dae33e87861ab5dbad0811c3a3b4a9214fb', lastModifiedTime: 1779197809, assetPath: './dist/vite.svg' }, lastModifiedTime: 1779197809, type: 'wasm-inline' },
+  '/assets/index-9jaZKl3E.js': { assetKey: '/assets/index-9jaZKl3E.js', contentType: 'application/javascript', isText: true, fileInfo: { size: 193167, hash: '0d24f9f225bc2f2ad59f638fae48474b97b95dbdd9a66780902e8c5d629d6a69', lastModifiedTime: 1782807172, assetPath: './dist/assets/index-9jaZKl3E.js' }, lastModifiedTime: 1782807172, type: 'wasm-inline' },
+  '/assets/index-hoDP6v4Q.css': { assetKey: '/assets/index-hoDP6v4Q.css', contentType: 'text/css', isText: true, fileInfo: { size: 1553, hash: '6747fc46412fa77c263e7ad1aef9fc5e5d4a3992a4d61af856701f604da038f9', lastModifiedTime: 1782807172, assetPath: './dist/assets/index-hoDP6v4Q.css' }, lastModifiedTime: 1782807172, type: 'wasm-inline' },
+  '/assets/react-CHdo91hT.svg': { assetKey: '/assets/react-CHdo91hT.svg', contentType: 'image/svg+xml', isText: true, fileInfo: { size: 4126, hash: '35ef61ed53b323ae94a16a8ec659b3d0af3880698791133f23b084085ab1c2e5', lastModifiedTime: 1782807172, assetPath: './dist/assets/react-CHdo91hT.svg' }, lastModifiedTime: 1782807172, type: 'wasm-inline' },
+  '/index.html': { assetKey: '/index.html', contentType: 'text/html', isText: true, fileInfo: { size: 463, hash: '9d14148f80c294fd76d895bbf4dd239f581c4b76ba1a05783b18d2182cd7584e', lastModifiedTime: 1782807172, assetPath: './dist/index.html' }, lastModifiedTime: 1782807172, type: 'wasm-inline' },
+  '/vite.svg': { assetKey: '/vite.svg', contentType: 'image/svg+xml', isText: true, fileInfo: { size: 1497, hash: '4a748afd443918bb16591c834c401dae33e87861ab5dbad0811c3a3b4a9214fb', lastModifiedTime: 1782807172, assetPath: './dist/vite.svg' }, lastModifiedTime: 1782807172, type: 'wasm-inline' },
 };
 
 export { staticAssetManifest };

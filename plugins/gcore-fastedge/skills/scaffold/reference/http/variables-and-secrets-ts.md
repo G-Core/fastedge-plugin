@@ -3,8 +3,8 @@
   sources:
     - id: fastedge-sdk-js
       ref: main
-      commit: b78b2a80317bb632af88010816d3e54afd3bd72d
-      updated: 2026-06-16
+      commit: 81145a9a43ec499240c687bd49376ab20c72b11c
+      updated: 2026-07-23
 -->
 
 ---
@@ -121,3 +121,40 @@ addEventListener('fetch', (event) => {
 - deploy skill (for setting env vars and uploading secrets via the FastEdge API)
 - manage skill (for updating secrets on an existing app)
 - platform-overview reference (for app configuration model)
+
+## Source Material
+
+### FILE: examples/variables-and-secrets/src/index.js
+
+```js
+import { getEnv } from 'fastedge::env';
+import { getSecret } from 'fastedge::secret';
+
+async function eventHandler(event) {
+  const username = getEnv('USERNAME') ?? '';
+  const password = getSecret('PASSWORD') ?? '';
+
+  return new Response(`Username: ${username}, Password: ${password}`);
+}
+
+addEventListener('fetch', (event) => {
+  event.respondWith(eventHandler(event));
+});
+```
+
+### FILE: examples/variables-and-secrets/package.json
+
+```json
+{
+  "name": "fastedge-example-variables-and-secrets",
+  "version": "1.0.0",
+  "description": "FastEdge JS example: environment variables and secrets",
+  "type": "module",
+  "scripts": {
+    "build": "fastedge-build src/index.js dist/variables-and-secrets.wasm"
+  },
+  "dependencies": {
+    "@gcoredev/fastedge-sdk-js": "^2.3.0"
+  }
+}
+```

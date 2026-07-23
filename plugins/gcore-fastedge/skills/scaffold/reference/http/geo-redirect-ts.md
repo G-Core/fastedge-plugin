@@ -3,8 +3,8 @@
   sources:
     - id: fastedge-sdk-js
       ref: main
-      commit: b78b2a80317bb632af88010816d3e54afd3bd72d
-      updated: 2026-06-16
+      commit: 81145a9a43ec499240c687bd49376ab20c72b11c
+      updated: 2026-07-23
 -->
 ---
 type: feature
@@ -113,7 +113,7 @@ addEventListener('fetch', (event) => {
 - Environment variables are set in the Gcore dashboard or via the API when creating or updating the FastEdge app.
 - Country-specific origins are configured as environment variables using ISO 3166-1 alpha-2 codes. If no matching variable exists, `BASE_ORIGIN` is used as the fallback.
 - If `BASE_ORIGIN` is not set, the handler returns HTTP 500 with a descriptive error message.
-- SDK dependency: `@gcoredev/fastedge-sdk-js` `^2.3.0` (as of source commit `b78b2a80317bb632af88010816d3e54afd3bd72d`).
+- SDK dependency: `@gcoredev/fastedge-sdk-js` `^2.3.0` (as of source commit `81145a9a43ec499240c687bd49376ab20c72b11c`).
 
 ## Source Material
 
