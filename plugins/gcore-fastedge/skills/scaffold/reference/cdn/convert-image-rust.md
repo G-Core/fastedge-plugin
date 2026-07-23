@@ -4,7 +4,7 @@
     - id: fastedge-sdk-rust
       ref: main
       commit: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-      updated: 2026-06-16
+      updated: 2026-07-23
 -->
 
 ---
@@ -161,7 +161,13 @@ fn on_http_response_body(&mut self, body_size: usize, end_of_stream: bool) -> Ac
    ```
 6. Decode image from memory using the `image` crate:
    ```rust
-   let img = load_from_memory(buf)?; // on error: log and return Action::Continue
+   let img = match load_from_memory(buf) {
+       Ok(i) => i,
+       Err(e) => {
+           println!("cannot load image to memory {}, not converting", e);
+           return Action::Continue;
+       }
+   };
    ```
 7. Encode as AVIF using `AvifEncoder`:
    ```rust
@@ -264,10 +270,11 @@ proxy_wasm::main! {{
 | No or empty `User-Agent` header        | Pass through without transformation               |
 | UA matches `IGNORED_UA_LIST` entry     | Pass through without transformation               |
 | Response status not 200               | Pass through without transformation               |
+| Response status property not exactly 2 bytes | Treat as missing status, pass through       |
+| No response body (`get_http_response_body` returns None) | Log and continue (original served) |
 | Image decode failure (`load_from_memory`) | Log error, serve original body               |
 | AVIF encode failure                   | Log error, serve original body                    |
 | `response.content-type` invalid UTF-8 | Send HTTP 500, return `Action::Pause`             |
-| `response.status` not exactly 2 bytes | Treat as missing status, pass through             |
 
 ---
 

@@ -4,7 +4,7 @@
     - id: fastedge-sdk-rust
       ref: main
       commit: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-      updated: 2026-06-16
+      updated: 2026-07-23
 -->
 
 ---
@@ -107,7 +107,7 @@ All methods are called on `self` within `HttpContext`.
 | `get_http_request_header_bytes` | `(name: &str) -> Option<Bytes>` | First matching header value as bytes or `None` | Case-insensitive name |
 | `add_http_request_header` | `(name: &str, value: &str)` | `()` | Appends; allows duplicate names |
 | `add_http_request_header_bytes` | `(name: &str, value: &[u8])` | `()` | Appends bytes; allows duplicate names |
-| `set_http_request_header` | `(name: &str, value: Option<&str>)` | `()` | `Some(v)` replaces; `None` removes (see caveat) |
+| `set_http_request_header` | `(name: &str, value: Option<&str>)` | `()` | `Some(v)` replaces all entries for that name; `None` removes (see caveat) |
 | `set_http_request_header_bytes` | `(name: &str, value: Option<&[u8]>)` | `()` | `Some(v)` replaces; `None` removes (see caveat) |
 
 ### Response Header Methods
@@ -122,7 +122,7 @@ Available in both `on_http_request_headers` (limited) and `on_http_response_head
 | `get_http_response_header_bytes` | `(name: &str) -> Option<Bytes>` | First matching response header bytes or `None` | |
 | `add_http_response_header` | `(name: &str, value: &str)` | `()` | Appends; allows duplicate names |
 | `add_http_response_header_bytes` | `(name: &str, value: &[u8])` | `()` | Appends bytes; allows duplicate names |
-| `set_http_response_header` | `(name: &str, value: Option<&str>)` | `()` | `Some(v)` replaces; `None` removes (see caveat) |
+| `set_http_response_header` | `(name: &str, value: Option<&str>)` | `()` | `Some(v)` replaces all entries for that name; `None` removes (see caveat) |
 | `set_http_response_header_bytes` | `(name: &str, value: Option<&[u8]>)` | `()` | `Some(v)` replaces; `None` removes (see caveat) |
 
 ---
@@ -200,7 +200,7 @@ fn on_http_request_headers(&mut self, _: usize, _: bool) -> Action {
 
 ### Validate Response Headers Set in Request Phase
 
-The source example demonstrates that after setting response headers in the request phase, `get_http_response_headers()` returns exactly the headers set in that phase. `get_http_response_header("host")` returns `None` because upstream response headers are not yet available:
+After setting response headers in the request phase, `get_http_response_headers()` returns exactly the headers set in that phase. `get_http_response_header("host")` returns `None` because upstream response headers are not yet available:
 
 ```rust
 // After add + set in on_http_request_headers:
@@ -208,6 +208,14 @@ The source example demonstrates that after setting response headers in the reque
 let response_headers = self.get_http_response_headers();
 if response_headers.len() != 1 {
     self.send_http_response(555, vec![], None);
+    return Action::Pause;
+}
+let Some((name, value)) = response_headers.into_iter().next() else {
+    self.send_http_response(555, vec![], None);
+    return Action::Pause;
+};
+if name != "new-response-header" || value != "value-02" {
+    self.send_http_response(556, vec![], None);
     return Action::Pause;
 }
 ```
@@ -238,11 +246,26 @@ let headers = self.get_http_request_headers()
     .collect::<HashSet<(String, String)>>();
 
 // After add/set operations, expected new entries include:
-// ("new-header-01", "")           // removed → empty string
-// ("new-header-02", "new-value-02") // replaced
-// ("new-header-03", "value-03")   // original add
-// ("new-header-03", "value-03-a") // duplicate add preserved
+// ("new-header-01", "")              // removed → empty string
+// ("new-header-bytes-01", "")        // removed → empty string
+// ("new-header-02", "new-value-02")  // replaced
+// ("new-header-bytes-02", "new-value-bytes-02") // replaced
+// ("new-header-03", "value-03")      // original add
+// ("new-header-bytes-03", "value-bytes-03") // original add
+// ("new-header-03", "value-03-a")    // duplicate add preserved
+// ("new-header-bytes-03", "value-bytes-03-a") // duplicate add preserved
+
+let diff = headers
+    .difference(&original_headers)
+    .collect::<HashSet<_>>();
+let diff = diff.difference(&expected).collect::<Vec<_>>();
+if !diff.is_empty() {
+    self.send_http_response(552, vec![], None);
+    return Action::Pause;
+}
 ```
+
+The same diff pattern applies to bytes variants using `get_http_request_headers_bytes()` and a `HashSet<(String, Bytes)>`.
 
 ---
 
@@ -266,7 +289,7 @@ Return `Action::Continue` when processing should proceed normally.
 | 550 | No headers found (request or response headers collection is empty) |
 | 551 | Required `host` header is absent |
 | 552 | Unexpected header diff after manipulation |
-| 553 | Expected response header missing (host header visible in response phase from request phase) |
+| 553 | Expected response header missing (`host` header visible in response phase from request phase) |
 | 554 | Response header value unexpectedly non-empty |
 | 555 | Response header count mismatch |
 | 556 | Response header name/value mismatch |
@@ -294,6 +317,7 @@ Called after the request/response cycle completes. Use for per-request logging o
 - Full upstream response headers are only accessible in `on_http_response_headers`.
 - `get_http_response_header("host")` returns `None` during `on_http_request_headers` because the upstream response has not been received yet.
 - After `set_*(name, None)`, `get_*` returns `Some("")` (empty string) rather than `None` on the FastEdge platform.
+- Both string and bytes variants (`_bytes` suffix) are available for all read, add, and set operations; behavior is identical except for the value type (`&str`/`String` vs `&[u8]`/`Bytes`).
 
 ---
 
