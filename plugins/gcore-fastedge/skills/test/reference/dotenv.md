@@ -4,7 +4,7 @@
     - id: fastedge-test
       ref: v0.2.4
       commit: cbb5bebd8bad7e9fee4f1a006a39c8511f951717
-      updated: 2026-06-11
+      updated: 2026-07-23
 -->
 
 # Dotenv — Runtime Secrets and Environment Variables
