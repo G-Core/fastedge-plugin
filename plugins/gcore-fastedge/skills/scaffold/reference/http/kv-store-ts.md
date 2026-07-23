@@ -3,8 +3,8 @@
   sources:
     - id: fastedge-sdk-js
       ref: main
-      commit: b78b2a80317bb632af88010816d3e54afd3bd72d
-      updated: 2026-06-16
+      commit: 81145a9a43ec499240c687bd49376ab20c72b11c
+      updated: 2026-07-23
 -->
 
 ---
@@ -286,3 +286,186 @@ Missing required parameters return HTTP 500 with JSON `{ "error": "..." }`.
 - The KV store must be pre-created in the Gcore dashboard or API before the app can use it. The store name is passed at runtime (e.g., as a query parameter).
 - Available KV operations: `get`, `scan`, `zrangeByScore`, `zscan`, `bfExists`.
 - `tsconfig.json` uses `"moduleResolution": "Bundler"` and `"target": "ES2023"`. Do not use `"moduleResolution": "Node"` or older ES targets with this SDK version.
+
+## Source Material
+
+### FILE: examples/kv-store/src/index.ts
+
+```ts
+import { KvStore } from 'fastedge::kv';
+
+import { Action, decodeValueArray, stringifyValueScoreTuples, validateQueryParams } from './utils';
+
+async function eventHandler(event: FetchEvent): Promise<Response> {
+  try {
+    const { request: req } = event;
+    const url = new URL(req.url);
+
+    const params = validateQueryParams(url.searchParams);
+    if (params.error) {
+      throw new Error(params.error);
+    }
+
+    const myStore = KvStore.open(params.store);
+    const action = params.action as Action;
+
+    const responseObj: Record<string, string> = {
+      Store: params.store,
+      Action: action,
+    };
+
+    switch (action) {
+      case 'get': {
+        const response = myStore.get(params.key);
+        responseObj.Key = params.key;
+        responseObj.Response = decodeValueArray(response);
+        break;
+      }
+      case 'scan': {
+        const response = myStore.scan(params.match);
+        responseObj.Match = params.match;
+        responseObj.Response = response.join(', ');
+        break;
+      }
+      case 'zrange': {
+        const { key, min, max } = params;
+        const response = myStore.zrangeByScore(key, Number.parseFloat(min), Number.parseFloat(max));
+        responseObj.Key = key;
+        responseObj.Min = min;
+        responseObj.Max = max;
+        responseObj.Response = stringifyValueScoreTuples(response);
+        break;
+      }
+      case 'zscan': {
+        const { key, match } = params;
+        const response = myStore.zscan(key, match);
+        responseObj.Key = key;
+        responseObj.Match = match;
+        responseObj.Response = stringifyValueScoreTuples(response);
+        break;
+      }
+      case 'bfExists': {
+        const { key, item } = params;
+        const exists = myStore.bfExists(key, item);
+        responseObj.Key = key;
+        responseObj.Item = item;
+        responseObj.Response = exists ? 'true' : 'false';
+        break;
+      }
+      default:
+        break;
+    }
+
+    return Response.json(responseObj);
+  } catch (error: Error | unknown) {
+    return Response.json({ error: `${(error as Error).message}` }, { status: 500 });
+  }
+}
+
+addEventListener('fetch', (event: FetchEvent) => {
+  event.respondWith(eventHandler(event));
+});
+```
+
+### FILE: examples/kv-store/src/utils.ts
+
+```ts
+const ALL_ACTIONS = ['get', 'scan', 'zscan', 'zrange', 'bfExists'] as const;
+
+export type Action = (typeof ALL_ACTIONS)[number];
+
+type ParamKey = 'action' | 'store' | 'key' | 'match' | 'min' | 'max' | 'item' | 'error';
+
+type Params = { [key in ParamKey]: string };
+
+export function validateQueryParams(queryParams: URLSearchParams): Params {
+  const validParams = {} as Params;
+
+  // Validate 'action' parameter
+  const action = queryParams.get('action') ?? 'get';
+  if (ALL_ACTIONS.includes(action as Action)) {
+    validParams.action = action;
+  } else {
+    validParams.error = `Invalid action '${action}'. Supported actions are: ${ALL_ACTIONS.join(
+      ', ',
+    )}`;
+    return validParams;
+  }
+
+  const requiredParameters = {
+    store: [...ALL_ACTIONS],
+    key: ['get', 'zrange', 'zscan', 'bfExists'],
+    match: ['scan', 'zscan'],
+    min: ['zrange'],
+    max: ['zrange'],
+    item: ['bfExists'],
+  } as Record<ParamKey, Array<string>>;
+
+  for (const [key, actions] of Object.entries(requiredParameters)) {
+    if (actions.includes(action)) {
+      const value = queryParams.get(key);
+      if (value && value !== '') {
+        validParams[key as ParamKey] = value;
+      } else {
+        validParams.error = `Query parameters must provide '${key}' for a '${action}' action.`;
+        return validParams;
+      }
+    }
+  }
+
+  return validParams;
+}
+
+export const decodeValueArray = (arrVal: ArrayBuffer | null) => {
+  if (arrVal) {
+    const decoder = new TextDecoder();
+    return decoder.decode(arrVal);
+  }
+  return '';
+};
+
+export const stringifyValueScoreTuples = (tupleList: Array<[ArrayBuffer, number]>): string => {
+  let strResponse = '[';
+  for (const tuple of tupleList) {
+    strResponse += `{ Value: ${decodeValueArray(tuple[0])}, Score: ${tuple[1]} }, `;
+  }
+  strResponse += ']';
+  return strResponse;
+};
+```
+
+### FILE: examples/kv-store/package.json
+
+```json
+{
+  "name": "fastedge-example-kv-store",
+  "version": "1.0.0",
+  "description": "FastEdge JS example: KV Store operations via query params",
+  "type": "module",
+  "scripts": {
+    "build": "fastedge-build -c"
+  },
+  "dependencies": {
+    "@gcoredev/fastedge-sdk-js": "^2.3.0"
+  }
+}
+```
+
+### FILE: examples/kv-store/tsconfig.json
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "lib": ["ES2023"],
+    "types": ["@gcoredev/fastedge-sdk-js"]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
+}
+```

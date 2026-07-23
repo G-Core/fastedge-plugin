@@ -3,20 +3,18 @@
   sources:
     - id: fastedge-sdk-js
       ref: main
-      commit: b78b2a80317bb632af88010816d3e54afd3bd72d
-      updated: 2026-06-16
+      commit: 81145a9a43ec499240c687bd49376ab20c72b11c
+      updated: 2026-07-23
 -->
 
 ---
-
 type: base-skeleton
 app_type: http
 languages: [typescript, javascript]
 template_origin: http-base
 source_repo: https://github.com/G-Core/FastEdge-sdk-js
-source_ref: b78b2a80317bb632af88010816d3e54afd3bd72d
-updated: 2026-06-16
-
+source_ref: 81145a9a43ec499240c687bd49376ab20c72b11c
+updated: 2026-07-23
 ---
 
 # Base Skeleton: HTTP TypeScript/JavaScript
@@ -196,35 +194,3 @@ addEventListener("fetch", (event) => {
 - **Build command (JavaScript)**: `fastedge-build src/index.js dist/hello-world.wasm`
 - No tsconfig.json needed
 - No TypeScript dependency needed
-
-## Source Material
-
-### FILE: examples/hello-world/src/index.js
-
-```js
-async function eventHandler(event) {
-  const request = event.request;
-  return new Response(`Hello, you made a request to ${request.url}`);
-}
-
-addEventListener('fetch', (event) => {
-  event.respondWith(eventHandler(event));
-});
-```
-
-### FILE: examples/hello-world/package.json
-
-```json
-{
-  "name": "fastedge-example-hello-world",
-  "version": "1.0.0",
-  "description": "FastEdge JS example: hello world request handler",
-  "type": "module",
-  "scripts": {
-    "build": "fastedge-build src/index.js dist/hello-world.wasm"
-  },
-  "dependencies": {
-    "@gcoredev/fastedge-sdk-js": "^2.3.0"
-  }
-}
-```
