@@ -1,0 +1,45 @@
+{
+  "name": "gcore-fastedge",
+  "version": "0.2.3",
+  "description": "Codex plugin for Gcore FastEdge with local indexed docs and MCP-backed build/deploy workflows.",
+  "author": {
+    "name": "Gcore",
+    "email": "support@gcore.com",
+    "url": "https://gcore.com"
+  },
+  "homepage": "https://gcore.com/fastedge",
+  "repository": "https://github.com/G-Core/fastedge-plugin",
+  "license": "Apache-2.0",
+  "keywords": [
+    "fastedge",
+    "gcore",
+    "codex",
+    "wasm",
+    "edge"
+  ],
+  "skills": "./skills/",
+  "hooks": "./hooks.json",
+  "mcpServers": "./.mcp.json",
+  "apps": "./.app.json",
+  "interface": {
+    "displayName": "Gcore FastEdge for Codex",
+    "shortDescription": "Build and deploy FastEdge apps in Codex.",
+    "longDescription": "FastEdge Codex plugin with local indexed reference docs and MCP-backed build, deploy, and management workflows.",
+    "developerName": "Gcore",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write",
+      "MCP Tools"
+    ],
+    "websiteURL": "https://gcore.com/fastedge",
+    "privacyPolicyURL": "https://gcore.com/legal/privacy",
+    "termsOfServiceURL": "https://gcore.com/legal/terms",
+    "defaultPrompt": [
+      "Scaffold a FastEdge HTTP app with KV support.",
+      "Use local docs-index to answer FastEdge SDK questions.",
+      "Deploy this app using FastEdge MCP tools."
+    ],
+    "brandColor": "#0078D4"
+  }
+}

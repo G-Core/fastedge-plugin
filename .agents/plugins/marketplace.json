@@ -1,0 +1,20 @@
+{
+  "name": "gcore-fastedge-codex-marketplace",
+  "interface": {
+    "displayName": "Gcore FastEdge"
+  },
+  "plugins": [
+    {
+      "name": "gcore-fastedge",
+      "source": {
+        "source": "local",
+        "path": "./plugins/gcore-fastedge-codex"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

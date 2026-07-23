@@ -1,0 +1,14 @@
+{
+  "_comment": "Single source of truth for reference-skill lists. mirrored = skills whose reference/ is copied into derived plugins (mirror-reference.sh). indexed = skills covered by docs-index.json (generate-docs-index.mjs) and packaged into the reference tarball (package-reference-artifact.sh) — these two must stay identical or tarball docs-index paths dangle.",
+  "mirrored": [
+    "debug",
+    "fastedge-docs",
+    "live-test",
+    "scaffold",
+    "test"
+  ],
+  "indexed": [
+    "fastedge-docs",
+    "test"
+  ]
+}

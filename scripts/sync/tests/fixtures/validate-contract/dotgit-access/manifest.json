@@ -1,0 +1,22 @@
+{
+  "$schema": "https://fastedge-plugin-source/manifest/v1",
+  "repo_id": "test-repo",
+  "version": "1.0.0",
+  "sources": {
+    "api-reference": {
+      "files": [".git/config"],
+      "required": true,
+      "description": "Git internals access"
+    }
+  },
+  "target_mapping": {
+    "api-reference": {
+      "reference_file": "plugins/gcore-fastedge/skills/test/reference/testing-api.md",
+      "section": null
+    }
+  },
+  "validation": {
+    "mode": "strict",
+    "strict_fields": ["api-reference"]
+  }
+}

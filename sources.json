@@ -1,0 +1,45 @@
+{
+  "version": "2.0",
+  "repos": [
+    {
+      "id": "fastedge-test",
+      "github_url": "https://github.com/G-Core/fastedge-test",
+      "ref": "latest-release",
+      "trigger": "release",
+      "contract_path": "fastedge-plugin-source/",
+      "intent_dir": "agent-intent-skills/fastedge-test/",
+      "generator_agent": "claude",
+      "reviewer_agent": "openai"
+    },
+    {
+      "id": "fastedge-sdk-js",
+      "github_url": "https://github.com/G-Core/FastEdge-sdk-js",
+      "ref": "main",
+      "trigger": "release",
+      "contract_path": "fastedge-plugin-source/",
+      "intent_dir": "agent-intent-skills/fastedge-sdk-js/",
+      "generator_agent": "claude",
+      "reviewer_agent": "openai"
+    },
+    {
+      "id": "fastedge-sdk-rust",
+      "github_url": "https://github.com/G-Core/FastEdge-sdk-rust",
+      "ref": "main",
+      "trigger": "release",
+      "contract_path": "fastedge-plugin-source/",
+      "intent_dir": "agent-intent-skills/fastedge-sdk-rust/",
+      "generator_agent": "claude",
+      "reviewer_agent": "openai"
+    },
+    {
+      "id": "proxy-wasm-sdk-as",
+      "github_url": "https://github.com/G-Core/proxy-wasm-sdk-as",
+      "ref": "master",
+      "trigger": "release",
+      "contract_path": "fastedge-plugin-source/",
+      "intent_dir": "agent-intent-skills/proxy-wasm-sdk-as/",
+      "generator_agent": "claude",
+      "reviewer_agent": "openai"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "fastedge-assistant": {
+      "type": "stdio",
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--pull=always",
+        "-v",
+        "${workspaceFolder}:/workspace",
+        "-e",
+        "WORKSPACE_ROOT=/workspace",
+        "-e",
+        "GCORE_API_KEY",
+        "-e",
+        "GCORE_API_BASE",
+        "ghcr.io/g-core/fastedge-mcp-server:latest"
+      ]
+    }
+  }
+}

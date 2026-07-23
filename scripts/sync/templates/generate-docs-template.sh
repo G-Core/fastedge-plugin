@@ -1,0 +1,419 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Generate docs/ from source code using .generation-config.md
+#
+# Usage:
+#   ./fastedge-plugin-source/generate-docs.sh                  # all files (parallel where possible)
+#   ./fastedge-plugin-source/generate-docs.sh API.md           # specific file
+#   ./fastedge-plugin-source/generate-docs.sh API.md CONFIG.md # multiple files
+#
+# Setup:
+#   1. Copy this file to <your-repo>/fastedge-plugin-source/generate-docs.sh
+#   2. chmod +x fastedge-plugin-source/generate-docs.sh
+#   3. Customize the three sections marked === CUSTOMIZE === below
+#   4. Add to package.json: "generate-docs": "./fastedge-plugin-source/generate-docs.sh"
+#
+# Reference implementation: fastedge-test/fastedge-plugin-source/generate-docs.sh
+
+# Model to use for generation (sonnet is recommended for cost efficiency)
+MODEL="sonnet"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+CONFIG_FILE="$SCRIPT_DIR/.generation-config.md"
+DOCS_DIR="$REPO_ROOT/docs"
+
+# --- Cleanup on interrupt ---
+# Two mechanisms work together to ensure clean shutdown:
+#
+# 1. kill_tree() recursively kills each background subshell AND its children
+#    (the `claude` processes). Plain `kill $pid` only kills the subshell,
+#    leaving `claude` orphaned.
+#
+# 2. INTERRUPT_FLAG file signals subshells to stop retrying. Bash variables
+#    don't cross process boundaries, so a temp file is the reliable way to
+#    communicate "stop" to background jobs before their next retry iteration.
+ALL_PIDS=()
+INTERRUPT_FLAG=$(mktemp /tmp/.generate-docs-interrupt.XXXXXX)
+rm -f "$INTERRUPT_FLAG"  # absent = running; present = stop
+
+kill_tree() {
+  local pid=$1
+  local children
+  children=$(pgrep -P "$pid" 2>/dev/null || true)
+  for child in $children; do
+    kill_tree "$child"
+  done
+  kill "$pid" 2>/dev/null || true
+}
+
+cleanup() {
+  echo ""
+  echo "Interrupted — killing background processes..."
+  touch "$INTERRUPT_FLAG"  # tell subshells to stop retrying
+  trap - INT TERM          # prevent re-entry
+
+  for pid in "${ALL_PIDS[@]}"; do
+    kill_tree "$pid"
+  done
+
+  # Clean up temp files left by killed generate_file subshells
+  # Must happen BEFORE kill -- -$$ which kills this script too
+  rm -f "$DOCS_DIR"/.*.md.[a-zA-Z0-9]* 2>/dev/null || true
+  rm -f "$INTERRUPT_FLAG"
+
+  # Belt-and-suspenders: kill entire process group (including this script)
+  kill -- -$$ 2>/dev/null || true
+  exit 130
+}
+
+trap cleanup INT TERM
+
+# =============================================================================
+# === CUSTOMIZE: Define your doc files and their dependency tiers ===
+#
+# Tier 1: Independent files (generated in parallel — read from source code only)
+# Tier 2: Files that reference tier 1 docs (e.g. quickstart, getting-started)
+# Tier 3: Files that summarize all other docs (e.g. INDEX.md)
+#
+# If your docs have no dependencies, put everything in TIER1 and leave others empty.
+# =============================================================================
+
+TIER1_FILES=("API.md" "CONFIG.md")
+TIER2_FILES=("quickstart.md")
+TIER3_FILES=("INDEX.md")
+
+ALL_FILES=("${TIER1_FILES[@]}" "${TIER2_FILES[@]}" "${TIER3_FILES[@]}")
+
+# =============================================================================
+# === CUSTOMIZE: Map each doc file to its source files ===
+#
+# Keys must match the filenames in the tier arrays above.
+# Values are space-separated paths relative to the repo root.
+# The script reads each file and passes its content to the generation prompt.
+# =============================================================================
+
+declare -A SOURCE_FILES
+SOURCE_FILES[API.md]="src/server.ts src/types.ts"
+SOURCE_FILES[CONFIG.md]="schemas/config.schema.json src/config.ts"
+SOURCE_FILES[quickstart.md]="package.json src/index.ts"
+SOURCE_FILES[INDEX.md]="package.json"
+
+# =============================================================================
+# === CUSTOMIZE: Package name for the generation prompt ===
+# =============================================================================
+
+PACKAGE_NAME="@your-org/your-package"
+
+# =============================================================================
+# === END CUSTOMIZATION — everything below is the reusable engine ===
+# =============================================================================
+
+if [ ! -f "$CONFIG_FILE" ]; then
+  echo "Error: $CONFIG_FILE not found"
+  exit 1
+fi
+
+# Determine which files to generate
+if [ $# -eq 0 ]; then
+  targets=("${ALL_FILES[@]}")
+  run_all=true
+else
+  targets=("$@")
+  run_all=false
+  # Validate targets
+  for target in "${targets[@]}"; do
+    found=false
+    for valid in "${ALL_FILES[@]}"; do
+      if [ "$target" = "$valid" ]; then
+        found=true
+        break
+      fi
+    done
+    if [ "$found" = false ]; then
+      echo "Error: unknown doc file '$target'"
+      echo "Valid files: ${ALL_FILES[*]}"
+      exit 1
+    fi
+  done
+fi
+
+mkdir -p "$DOCS_DIR"
+
+# Clean up stale temp files from previous interrupted runs
+rm -f "$DOCS_DIR"/.*.md.[a-zA-Z0-9]* 2>/dev/null || true
+
+generate_file() {
+  local target="$1"
+
+  # Validate that SOURCE_FILES has an entry for this target
+  if [ -z "${SOURCE_FILES[$target]+set}" ] || [ -z "${SOURCE_FILES[$target]}" ]; then
+    echo "  ERROR: no SOURCE_FILES entry for '$target' — add one to the CUSTOMIZE section"
+    return 1
+  fi
+
+  local sources="${SOURCE_FILES[$target]}"
+
+  # Build the source files content block
+  local source_content=""
+  local loaded=0
+  for src in $sources; do
+    local full_path="$REPO_ROOT/$src"
+    if [ ! -f "$full_path" ]; then
+      echo "  Warning: source file $src not found, skipping"
+      continue
+    fi
+    source_content+="
+--- FILE: $src ---
+$(cat "$full_path")
+--- END FILE ---
+"
+    loaded=$((loaded + 1))
+  done
+
+  if [ "$loaded" -eq 0 ]; then
+    echo "  ERROR: all source files for '$target' are missing (expected: $sources)"
+    return 1
+  fi
+
+  # Extract the section for this target from generation-config
+  # Use awk variable to avoid regex delimiter issues with /
+  local section
+  local escaped_target="docs/$target"
+  section=$(awk -v start="## $escaped_target" '
+    $0 == start { found=1; next }
+    found && /^## docs\// { exit }
+    found { print }
+  ' "$CONFIG_FILE")
+
+  # Validate that the config section exists and has content
+  if [ -z "$(echo "$section" | tr -d '[:space:]')" ]; then
+    echo "  ERROR: no instructions found for '$target' — add a '## docs/$target' section to $CONFIG_FILE"
+    return 1
+  fi
+
+  # Check for existing doc to enable incremental updates
+  # When docs/<file> already exists, it is passed as context so the model
+  # preserves accurate content and manual additions, only changing what is
+  # incorrect, incomplete, or missing per the source code.
+  local existing_doc=""
+  local existing_path="$DOCS_DIR/$target"
+  local mode="Generate"
+  if [ -f "$existing_path" ]; then
+    existing_doc=$(cat "$existing_path")
+    mode="Update"
+  fi
+
+  if [ "$mode" = "Update" ]; then
+    echo "Updating docs/$target ..."
+  else
+    echo "Generating docs/$target ..."
+  fi
+
+  local existing_section=""
+  if [ -n "$existing_doc" ]; then
+    existing_section="
+# Existing Content for docs/$target
+Use this as the baseline. Preserve all accurate content and manual additions. Only change what is incorrect, incomplete, or missing per the source code. Keep sections not covered by the instructions above. Apply table formatting rules to all tables.
+
+If the existing content is already accurate against the source code, output it verbatim with zero preamble or acknowledgement — your output starts at the # of the level-1 heading regardless of whether you made changes.
+
+<existing>
+$existing_doc
+</existing>
+"
+  fi
+
+  # Build prompt with sandwich output constraint:
+  # The OUTPUT CONSTRAINT appears at both the start and end of the prompt.
+  # This is critical for large prompts where the model may lose track of
+  # the instruction to output only raw markdown. Without it, the model
+  # sometimes produces conversational preamble or asks for permission.
+  local prompt
+  prompt="$(cat <<PROMPT
+OUTPUT CONSTRAINT: Your output is piped directly to a file. Output ONLY raw markdown. No conversational text. No preamble. No "here is" or "I'll generate". No "the existing content is accurate", "no changes needed", "outputting verbatim", or any similar acknowledgement — this applies equally when the existing content needs no changes. No questions. No explanation. No permission requests. Start your very first character with # (the level-1 heading). End with the last line of markdown.
+
+Generate docs/$target for the $PACKAGE_NAME package.
+
+# Global Rules
+$(awk '/^## Global Rules$/{found=1; next} found && /^## docs\//{exit} found{print}' "$CONFIG_FILE")
+
+# Instructions for this file
+$section
+
+# Source Code to Reference
+$source_content
+$existing_section
+REMINDER: Output raw markdown only. First character must be #. No conversational text.
+PROMPT
+)"
+
+  # Write to a temp file first, only move to docs/ on success.
+  # This protects the existing file from being clobbered by a failed attempt,
+  # so re-running the script after a failure still has the original content
+  # available for incremental updates.
+  local tmpfile
+  tmpfile=$(mktemp "$DOCS_DIR/.${target}.XXXXXX")
+  # Note: we do NOT trap-rm the tmpfile on RETURN. Failed-validation output is
+  # preserved under $DOCS_DIR/.failures/ for prompt-debugging (see below) —
+  # the success path writes stripped content directly to docs/$target and deletes
+  # the tmpfile, the interrupt path rm's it explicitly, and after max_attempts
+  # we explicitly rm the working tmpfile.
+
+  # Failure-preservation directory. Accumulates across runs so you can compare
+  # what the model emits on attempt 1 vs 2 vs 3 and across invocations.
+  # Lives in a subdir so the startup cleanup glob (`.*.md.[a-zA-Z0-9]*`) does
+  # NOT reach in. Prune manually when it grows; nothing else does.
+  local failure_dir="$DOCS_DIR/.failures"
+  mkdir -p "$failure_dir"
+
+  # Retry loop: validate that the model produced raw markdown (starts with #)
+  # On large prompts, the model occasionally produces conversational output
+  # despite the sandwich constraint. Retrying usually succeeds.
+  local max_attempts=3
+  local attempt=1
+  while [ $attempt -le $max_attempts ]; do
+    # Stop retrying if parent signalled interrupt
+    if [ -f "$INTERRUPT_FLAG" ]; then
+      rm -f "$tmpfile"
+      return 130
+    fi
+
+    # Pipe prompt via stdin to avoid Linux's MAX_ARG_STRLEN (~128KB per argv string).
+    # Large prompts (source files + existing doc for incremental updates) exceed
+    # this limit as an SDK grows; stdin has no such cap.
+    claude -p --model "$MODEL" > "$tmpfile" <<<"$prompt"
+
+    # Validate + salvage. The model intermittently leaks a conversational
+    # preamble like "I'll write the markdown now." before the real document,
+    # despite the OUTPUT CONSTRAINT in the prompt. Rather than discard those
+    # outputs and retry (wasting API quota on otherwise-good content), find
+    # the first level-1 heading and treat everything from there forward as
+    # the doc. The original is still saved to .failures/ so the prompt can
+    # be tuned later.
+    local stripped
+    # Fence-aware level-1-only salvage: track ``` fences so that #-prefixed
+    # lines inside a fence (shell comments, #include, etc.) don't trigger the
+    # heading-detection scan. Fence delimiter lines are NOT skipped — they fall
+    # through to `found { print }` so fenced code blocks are preserved intact
+    # in the output. Only a bare `# ` heading outside a fence sets found=1.
+    stripped=$(awk '/^```/ { in_fence = !in_fence } !in_fence && /^# / { found=1 } found' "$tmpfile")
+
+    # Post-strip validation: confirm the salvaged output actually starts with a
+    # level-1 heading (# followed by a space). Belt-and-suspenders against any
+    # remaining edge case; reject and retry rather than silently writing junk.
+    local first_nonempty
+    first_nonempty=$(printf '%s\n' "$stripped" | grep -m1 '.')
+    if [ -n "$stripped" ] && [[ "$first_nonempty" =~ ^"# " ]]; then
+      # Detect preamble: anything before the first level-1 heading is preamble.
+      local first_heading_line
+      first_heading_line=$(grep -n -m1 '^# ' "$tmpfile" | cut -d: -f1)
+      if [ "${first_heading_line:-1}" -gt 1 ]; then
+        local preamble_copy="$failure_dir/${target}.preamble.attempt-${attempt}.$(date +%s).md"
+        cp "$tmpfile" "$preamble_copy"
+        echo "  Stripped $((first_heading_line - 1)) preamble line(s) from $target (attempt $attempt) — original saved to $preamble_copy"
+      fi
+      printf '%s\n' "$stripped" > "$DOCS_DIR/$target"
+      rm -f "$tmpfile"
+      echo "  Done: docs/$target"
+      return 0
+    fi
+
+    # No valid level-1 heading found — genuine failure. Save and retry.
+    local failed_copy="$failure_dir/${target}.attempt-${attempt}.$(date +%s).md"
+    cp "$tmpfile" "$failed_copy"
+    echo "  Attempt $attempt/$max_attempts failed for $target (no level-1 heading found in output) — saved to $failed_copy, retrying..."
+    attempt=$((attempt + 1))
+  done
+
+  rm -f "$tmpfile"
+  echo "  FAILED after $max_attempts attempts: docs/$target"
+  return 1
+}
+
+# Run a tier of files in parallel, wait for all to complete
+run_tier() {
+  local tier_name="$1"
+  shift
+  local files=("$@")
+  local pids=()
+  local failed=()
+
+  # Skip empty tiers
+  if [ ${#files[@]} -eq 0 ]; then
+    return 0
+  fi
+
+  echo "--- $tier_name (${#files[@]} files in parallel) ---"
+
+  for target in "${files[@]}"; do
+    generate_file "$target" &
+    pids+=($!)
+    ALL_PIDS+=($!)
+  done
+
+  # Wait for all and collect failures
+  for i in "${!pids[@]}"; do
+    if ! wait "${pids[$i]}"; then
+      failed+=("${files[$i]}")
+    fi
+  done
+
+  if [ ${#failed[@]} -gt 0 ]; then
+    echo "  FAILED in $tier_name: ${failed[*]}"
+    return 1
+  fi
+  return 0
+}
+
+# --- Main execution ---
+
+if [ "$run_all" = true ]; then
+  # Parallel tiered execution
+  tier_failed=false
+
+  run_tier "Tier 1: Core reference" "${TIER1_FILES[@]}" || tier_failed=true
+
+  if [ "$tier_failed" = false ]; then
+    run_tier "Tier 2: Quickstart" "${TIER2_FILES[@]}" || tier_failed=true
+  else
+    echo "Skipping Tier 2 due to Tier 1 failures"
+  fi
+
+  if [ "$tier_failed" = false ]; then
+    run_tier "Tier 3: Index" "${TIER3_FILES[@]}" || tier_failed=true
+  else
+    echo "Skipping Tier 3 due to earlier failures"
+  fi
+
+  echo ""
+  echo "=== Generation Complete ==="
+  echo "Generated: ${#ALL_FILES[@]} file(s) in docs/"
+  if [ "$tier_failed" = true ]; then
+    echo "Some files failed — check output above"
+    exit 1
+  fi
+
+  # Regenerate llms.txt from docs/ contents (if the script is installed)
+  if [ -x "$SCRIPT_DIR/generate-llms-txt.sh" ]; then
+    "$SCRIPT_DIR/generate-llms-txt.sh"
+  fi
+else
+  # Specific files: run sequentially (user chose explicit order)
+  failed=()
+  for target in "${targets[@]}"; do
+    if ! generate_file "$target"; then
+      failed+=("$target")
+      echo "  FAILED: docs/$target"
+    fi
+  done
+
+  echo ""
+  echo "=== Generation Complete ==="
+  echo "Generated: ${#targets[@]} file(s) in docs/"
+  if [ ${#failed[@]} -gt 0 ]; then
+    echo "Failed: ${failed[*]}"
+    exit 1
+  fi
+fi

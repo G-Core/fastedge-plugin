@@ -1,0 +1,216 @@
+# release-plugin.yml — Weekly release of fastedge-plugin.
+#
+# Checks whether reference docs changed since the last release tag.
+# If so: regenerates docs-index.json, bumps the plugin version, pushes a
+# release/vX.Y.Z branch, tags it, creates a GitHub Release, uploads the
+# reference-docs artifact, and dispatches to FastEdge-mcp-server — all
+# without waiting for PR approval. A PR is opened for human review; merging
+# it lands the version bump on main. The tag/release/dispatch are unblocked.
+#
+# All three consumers (Claude plugin, Codex plugin, MCP server)
+# share the same version number after each release.
+#
+# Secrets:
+#   FASTEDGE_APP_ID          — GitHub App numeric ID
+#   FASTEDGE_APP_PRIVATE_KEY — GitHub App private key (.pem)
+#                              Used for release branch push AND cross-repo
+#                              dispatch to FastEdge-mcp-server.
+
+name: Release Plugin
+
+on:
+  schedule:
+    - cron: "0 6 * * 2" # Every Tuesday at 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: "Version bump type (patch for reference-only, minor/major for features)"
+        type: choice
+        required: false
+        default: "patch"
+        options:
+          - patch
+          - minor
+          - major
+      force:
+        description: "Run even if no reference changes detected"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release-plugin
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: [self-hosted, ubuntu-22-04, regular]
+    steps:
+      - name: Generate GitHub App token (this repo)
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.FASTEDGE_APP_ID }}
+          private-key: ${{ secrets.FASTEDGE_APP_PRIVATE_KEY }}
+
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Configure git identity
+        run: |
+          git config user.name "fastedge-plugin-sync[bot]"
+          git config user.email "fastedge-plugin-sync[bot]@users.noreply.github.com"
+
+      - name: Detect changes since last release
+        id: detect
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || echo "")
+          echo "last_tag=${LAST_TAG}" >> "$GITHUB_OUTPUT"
+
+          if [ -n "$LAST_TAG" ]; then
+            CHANGED=$(git diff --name-only "$LAST_TAG"..HEAD -- \
+              'plugins/gcore-fastedge/skills/*/reference/**/*.md' || true)
+          else
+            CHANGED="first-release"
+          fi
+
+          if [ -z "$CHANGED" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Exit early if no changes
+        if: steps.detect.outputs.changed == 'false' && inputs.force != true
+        run: |
+          echo "No reference doc changes since ${{ steps.detect.outputs.last_tag }} — skipping release."
+          exit 0
+
+      - name: Setup Node.js
+        if: steps.detect.outputs.changed == 'true' || inputs.force == true
+        uses: ./.github/setup-node
+
+      - name: Mirror reference docs into Codex plugin
+        if: steps.detect.outputs.changed == 'true' || inputs.force == true
+        run: bash scripts/sync/mirror-reference.sh gcore-fastedge-codex
+
+      # Generator must run before the mirror: on a clean checkout the Cursor
+      # skills/ dirs don't exist (all generated + gitignored) — the generator
+      # creates them, then the mirror fills in reference/.
+      - name: Generate Cursor derived files (skills + knowledge rule)
+        if: steps.detect.outputs.changed == 'true' || inputs.force == true
+        run: node scripts/sync/generate-cursor-plugin.mjs
+
+      - name: Mirror reference docs into Cursor plugin
+        if: steps.detect.outputs.changed == 'true' || inputs.force == true
+        run: bash scripts/sync/mirror-reference.sh gcore-fastedge-cursor
+
+      - name: Regenerate docs-index.json (Claude + Codex + Cursor)
+        if: steps.detect.outputs.changed == 'true' || inputs.force == true
+        run: bash scripts/sync/generate-docs-index.sh
+
+      - name: Bump version
+        if: steps.detect.outputs.changed == 'true' || inputs.force == true
+        id: bump
+        run: |
+          BUMP_TYPE="${{ inputs.bump_type || 'patch' }}"
+          NEW_VERSION=$(bash scripts/bump-version.sh "$BUMP_TYPE")
+          echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Bumped to v${NEW_VERSION} (${BUMP_TYPE})"
+
+      - name: Commit, tag, and push
+        if: steps.detect.outputs.changed == 'true' || inputs.force == true
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          VERSION="${{ steps.bump.outputs.version }}"
+          BRANCH="release/v${VERSION}"
+
+          git checkout -b "$BRANCH"
+          git add --force plugins/gcore-fastedge/docs-index.json
+          git add --force plugins/gcore-fastedge-codex/docs-index.json
+          git add --force plugins/gcore-fastedge-cursor/docs-index.json
+          git add --force plugins/gcore-fastedge-codex/skills/
+          git add --force plugins/gcore-fastedge-cursor/skills/
+          git add --force plugins/gcore-fastedge-cursor/rules/fastedge-knowledge.mdc
+          git add plugins/gcore-fastedge/.claude-plugin/plugin.json
+          git add plugins/gcore-fastedge-codex/.codex-plugin/plugin.json
+          git add plugins/gcore-fastedge-cursor/.cursor-plugin/plugin.json
+          git add .claude-plugin/marketplace.json
+
+          git commit -m "release: v${VERSION} — update docs index and bump version"
+          git tag -a "v${VERSION}" -m "Release v${VERSION}"
+          git push origin "$BRANCH" --follow-tags
+
+      - name: Create GitHub Release
+        if: steps.detect.outputs.changed == 'true' || inputs.force == true
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          VERSION="${{ steps.bump.outputs.version }}"
+          gh release create "v${VERSION}" \
+            --title "v${VERSION}" \
+            --generate-notes
+
+      - name: Package reference-docs artifact
+        if: steps.detect.outputs.changed == 'true' || inputs.force == true
+        env:
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: bash scripts/sync/package-reference-artifact.sh
+
+      - name: Upload reference-docs artifact to GitHub Release
+        if: steps.detect.outputs.changed == 'true' || inputs.force == true
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          gh release upload "v${VERSION}" \
+            "dist/fastedge-reference-docs-v${VERSION}.tar.gz" \
+            "dist/fastedge-reference-docs-v${VERSION}.tar.gz.sha256"
+
+      - name: Generate cross-repo token for MCP server
+        if: steps.detect.outputs.changed == 'true' || inputs.force == true
+        id: mcp-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.FASTEDGE_APP_ID }}
+          private-key: ${{ secrets.FASTEDGE_APP_PRIVATE_KEY }}
+          repositories: FastEdge-mcp-server
+
+      - name: Dispatch to FastEdge-mcp-server
+        if: steps.detect.outputs.changed == 'true' || inputs.force == true
+        env:
+          GH_TOKEN: ${{ steps.mcp-token.outputs.token }}
+        run: |
+          VERSION="${{ steps.bump.outputs.version }}"
+          ARTIFACT_BASE="https://github.com/G-Core/fastedge-plugin/releases/download/v${VERSION}/fastedge-reference-docs-v${VERSION}.tar.gz"
+          jq -n \
+            --arg version "$VERSION" \
+            --arg tag "v${VERSION}" \
+            --arg commit "$(git rev-parse HEAD)" \
+            --arg artifact_url "$ARTIFACT_BASE" \
+            --arg artifact_sha256_url "${ARTIFACT_BASE}.sha256" \
+            '{event_type:"plugin-release",client_payload:{version:$version,tag:$tag,commit:$commit,artifact_url:$artifact_url,artifact_sha256_url:$artifact_sha256_url}}' \
+          | gh api repos/G-Core/FastEdge-mcp-server/dispatches --method POST --input -
+
+      - name: Open release PR
+        if: steps.detect.outputs.changed == 'true' || inputs.force == true
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.bump.outputs.version }}"
+          BRANCH="release/v${VERSION}"
+          gh pr create \
+            --title "release: v${VERSION}" \
+            --body "Automated release — docs index refresh and version bump to v${VERSION}. Approve to land on main." \
+            --base main \
+            --head "$BRANCH"

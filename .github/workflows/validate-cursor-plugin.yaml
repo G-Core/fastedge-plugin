@@ -1,0 +1,59 @@
+name: Validate Cursor Plugin
+
+# Runs scripts/validate-cursor-plugin.sh on PRs that touch the Cursor plugin,
+# the Claude plugin it is generated from, or the generation scripts.
+#
+# The Cursor target commits no generated files, so on a fresh checkout the
+# generate -> mirror -> docs-index steps below double as a from-scratch
+# bootstrap smoke test (guards the PR #90 ordering bug).
+
+on:
+  pull_request:
+    paths:
+      - "plugins/gcore-fastedge-cursor/**"
+      - "plugins/gcore-fastedge/**"
+      - "scripts/validate-cursor-plugin.sh"
+      - "scripts/sync/generate-cursor-plugin.mjs"
+      - "scripts/sync/mirror-reference.sh"
+      - "scripts/sync/generate-docs-index.mjs"
+      - "scripts/sync/generate-docs-index.sh"
+      - "scripts/sync/reference-skills.json"
+      - ".github/workflows/validate-cursor-plugin.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-cursor-plugin:
+    runs-on: [self-hosted, ubuntu-22-04, regular]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: ./.github/setup-node
+
+      # Same order as release-plugin.yaml: generator creates the skill dirs
+      # the mirror copies reference/ into.
+      - name: Generate Cursor derived files (skills + knowledge rule)
+        run: node scripts/sync/generate-cursor-plugin.mjs
+
+      - name: Mirror reference docs into Cursor plugin
+        run: bash scripts/sync/mirror-reference.sh gcore-fastedge-cursor
+
+      - name: Regenerate docs-index.json
+        run: bash scripts/sync/generate-docs-index.sh
+
+      - name: Check generator idempotency
+        run: |
+          out="$(node scripts/sync/generate-cursor-plugin.mjs)"
+          echo "$out"
+          if echo "$out" | grep -q '^updated'; then
+            echo "ERROR: second generator run still reports changes — generator is not idempotent" >&2
+            exit 1
+          fi
+
+      - name: Validate Cursor plugin wiring
+        run: bash scripts/validate-cursor-plugin.sh

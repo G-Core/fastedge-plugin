@@ -1,0 +1,22 @@
+{
+  "name": "gcore-fastedge",
+  "displayName": "Gcore FastEdge",
+  "description": "Build, deploy, and manage serverless WebAssembly applications on Gcore FastEdge — Wasm compute on 210+ global edge PoPs.",
+  "version": "0.2.3",
+  "author": {
+    "name": "Gcore",
+    "email": "support@gcore.com",
+    "url": "https://gcore.com"
+  },
+  "homepage": "https://gcore.com/fastedge",
+  "repository": "https://github.com/G-Core/fastedge-plugin",
+  "license": "Apache-2.0",
+  "keywords": [
+    "fastedge",
+    "gcore",
+    "cursor",
+    "wasm",
+    "edge",
+    "serverless"
+  ]
+}

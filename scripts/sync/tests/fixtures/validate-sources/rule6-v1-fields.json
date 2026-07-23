@@ -1,0 +1,17 @@
+{
+  "version": "2.0",
+  "repos": [
+    {
+      "id": "repo-a",
+      "github_url": "https://github.com/example/repo-a",
+      "ref": "main",
+      "trigger": "release",
+      "contract_path": "fastedge-plugin-source/",
+      "intent_dir": "agent-intent-skills/fastedge-test/",
+      "generator_agent": "claude",
+      "reviewer_agent": "codex",
+      "sparse_paths": ["src/"],
+      "updates": [{"reference_file": "plugins/test/ref.md"}]
+    }
+  ]
+}

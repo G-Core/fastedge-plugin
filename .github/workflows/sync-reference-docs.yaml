@@ -1,0 +1,108 @@
+name: Sync Reference Docs
+
+# Trigger 1: Manual dispatch (workflow_dispatch)
+# Processes repos with trigger "schedule" or "both", OR a specific repo by ID.
+#
+# Trigger 2: Repository dispatch (repository_dispatch) — T015 / US3.
+# A source repo sends event_type "fastedge-ref-update" with client_payload:
+#   { "source_repo_id": "<id>", "ref": "<tag>", "commit": "<sha>" }
+# Processes only the identified repo (must exist in sources.json).
+#
+# Secrets required:
+#   ANTHROPIC_API_KEY  — Claude generator agent
+#   OPENAI_API_KEY     — OpenAI gpt-4o reviewer agent (via api.openai.com)
+#   FASTEDGE_APP_ID          — GitHub App numeric ID (fastedge-plugin-sync)
+#   FASTEDGE_APP_PRIVATE_KEY — GitHub App private key (.pem)
+#                              Token generated via actions/create-github-app-token@v1
+#                              and exported as GH_TOKEN for all steps (validate,
+#                              fetch, PR creation/updates, baseline tag pushes)
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_repo_id:
+        description: >
+          If set, process only this repo ID regardless of its trigger setting.
+          If omitted, all repos with trigger "schedule" or "both" are processed.
+        type: choice
+        required: false
+        default: "(all scheduled)"
+        options:
+          - "(all scheduled)"
+          - fastedge-test
+          - fastedge-sdk-js
+          - fastedge-sdk-rust
+          - proxy-wasm-sdk-as
+      dry_run:
+        description: >
+          When true, run fetch / generate / review but skip file writes,
+          PR creation/updates, and baseline tag updates.
+        type: boolean
+        required: false
+        default: false
+      force_run:
+        description: >
+          When true, bypass change detection and process repos regardless of
+          whether the ref has changed since the last baseline. Useful for
+          testing or re-running without bumping the ref in sources.json.
+        type: boolean
+        required: false
+        default: false
+  repository_dispatch:
+    types: [fastedge-ref-update]
+
+permissions:
+  contents: write # push annotated baseline tags + PR branch commits
+  pull-requests: write # create / edit PRs via gh CLI
+
+env:
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+jobs:
+  sync-reference-docs:
+    runs-on: [self-hosted, ubuntu-22-04, regular]
+
+    steps:
+      - name: Checkout plugin repo
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.FASTEDGE_APP_ID }}
+          private-key: ${{ secrets.FASTEDGE_APP_PRIVATE_KEY }}
+
+      - name: Export token for gh CLI
+        run: echo "GH_TOKEN=${{ steps.app-token.outputs.token }}" >> "$GITHUB_ENV"
+
+      - name: Validate sources.json
+        run: bash scripts/sync/validate-sources.sh sources.json
+
+      - name: Configure git credentials
+        run: gh auth setup-git
+
+      - name: Setup Node.js
+        uses: ./.github/setup-node
+
+      - name: Install Claude CLI
+        run: npm install -g @anthropic-ai/claude-code@2.1.71
+
+      - name: Sync reference docs
+        env:
+          # workflow_dispatch inputs (empty for repository_dispatch)
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          FORCE_RUN: ${{ inputs.force_run || 'false' }}
+          # source_repo_id from whichever trigger fired
+          # Normalize "(all scheduled)" dropdown sentinel to empty string
+          FILTER_REPO_ID: ${{ inputs.source_repo_id != '(all scheduled)' && inputs.source_repo_id || github.event.client_payload.source_repo_id || '' }}
+          # T015: repository_dispatch payload fields (empty for workflow_dispatch)
+          DISPATCH_REF: ${{ github.event.client_payload.ref }}
+          DISPATCH_TRIGGER: ${{ github.event_name }}
+          # Explicit base branch — avoids relying on git symbolic-ref in detached-HEAD checkouts
+          TARGET_BRANCH: ${{ github.ref_name }}
+        run: bash scripts/sync/process-repos.sh

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://fastedge-plugin-source/manifest/v1",
+  "repo_id": "test-repo",
+  "version": "1.0.0",
+  "sources": {
+    "api-reference": {
+      "files": ["docs/api-reference.md"],
+      "required": false,
+      "description": "API surface"
+    }
+  },
+  "target_mapping": {
+    "api-reference": {
+      "reference_file": "docs/not-in-plugins/ref.md",
+      "section": null
+    }
+  },
+  "validation": {
+    "mode": "advisory",
+    "strict_fields": []
+  }
+}

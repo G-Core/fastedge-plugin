@@ -1,0 +1,31 @@
+{
+  "$schema": "https://fastedge-plugin-source/manifest/v1",
+  "repo_id": "test-repo",
+  "version": "1.0.0",
+  "sources": {
+    "api-reference": {
+      "files": ["docs/api-reference.md"],
+      "required": true,
+      "description": "Full API surface"
+    },
+    "examples-index": {
+      "files": ["docs/examples-index.md"],
+      "required": true,
+      "description": "Annotated example catalog"
+    }
+  },
+  "target_mapping": {
+    "api-reference": {
+      "reference_file": "plugins/gcore-fastedge/skills/test/reference/testing-api.md",
+      "section": null
+    },
+    "examples-index": {
+      "reference_file": "plugins/gcore-fastedge/skills/test/reference/test-config.md",
+      "section": null
+    }
+  },
+  "validation": {
+    "mode": "advisory",
+    "strict_fields": ["api-reference"]
+  }
+}

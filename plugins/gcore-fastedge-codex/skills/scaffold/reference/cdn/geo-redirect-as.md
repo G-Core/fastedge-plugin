@@ -1,0 +1,254 @@
+<!--
+  auto-updated: true
+  sources:
+    - id: proxy-wasm-sdk-as
+      ref: master
+      commit: 60f25c7bd35564e5bafb421be7f37aa4acf1bf81
+      updated: 2026-05-20
+-->
+
+---
+type: feature
+app_type: cdn
+languages: [assemblyscript]
+capabilities: [geo-routing, redirect]
+base_skeleton: cdn-base
+source_example: proxy-wasm-sdk-as/examples/geoRedirect
+---
+
+# Geo Redirect (AssemblyScript, CDN)
+
+Routes upstream fetch requests to different origin URLs based on the client's country code. The redirect is transparent — the client receives a normal response from the matched origin; no 3xx browser redirect is issued.
+
+## When to Use
+
+Use this blueprint when you need to route CDN traffic to a different origin server based on the client's country code at the edge layer, without exposing the routing logic to the client.
+
+## Imports
+
+```typescript
+export * from "@gcoredev/proxy-wasm-sdk-as/assembly/proxy";
+
+import {
+  Context,
+  FilterHeadersStatusValues,
+  get_property,
+  log,
+  LogLevelValues,
+  registerRootContext,
+  RootContext,
+  send_http_response,
+  set_property,
+} from "@gcoredev/proxy-wasm-sdk-as/assembly";
+
+import {
+  getEnv,
+  setLogLevel,
+} from "@gcoredev/proxy-wasm-sdk-as/assembly/fastedge";
+```
+
+- `get_property`, `set_property`, `send_http_response`, `log`, `registerRootContext` — from `@gcoredev/proxy-wasm-sdk-as/assembly`
+- `getEnv`, `setLogLevel` — from `@gcoredev/proxy-wasm-sdk-as/assembly/fastedge`
+
+## Class Structure
+
+### RootContext subclass
+
+```typescript
+class GeoRedirectRoot extends RootContext {
+  createContext(context_id: u32): Context {
+    setLogLevel(LogLevelValues.info);
+    return new GeoRedirect(context_id, this);
+  }
+}
+```
+
+- Call `setLogLevel` in `createContext` before returning the context instance.
+
+### Context subclass
+
+```typescript
+class GeoRedirect extends Context {
+  constructor(context_id: u32, root_context: GeoRedirectRoot) {
+    super(context_id, root_context);
+  }
+
+  onRequestHeaders(a: u32, end_of_stream: bool): FilterHeadersStatusValues {
+    // ... routing logic
+  }
+}
+```
+
+## Core Pattern: `onRequestHeaders`
+
+All routing logic runs in `onRequestHeaders`. Return `FilterHeadersStatusValues.Continue` to proceed with the upstream fetch, or `FilterHeadersStatusValues.StopIteration` after calling `send_http_response` on error.
+
+### Step 1 — Validate DEFAULT origin
+
+```typescript
+const defaultOrigin = getEnv("DEFAULT");
+
+if (!defaultOrigin) {
+  send_http_response(
+    INTERNAL_SERVER_ERROR,
+    "internal server error",
+    String.UTF8.encode("App misconfigured - DEFAULT must be set"),
+    [],
+  );
+  return FilterHeadersStatusValues.StopIteration;
+}
+```
+
+- `getEnv("DEFAULT")` returns an empty string `""` when unset; falsy check covers both empty string and null.
+- Missing `DEFAULT` → 500 response, stop iteration.
+
+### Step 2 — Read country code
+
+```typescript
+const countryArrBuf = get_property("request.country");
+if (countryArrBuf.byteLength === 0) {
+  send_http_response(
+    BAD_GATEWAY,
+    "bad gateway",
+    String.UTF8.encode("Missing country information"),
+    [],
+  );
+  return FilterHeadersStatusValues.StopIteration;
+}
+const countryCode = String.UTF8.decode(countryArrBuf);
+```
+
+- `get_property("request.country")` returns `ArrayBuffer`; decode with `String.UTF8.decode`.
+- `byteLength === 0` means the property was absent — return 502 and stop.
+- Country codes follow ISO 3166-1 alpha-2 (e.g. `"DE"`, `"US"`).
+
+### Step 3 — Country-keyed origin lookup
+
+```typescript
+const countrySpecificOrigin = getEnv(countryCode);
+```
+
+- `getEnv(countryCode)` looks up an env var named after the country code (e.g. env var `DE` for Germany).
+- Returns `""` (empty string) when no matching env var is set.
+- Do **not** use a null/undefined check; use an empty-string check.
+
+### Step 4 — Read request path
+
+```typescript
+const pathArrBuf = get_property("request.path");
+if (pathArrBuf.byteLength === 0) {
+  send_http_response(
+    INTERNAL_SERVER_ERROR,
+    "internal server error",
+    String.UTF8.encode("Internal server error - no request path"),
+    [],
+  );
+  return FilterHeadersStatusValues.StopIteration;
+}
+const path = String.UTF8.decode(pathArrBuf);
+```
+
+- `get_property("request.path")` returns `ArrayBuffer`; decode with `String.UTF8.decode`.
+- Missing path → 500 response, stop iteration.
+
+### Step 5 — Build and set target URL
+
+```typescript
+const origin = countrySpecificOrigin === "" ? defaultOrigin : countrySpecificOrigin;
+const cleanedOrigin = origin.endsWith("/") ? origin.slice(0, -1) : origin;
+const requestUrl = `${cleanedOrigin}${path}`;
+
+set_property("request.url", String.UTF8.encode(requestUrl));
+
+return FilterHeadersStatusValues.Continue;
+```
+
+- Select country-specific origin if non-empty; otherwise fall back to `DEFAULT`.
+- Strip trailing slash from origin before concatenating with path.
+- `set_property("request.url", ...)` rewrites the upstream fetch target — this is **not** an HTTP redirect; the client sees a normal response.
+- Encode the URL string with `String.UTF8.encode` before passing to `set_property`.
+
+## Runtime Properties
+
+| Property | Access | Return type | Description |
+|---|---|---|---|
+| `request.country` | `get_property` | `ArrayBuffer` | ISO 3166-1 alpha-2 country code from FastEdge Geo-IP |
+| `request.host` | `get_property` | `ArrayBuffer` | Request Host header value |
+| `request.path` | `get_property` | `ArrayBuffer` | Request URL path |
+| `request.url` | `set_property` | — | Upstream fetch target URL (rewrite, not redirect) |
+
+All `get_property` return values must be decoded with `String.UTF8.decode`. All `set_property` values must be encoded with `String.UTF8.encode`.
+
+## Environment Variables
+
+| Variable | Required | Example | Description |
+|---|---|---|---|
+| `DEFAULT` | Yes | `https://origin.example.com` | Fallback origin URL; must be set or app returns 500 |
+| `<COUNTRY_CODE>` | No | `DE=https://de.example.com` | Per-country origin URL; one env var per country code |
+
+- Country code env vars use ISO 3166-1 alpha-2 (uppercase, e.g. `DE`, `US`, `JP`).
+- Any country without a matching env var falls back to `DEFAULT`.
+
+## Error Responses
+
+| Condition | Status | Body |
+|---|---|---|
+| `DEFAULT` env var not set | 500 | `App misconfigured - DEFAULT must be set` |
+| `request.country` property absent | 502 | `Missing country information` |
+| `request.path` property absent | 500 | `Internal server error - no request path` |
+
+`send_http_response(status: u32, status_message: string, body: ArrayBuffer, headers: string[]): void`
+
+## Registration
+
+```typescript
+registerRootContext((context_id: u32) => {
+  return new GeoRedirectRoot(context_id);
+}, "geoRedirect");
+```
+
+- The second argument is the root context name; must match the name used during app registration.
+
+## Logging
+
+```typescript
+log(LogLevelValues.info, `Country code: ( ${countryCode} ): ${matchedOrigin}`);
+log(LogLevelValues.info, `Provided Host: ${host}`);
+log(LogLevelValues.info, `request-url: ${requestUrl}`);
+```
+
+- Log level is set to `info` in `createContext` via `setLogLevel(LogLevelValues.info)`.
+- Logs are visible in FastEdge application logs.
+
+## Build
+
+```json
+{
+  "scripts": {
+    "asbuild:debug": "asc assembly/index.ts --target debug",
+    "asbuild:release": "asc assembly/index.ts --target release",
+    "asbuild": "npm run asbuild:debug && npm run asbuild:release"
+  },
+  "dependencies": {
+    "@gcoredev/proxy-wasm-sdk-as": "^1.2.3"
+  },
+  "devDependencies": {
+    "@assemblyscript/wasi-shim": "^0.1.0",
+    "assemblyscript": "^0.28.9"
+  }
+}
+```
+
+Build outputs:
+
+| File | Description |
+|---|---|
+| `build/geoRedirect.wasm` | Optimised release binary — deploy this to FastEdge |
+| `build/geoRedirect-debug.wasm` | Debug binary with source maps |
+
+## See Also
+
+- cdn-base skeleton reference
+- platform-overview (runtime properties, Geo-IP data)
+- deploy skill reference
+- manage skill reference (environment variable configuration)

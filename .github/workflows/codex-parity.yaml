@@ -1,0 +1,31 @@
+name: Codex Parity Check
+
+# Fails when a Claude SKILL.md changes without a matching Codex touch — the
+# Codex skills are hand-maintained rewrites, so this is the drift tripwire
+# (Cursor needs no equivalent: its skills are generated from Claude's).
+# Intentional Claude-only changes: apply the skip-codex-parity label.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+    paths:
+      - "plugins/gcore-fastedge/skills/*/SKILL.md"
+      - "scripts/check-codex-parity.sh"
+      - ".github/workflows/codex-parity.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  codex-parity:
+    runs-on: [self-hosted, ubuntu-22-04, regular]
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-codex-parity') }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check Codex parity
+        run: bash scripts/check-codex-parity.sh "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}"

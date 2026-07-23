@@ -1,0 +1,31 @@
+{
+  "$schema": "https://fastedge-plugin-source/manifest/v1",
+  "repo_id": "test-repo",
+  "version": "1.0.0",
+  "sources": {
+    "api-reference": {
+      "files": ["docs/api-reference.md"],
+      "required": true,
+      "description": "In strict_fields but missing — should fail even in advisory mode"
+    },
+    "examples-index": {
+      "files": ["docs/examples-index.md"],
+      "required": true,
+      "description": "Not in strict_fields and missing — advisory warning only"
+    }
+  },
+  "target_mapping": {
+    "api-reference": {
+      "reference_file": "plugins/test/ref-a.md",
+      "section": null
+    },
+    "examples-index": {
+      "reference_file": "plugins/test/ref-b.md",
+      "section": null
+    }
+  },
+  "validation": {
+    "mode": "advisory",
+    "strict_fields": ["api-reference"]
+  }
+}

@@ -1,0 +1,116 @@
+<!--
+  auto-updated: true
+  sources:
+    - id: fastedge-sdk-js
+      ref: main
+      commit: b78b2a80317bb632af88010816d3e54afd3bd72d
+      updated: 2026-06-16
+-->
+
+---
+type: feature
+app_type: http
+languages: [javascript]
+capabilities: [streaming]
+base_skeleton: http-base
+source_example: FastEdge-sdk-js/examples/streaming
+---
+
+# Feature: Streaming Response
+
+## When to Use
+
+Use this pattern when the app must send a chunked HTTP response instead of buffering the full body before responding. Typical cases: server-sent events, progressive output, long-poll-style data feeds.
+
+## Key APIs
+
+### `ReadableStream`
+
+```js
+new ReadableStream({
+  async start(controller) { ... }
+})
+```
+
+- `start(controller)` — called once when the stream is created; write all enqueue logic here
+- `controller.enqueue(chunk)` — pushes a `Uint8Array` chunk to the stream; call inside a loop to produce multiple chunks
+- `controller.close()` — signals end-of-stream; **required** for the response to terminate cleanly
+
+### `TextEncoder`
+
+```js
+const encoder = new TextEncoder();
+encoder.encode(string) // → Uint8Array
+```
+
+Converts string chunks to the `Uint8Array` payload expected by `controller.enqueue`. Instantiate once and reuse inside the `start` closure.
+
+### `Response` with stream body
+
+```js
+new Response(stream, {
+  status: 200,
+  headers: { 'content-type': 'text/plain; charset=utf-8' }
+})
+```
+
+Pass the `ReadableStream` instance directly as the first argument. No buffering occurs — chunks are forwarded as they are enqueued.
+
+### Timed chunk spacing
+
+```js
+await new Promise((resolve) => { setTimeout(resolve, 200); });
+```
+
+Wraps `setTimeout` in a `Promise` to create an async delay between chunks. Use inside an `async start` function with `await`. Long-running streams must respect the runtime's request-handling time budget — avoid delays that exceed platform limits.
+
+## Complete Example
+
+```js
+function app(event) {
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      for (let i = 0; i < 5; i++) {
+        await new Promise((resolve) => { setTimeout(resolve, 200); });
+        controller.enqueue(encoder.encode(`chunk ${i}\n`));
+      }
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    status: 200,
+    headers: { 'content-type': 'text/plain; charset=utf-8' },
+  });
+}
+
+addEventListener('fetch', (event) => {
+  event.respondWith(app(event));
+});
+```
+
+## Build
+
+```json
+"scripts": {
+  "build": "fastedge-build src/index.js dist/streaming.wasm"
+}
+```
+
+Entry point: `src/index.js`. Output: `dist/streaming.wasm`. Requires `@gcoredev/fastedge-sdk-js` ^2.2.2.
+
+## Constraints
+
+- `controller.close()` must be called after all chunks are enqueued; omitting it leaves the response open indefinitely
+- Chunk payload must be `Uint8Array`; use `TextEncoder.encode` to convert strings
+- `async start` is the correct source pattern — chunks produced in `start`, not `pull`
+- Timed delays must stay within the platform's request-handling time budget
+
+## See Also
+
+- http-base skeleton reference
+- deploy skill reference
+- fastedge-build CLI reference
+- FastEdge-sdk-js SDK reference
