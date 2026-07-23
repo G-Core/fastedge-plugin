@@ -4,7 +4,7 @@
     - id: fastedge-sdk-rust
       ref: main
       commit: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-      updated: 2026-06-16
+      updated: 2026-07-23
 -->
 
 ---
@@ -185,3 +185,93 @@ Both hooks return `Action::Continue`, which passes the request/response through 
 - platform-overview reference (CDN app lifecycle, hook execution order)
 - host-services-rust reference (`get_current_time`, `Context` trait, `LogLevel` variants)
 - best-practices reference (log level selection, structured logging conventions)
+
+## Source Material
+
+### FILE: examples/cdn/log_time/src/lib.rs
+
+```rust
+use log::info;
+use proxy_wasm::traits::*;
+use proxy_wasm::types::*;
+use std::time::SystemTime;
+
+proxy_wasm::main! {{
+    proxy_wasm::set_log_level(LogLevel::Trace);
+    proxy_wasm::set_root_context(|_| -> Box<dyn RootContext> { Box::new(HttpHeadersRoot) });
+}}
+
+struct HttpHeadersRoot;
+
+impl Context for HttpHeadersRoot {}
+
+impl RootContext for HttpHeadersRoot {
+    fn create_http_context(&self, context_id: u32) -> Option<Box<dyn HttpContext>> {
+        Some(Box::new(HttpHeaders { context_id }))
+    }
+
+    fn get_type(&self) -> Option<ContextType> {
+        Some(ContextType::HttpContext)
+    }
+}
+
+struct HttpHeaders {
+    context_id: u32,
+}
+
+impl Context for HttpHeaders {}
+
+impl HttpContext for HttpHeaders {
+    fn on_http_request_headers(&mut self, _: usize, _: bool) -> Action {
+        let time = self.get_current_time();
+        info!(
+            "on_http_request_headers: {}",
+            time.duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+                / 3600
+        );
+        Action::Continue
+    }
+
+    fn on_http_response_headers(&mut self, _: usize, _: bool) -> Action {
+        let time = self.get_current_time();
+        info!(
+            "on_http_response_headers: {}",
+            time.duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+                / 3600
+        );
+        Action::Continue
+    }
+}
+```
+
+### FILE: examples/cdn/log_time/Cargo.toml
+
+```toml
+[workspace]
+
+[package]
+name = "log_time"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+log = "0.4"
+proxy-wasm = "0.2"
+```
+
+### FILE: examples/cdn/log_time/README.md
+
+```
+[← Back to examples](../../README.md)
+
+# Log Time (CDN)
+
+Logs request and response timestamps (hours since UNIX epoch) using the proxy-wasm ABI.
+```

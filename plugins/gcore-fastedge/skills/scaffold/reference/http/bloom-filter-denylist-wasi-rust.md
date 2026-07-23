@@ -4,7 +4,7 @@
     - id: fastedge-sdk-rust
       ref: main
       commit: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-      updated: 2026-06-16
+      updated: 2026-07-23
 -->
 
 ---
@@ -167,6 +167,13 @@ async fn main(req: Request<Body>) -> anyhow::Result<Response<Body>> {
     }
 
     json_response(200, json!({ "allowed": true, "ip": ip }))
+}
+
+fn json_response(status: u16, value: serde_json::Value) -> anyhow::Result<Response<Body>> {
+    Ok(Response::builder()
+        .status(status)
+        .header("content-type", "application/json")
+        .body(Body::from(value.to_string()))?)
 }
 ```
 
