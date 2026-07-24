@@ -26,8 +26,8 @@ Codex marketplace descriptor in this repo:
 ## Install the plugin
 
 ```bash
-codex plugin marketplace add G-Core/fastedge-plugin
-codex plugin add gcore-fastedge@gcore-fastedge-codex-marketplace
+codex plugin marketplace add G-Core/gcore-marketplace
+codex plugin add gcore-fastedge@gcore-marketplace
 ```
 
 This persists across sessions. For a local-clone or air-gapped install, see the [README](../README.md#codex-installation).
