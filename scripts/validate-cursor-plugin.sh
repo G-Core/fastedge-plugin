@@ -119,15 +119,15 @@ head -5 "$RULE_MDC" | grep -q '^alwaysApply: true$' || err "fastedge-knowledge.m
 head -5 "$RULE_MDC" | grep -q '^description:' || err "fastedge-knowledge.mdc frontmatter must set description"
 ok "Knowledge rule frontmatter valid"
 
-# Generated artifacts must stay gitignored (release commits them via git add
-# --force; check-ignore tests patterns, so this passes on release checkouts too).
+# Generated artifacts must stay gitignored. --no-index tests patterns alone —
+# without it, tracked files (force-added on release branches) report not-ignored.
 if command -v git >/dev/null 2>&1 && git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
   for rel in \
     "plugins/gcore-fastedge-cursor/docs-index.json" \
     "plugins/gcore-fastedge-cursor/rules/fastedge-knowledge.mdc" \
     "plugins/gcore-fastedge-cursor/skills/deploy/SKILL.md" \
     "plugins/gcore-fastedge-cursor/skills/fastedge-docs/reference/x.md"; do
-    git -C "$REPO_ROOT" check-ignore -q "$rel" || err "Generated artifact not covered by .gitignore: $rel"
+    git -C "$REPO_ROOT" check-ignore -q --no-index "$rel" || err "Generated artifact not covered by .gitignore: $rel"
   done
   ok "Generated artifacts covered by .gitignore"
 else
