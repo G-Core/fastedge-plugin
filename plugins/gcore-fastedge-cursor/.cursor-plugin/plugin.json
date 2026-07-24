@@ -2,7 +2,7 @@
   "name": "gcore-fastedge",
   "displayName": "Gcore FastEdge",
   "description": "Build, deploy, and manage serverless WebAssembly applications on Gcore FastEdge — Wasm compute on 210+ global edge PoPs.",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "author": {
     "name": "Gcore",
     "email": "support@gcore.com",
