@@ -8,14 +8,14 @@ FastEdge runs Wasm workloads on 210+ global edge Points of Presence with sub-mil
 
 **Option 1: Install from GitHub (recommended)**
 
-From inside Claude Code, add the marketplace directly from the GitHub repo and install the plugin:
+From inside Claude Code, add the Gcore marketplace and install the plugin:
 
 ```
-/plugin marketplace add G-Core/fastedge-plugin
-/plugin install gcore-fastedge@gcore-fastedge-marketplace
+/plugin marketplace add G-Core/gcore-marketplace
+/plugin install gcore-fastedge@gcore-marketplace
 ```
 
-This persists across sessions. To pick up new versions later, run `/plugin marketplace update gcore-fastedge-marketplace`.
+This persists across sessions. To pick up new versions later, run `/plugin marketplace update gcore-marketplace`.
 
 **Option 2: Install from a local clone (for development or air-gapped use)**
 
@@ -43,8 +43,8 @@ claude --plugin-dir /path/to/fastedge-plugin
 **Option 1: Install from GitHub (recommended)**
 
 ```bash
-codex plugin marketplace add G-Core/fastedge-plugin
-codex plugin add gcore-fastedge@gcore-fastedge-codex-marketplace
+codex plugin marketplace add G-Core/gcore-marketplace
+codex plugin add gcore-fastedge@gcore-marketplace
 ```
 
 **Option 2: Install from a local clone (for development or air-gapped use)**

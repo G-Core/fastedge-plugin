@@ -33,7 +33,14 @@ A root-level `CLAUDE.md` (this file) is only read when someone works on the plug
 claude --plugin-dir /path/to/fastedge-plugin
 ```
 
-**Install persistently:**
+**Install persistently (canonical — central marketplace):**
+
+```bash
+/plugin marketplace add G-Core/gcore-marketplace
+/plugin install gcore-fastedge@gcore-marketplace
+```
+
+**Install persistently (local-clone / dev fallback — this repo's own descriptor):**
 
 ```bash
 /plugin marketplace add /path/to/fastedge-plugin

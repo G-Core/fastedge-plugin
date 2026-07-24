@@ -55,8 +55,8 @@ A single weekly release produces three consumable outputs from the same tag (`vX
 
 | # | Artifact | Consumer | How they get it |
 |---|---|---|---|
-| 1 | Claude plugin (`plugins/gcore-fastedge/`) | Claude Code users | `/plugin marketplace add G-Core/fastedge-plugin` → `/plugin install gcore-fastedge@gcore-fastedge-marketplace` |
-| 2 | Codex plugin (`plugins/gcore-fastedge-codex/`) | Codex CLI users | `codex plugin marketplace add` against the same repo URL (or local path); resolves via `.agents/plugins/marketplace.json` |
+| 1 | Claude plugin (`plugins/gcore-fastedge/`) | Claude Code users | `/plugin marketplace add G-Core/gcore-marketplace` → `/plugin install gcore-fastedge@gcore-marketplace` (canonical). Local/air-gapped fallback: add this repo directly → `gcore-fastedge@gcore-fastedge-marketplace` |
+| 2 | Codex plugin (`plugins/gcore-fastedge-codex/`) | Codex CLI users | `codex plugin marketplace add G-Core/gcore-marketplace` → `gcore-fastedge@gcore-marketplace` (canonical). Local/air-gapped fallback: add this repo directly; resolves via `.agents/plugins/marketplace.json` (`gcore-fastedge-codex-marketplace`) |
 | 3 | Reference-docs tarball (`fastedge-reference-docs-vX.Y.Z.tar.gz`) | `FastEdge-mcp-server` CI | Attached to the GitHub Release. Pulled by MCP server CI on `repository_dispatch: plugin-release` |
 
 All three share **one version number**. `scripts/bump-version.sh` writes the same version to both `plugin.json` files in lockstep. The MCP server pins to the same `vX.Y.Z` after each release.
@@ -65,17 +65,28 @@ All three share **one version number**. `scripts/bump-version.sh` writes the sam
 
 ## Marketplace discovery
 
-### Claude Code
+### Canonical: the central `G-Core/gcore-marketplace` repo
 
-- **Descriptor:** `.claude-plugin/marketplace.json` at repo root.
-- **Discovery:** Users run `/plugin marketplace add <git-url-or-path>`. Claude Code reads `.claude-plugin/marketplace.json` from the default branch (or local clone).
-- **Install:** `/plugin install gcore-fastedge@gcore-fastedge-marketplace`. The `source: "./plugins/gcore-fastedge"` field in the marketplace JSON tells Claude Code which subfolder to vendor.
+The documented install path for both runtimes is the central **`gcore-marketplace`** repo — a thin index that fetches this plugin **in place** via `git-subdir` (no code is copied or forked). It carries two descriptors mirroring this repo's two runtimes:
+
+- `.claude-plugin/marketplace.json` → fetches `plugins/gcore-fastedge` from `G-Core/fastedge-plugin@main`
+- `.agents/plugins/marketplace.json` → fetches `plugins/gcore-fastedge-codex` from `G-Core/fastedge-plugin@main`
+
+Both list the plugin as `gcore-fastedge` under a marketplace named `gcore-marketplace`, so the install is `gcore-fastedge@gcore-marketplace` in both CLIs. Version still comes from this repo's own `plugin.json` files (the git-subdir source resolves them). **Nothing in this repo needs to change to feed the central marketplace** — keep the two subdirs self-contained and the version fields current.
+
+The two in-repo descriptors below are retained as the **local-clone / air-gapped fallback** (add this repo directly by path). They keep their original marketplace names.
+
+### Claude Code (in-repo fallback descriptor)
+
+- **Descriptor:** `.claude-plugin/marketplace.json` at repo root (marketplace name `gcore-fastedge-marketplace`).
+- **Discovery:** Users run `/plugin marketplace add <local-path>`. Claude Code reads `.claude-plugin/marketplace.json` from the local clone.
+- **Install:** `/plugin install gcore-fastedge@gcore-fastedge-marketplace`. The `source: "./plugins/gcore-fastedge"` field tells Claude Code which subfolder to vendor.
 - **What ships to the user:** only files under `plugins/gcore-fastedge/`. The sibling Codex folder is **not** present in the install.
 
-### Codex
+### Codex (in-repo fallback descriptor)
 
-- **Descriptor:** `.agents/plugins/marketplace.json` (Codex convention; do not move).
-- **Discovery:** Users run `codex plugin marketplace add <git-url-or-path>`. Codex reads `.agents/plugins/marketplace.json`.
+- **Descriptor:** `.agents/plugins/marketplace.json` (Codex convention; do not move — marketplace name `gcore-fastedge-codex-marketplace`).
+- **Discovery:** Users run `codex plugin marketplace add <local-path>`. Codex reads `.agents/plugins/marketplace.json`.
 - **Install:** Resolves `gcore-fastedge` plugin, sources from `./plugins/gcore-fastedge-codex/` per the `source.path` field.
 - **What ships to the user:** only files under `plugins/gcore-fastedge-codex/`. The sibling Claude folder is **not** present in the install.
 

@@ -11,11 +11,11 @@
 
 ## Install the Plugin
 
-From inside Claude Code, add the marketplace from GitHub and install:
+From inside Claude Code, add the Gcore marketplace from GitHub and install:
 
 ```
-/plugin marketplace add G-Core/fastedge-plugin
-/plugin install gcore-fastedge@gcore-fastedge-marketplace
+/plugin marketplace add G-Core/gcore-marketplace
+/plugin install gcore-fastedge@gcore-marketplace
 ```
 
 This persists across sessions. For a local-clone or air-gapped install, see the [README](../README.md#installation).
@@ -63,4 +63,4 @@ Builds your app to WASM, uploads the binary, and creates or updates the FastEdge
 - **MCP server not starting**: Verify Docker is running (`docker ps`). The plugin pulls `ghcr.io/g-core/fastedge-mcp-server:latest` on first use; check network access to `ghcr.io`.
 - **Build fails (MCP path)**: Check the MCP server logs (`/mcp` inside Claude Code shows server status). Most build issues are reported back through the tool response.
 - **Build fails (local opt-out path)**: You're outside the supported default — make sure your local toolchain is installed (`fastedge-build` for JS/TS, `cargo` for Rust, `asc` for AssemblyScript).
-- **Plugin not loading**: Run `/plugin marketplace list` to confirm the marketplace was added, then `/plugin install gcore-fastedge@gcore-fastedge-marketplace`. (For a local `--plugin-dir` install, ensure the path points to the directory containing `.claude-plugin/marketplace.json`.)
+- **Plugin not loading**: Run `/plugin marketplace list` to confirm the marketplace was added, then `/plugin install gcore-fastedge@gcore-marketplace`. (For a local `--plugin-dir` install, ensure the path points to the directory containing `.claude-plugin/marketplace.json`.)
