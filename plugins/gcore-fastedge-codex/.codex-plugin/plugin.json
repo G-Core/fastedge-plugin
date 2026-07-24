@@ -1,6 +1,6 @@
 {
   "name": "gcore-fastedge",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Codex plugin for Gcore FastEdge with local indexed docs and MCP-backed build/deploy workflows.",
   "author": {
     "name": "Gcore",
