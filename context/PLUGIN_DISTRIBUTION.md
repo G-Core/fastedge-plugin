@@ -163,6 +163,19 @@ If you find yourself wanting to add a Docker file, an MCP tool definition, or an
 
 ---
 
+## Known validation warnings (deliberately accepted)
+
+`claude plugin validate plugins/gcore-fastedge` passes (exit 0) with one standing warning — **do not re-investigate, it is intentional**:
+
+> `CLAUDE.md at the plugin root is not loaded as project context. To ship context with your plugin, use a skill instead.`
+
+- **Why accepted:** the plugin-root `CLAUDE.md` is a hand-curated knowledge base that (a) is the source `scripts/sync/generate-cursor-plugin.mjs` reads to build the Cursor `fastedge-knowledge.mdc` rule, and (b) a dev-facing reference. Its *technical* content (Rust stdout/stderr logging hazard, app types, SDK APIs, error codes) is already duplicated into the skills and `fastedge-docs/reference/` that load on-demand — so nothing load-bearing is lost by it not being auto-loaded. The only CLAUDE.md-unique content is behavioral (Rule 0 filesystem scope + intake protocol); judged not worth forcing into always-on context.
+- **Not suppressible:** `claude plugin validate` has no per-rule ignore flag (only `--help`, `--strict`). The warning fires purely because a file named `CLAUDE.md` sits at the plugin root; the only way to silence it is to rename the file, which would mean touching the Cursor-gen script + ~5 skill prose references — not worth it.
+- **Submission-safe:** the `anthropics/claude-plugins-community` pipeline does **not** run `--strict` and its `fail-on-warnings` input defaults off (verified 2026-07-28). Only true errors (exit ≠ 0) or an I1–I11 policy-invariant violation fail submission — warnings pass.
+- If we ever want Rule 0 always-on, the mechanism is a `SessionStart` hook (`hooks/hooks.json` → `cat "${CLAUDE_PLUGIN_ROOT}/<preamble>.md"`), not a plugin-root CLAUDE.md.
+
+---
+
 ## Decision log
 
 | Date | Decision | Rationale |
