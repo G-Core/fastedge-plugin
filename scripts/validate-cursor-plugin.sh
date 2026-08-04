@@ -83,7 +83,7 @@ ok "JSON files parse"
 marketplace_name="$(jq -r '.name // empty' "$MARKETPLACE_JSON")"
 [[ "$marketplace_name" == "gcore-fastedge-marketplace" ]] || err "marketplace.json name must be gcore-fastedge-marketplace (got: ${marketplace_name:-<missing>})"
 
-marketplace_plugin_count="$(jq '[.plugins[] | select(.name == "gcore-fastedge" and .source == "./plugins/gcore-fastedge-cursor")] | length' "$MARKETPLACE_JSON")"
+marketplace_plugin_count="$(jq '[(.plugins // [])[] | select(.name == "gcore-fastedge" and .source == "./plugins/gcore-fastedge-cursor")] | length' "$MARKETPLACE_JSON")"
 [[ "$marketplace_plugin_count" -eq 1 ]] || err "marketplace.json must expose gcore-fastedge from ./plugins/gcore-fastedge-cursor exactly once"
 ok "marketplace.json Cursor plugin source valid"
 
