@@ -9,6 +9,40 @@ This is the **third target** alongside the Claude Code (`gcore-fastedge`) and Co
 same [FastEdge MCP server](https://github.com/G-Core/FastEdge-mcp-server); only the
 manifest/packaging differs per CLI.
 
+## Install from GitHub
+
+Add this repository as a personal Cursor marketplace:
+
+```bash
+agent plugin marketplace add https://github.com/G-Core/fastedge-plugin.git
+```
+
+Then run `agent`, enter `/plugin`, open the **Marketplace** tab, and install
+**Gcore FastEdge** at user or project scope.
+
+The marketplace follows the repository's default branch. Pin a branch, tag, or
+commit when testing a specific release:
+
+```bash
+agent plugin marketplace add \
+  https://github.com/G-Core/fastedge-plugin.git \
+  --git-ref main
+```
+
+Refresh or remove the marketplace with:
+
+```bash
+agent plugin marketplace update gcore-fastedge-marketplace
+agent plugin marketplace remove gcore-fastedge-marketplace
+```
+
+Cursor Teams and Enterprise administrators can instead import the same repository
+from **Dashboard → Plugins → Add Marketplace → Import from Repo**, then configure
+the plugin as Default Off, Default On, or Required.
+
+See the [Cursor quickstart](../../docs/cursor-quickstart.md) for prerequisites,
+credentials, installation verification, and troubleshooting.
+
 ## Layout
 
 ```
@@ -47,18 +81,18 @@ API calls succeeded). The only wrinkle is getting the vars **into** Cursor's
 environment in the first place — on macOS-GUI that means `launchctl setenv` (see
 gotcha #1 below), not a missing manifest declaration.
 
-## Local testing (no publish needed)
+## Local development
 
-On a fresh clone this folder is mostly empty — the `skills/*/SKILL.md`, the
-`rules/*.mdc` knowledge rule, and `reference/` are generated at release time
-(gitignored on `main`). Materialize them first:
+Generated skills, rules, reference files, and `docs-index.json` are committed in
+release snapshots. Regenerate them after changing the Claude source files:
 
 ```bash
 node scripts/sync/generate-cursor-plugin.mjs
 bash scripts/sync/mirror-reference.sh gcore-fastedge-cursor
+bash scripts/sync/generate-docs-index.sh
 ```
 
-Then load it as a local plugin: symlink (or copy) this folder into
+Load the working tree as a local plugin by symlinking (or copying) this folder into
 `~/.cursor/plugins/local/`, then fully restart Cursor.
 
 ```bash
@@ -99,5 +133,6 @@ should appear in `docker ps` once a FastEdge tool is used.
 
 ## Publishing
 
-Requires a **public** repo. Submit at https://cursor.com/marketplace/publish.
-Blocked on the same SecOp review as making this repo public.
+The GitHub marketplace installation above does not publish the plugin to Cursor's
+official public marketplace. Official publication requires the public repository
+to be submitted for review at https://cursor.com/marketplace/publish.

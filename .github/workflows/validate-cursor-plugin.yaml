@@ -3,13 +3,13 @@ name: Validate Cursor Plugin
 # Runs scripts/validate-cursor-plugin.sh on PRs that touch the Cursor plugin,
 # the Claude plugin it is generated from, or the generation scripts.
 #
-# The Cursor target commits no generated files, so on a fresh checkout the
-# generate -> mirror -> docs-index steps below double as a from-scratch
-# bootstrap smoke test (guards the PR #90 ordering bug).
+# Regenerate derived files before validation to verify source consistency and
+# preserve the from-scratch bootstrap smoke test (guards the PR #90 ordering bug).
 
 on:
   pull_request:
     paths:
+      - ".cursor-plugin/**"
       - "plugins/gcore-fastedge-cursor/**"
       - "plugins/gcore-fastedge/**"
       - "scripts/validate-cursor-plugin.sh"

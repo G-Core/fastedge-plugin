@@ -1,4 +1,4 @@
-# Plugin Distribution — One Repo, Two Marketplaces, Three Artifacts
+# Plugin Distribution — One Repo, Three Marketplaces, Four Artifacts
 
 **Status:** Architectural baseline (2026-05-20).
 **Audience:** Maintainers; future agents implementing pipeline changes.
@@ -8,7 +8,7 @@
 
 ## Why this doc exists
 
-`fastedge-plugin` is one repository that ships **two installable plugins** (Claude Code, Codex) and **one shared reference-docs artifact** consumed by `FastEdge-mcp-server`. The structure is intentional — explained here so future agents don't try to split the repo, duplicate the pipeline, or cross-reference between plugin folders at install time.
+`fastedge-plugin` is one repository that ships **three installable plugins** (Claude Code, Codex, Cursor) and **one shared reference-docs artifact** consumed by `FastEdge-mcp-server`. The structure is intentional — explained here so future agents don't try to split the repo, duplicate the pipeline, or cross-reference between plugin folders at install time.
 
 If you're touching: distribution, marketplace descriptors, install instructions, or how the MCP server pulls reference content — read this first.
 
@@ -20,6 +20,7 @@ If you're touching: distribution, marketplace descriptors, install instructions,
 fastedge-plugin/
 ├── .claude-plugin/marketplace.json         # Claude Code marketplace descriptor
 ├── .agents/plugins/marketplace.json        # Codex marketplace descriptor
+├── .cursor-plugin/marketplace.json          # Cursor marketplace descriptor
 ├── plugins/
 │   ├── gcore-fastedge/                     # Claude plugin (source of truth for reference docs)
 │   │   ├── .claude-plugin/plugin.json      # version: lockstep with codex
@@ -29,13 +30,19 @@ fastedge-plugin/
 │   │   └── skills/
 │   │       ├── fastedge-docs/reference/    # reference markdown — pipeline source-of-truth
 │   │       └── ...
-│   └── gcore-fastedge-codex/               # Codex plugin (mirrors reference docs)
-│       ├── .codex-plugin/plugin.json       # version: lockstep with claude
-│       ├── .mcp.json                       # MCP server registration (loaded on install)
-│       ├── docs-index.json                 # generated alongside Claude's at release time
+│   ├── gcore-fastedge-codex/               # Codex plugin (mirrors reference docs)
+│   │   ├── .codex-plugin/plugin.json       # version: lockstep with claude
+│   │   ├── .mcp.json                       # MCP server registration (loaded on install)
+│   │   ├── docs-index.json                 # generated alongside Claude's at release time
+│   │   └── skills/
+│   │       ├── fastedge-docs/reference/    # MIRRORED from Claude plugin at release time
+│   │       └── ...
+│   └── gcore-fastedge-cursor/              # Cursor plugin (generated from Claude)
+│       ├── .cursor-plugin/plugin.json      # version: lockstep with claude
+│       ├── mcp.json                        # MCP server registration (loaded on install)
+│       ├── docs-index.json                 # generated alongside the other targets
+│       ├── rules/
 │       └── skills/
-│           ├── fastedge-docs/reference/    # MIRRORED from Claude plugin at release time
-│           └── ...
 ├── scripts/sync/                           # reference-docs pipeline (the work of this repo)
 ├── agent-intent-skills/                    # generator instructions per source repo
 ├── sources.json                            # pipeline config (v2)
@@ -45,21 +52,22 @@ fastedge-plugin/
     └── validate-codex-plugin.yml           # structural checks for Codex plugin
 ```
 
-**Key rule:** Within the repo, the Claude plugin folder is the source of truth for reference markdown. The Codex plugin folder receives a mirror at release time. Neither plugin should read across its own folder at runtime once an end user has installed it.
+**Key rule:** Within the repo, the Claude plugin folder is the source of truth for reference markdown. The Codex and Cursor plugin folders receive mirrors at release time. No plugin should read across its own folder at runtime once an end user has installed it.
 
 ---
 
-## Three published artifacts per release
+## Four published artifacts per release
 
-A single weekly release produces three consumable outputs from the same tag (`vX.Y.Z`):
+A single weekly release produces four consumable outputs from the same tag (`vX.Y.Z`):
 
 | # | Artifact | Consumer | How they get it |
 |---|---|---|---|
 | 1 | Claude plugin (`plugins/gcore-fastedge/`) | Claude Code users | `/plugin marketplace add G-Core/gcore-marketplace` → `/plugin install gcore-fastedge@gcore-marketplace` (canonical). Local/air-gapped fallback: add this repo directly → `gcore-fastedge@gcore-fastedge-marketplace` |
 | 2 | Codex plugin (`plugins/gcore-fastedge-codex/`) | Codex CLI users | `codex plugin marketplace add G-Core/gcore-marketplace` → `gcore-fastedge@gcore-marketplace` (canonical). Local/air-gapped fallback: add this repo directly; resolves via `.agents/plugins/marketplace.json` (`gcore-fastedge-codex-marketplace`) |
-| 3 | Reference-docs tarball (`fastedge-reference-docs-vX.Y.Z.tar.gz`) | `FastEdge-mcp-server` CI | Attached to the GitHub Release. Pulled by MCP server CI on `repository_dispatch: plugin-release` |
+| 3 | Cursor plugin (`plugins/gcore-fastedge-cursor/`) | Cursor users | `agent plugin marketplace add https://github.com/G-Core/fastedge-plugin.git` → interactive installation through `/plugin` |
+| 4 | Reference-docs tarball (`fastedge-reference-docs-vX.Y.Z.tar.gz`) | `FastEdge-mcp-server` CI | Attached to the GitHub Release. Pulled by MCP server CI on `repository_dispatch: plugin-release` |
 
-All three share **one version number**. `scripts/bump-version.sh` writes the same version to both `plugin.json` files in lockstep. The MCP server pins to the same `vX.Y.Z` after each release.
+All four share **one version number**. `scripts/bump-version.sh` writes the same version to all three `plugin.json` files in lockstep. The MCP server pins to the same `vX.Y.Z` after each release.
 
 ---
 
@@ -67,12 +75,18 @@ All three share **one version number**. `scripts/bump-version.sh` writes the sam
 
 ### Canonical: the central `G-Core/gcore-marketplace` repo
 
-The documented install path for both runtimes is the central **`gcore-marketplace`** repo — a thin index that fetches this plugin **in place** via `git-subdir` (no code is copied or forked). It carries two descriptors mirroring this repo's two runtimes:
+The documented install path for Claude Code and Codex is the central **`gcore-marketplace`** repo — a thin index that fetches this plugin **in place** via `git-subdir` (no code is copied or forked). It carries two descriptors mirroring this repo's corresponding runtimes:
 
 - `.claude-plugin/marketplace.json` → fetches `plugins/gcore-fastedge` from `G-Core/fastedge-plugin@main`
 - `.agents/plugins/marketplace.json` → fetches `plugins/gcore-fastedge-codex` from `G-Core/fastedge-plugin@main`
 
-Both list the plugin as `gcore-fastedge` under a marketplace named `gcore-marketplace`, so the install is `gcore-fastedge@gcore-marketplace` in both CLIs. Version still comes from this repo's own `plugin.json` files (the git-subdir source resolves them). **Nothing in this repo needs to change to feed the central marketplace** — keep the two subdirs self-contained and the version fields current.
+Both list the plugin as `gcore-fastedge` under a marketplace named `gcore-marketplace`, so the install is `gcore-fastedge@gcore-marketplace` in both CLIs. Version still comes from this repo's own `plugin.json` files (the git-subdir source resolves them).
+
+Cursor marketplace manifests only document relative plugin sources within the
+same repository. They do not support Claude/Codex-style cross-repository
+`git-subdir` sources. Cursor therefore indexes this repository directly through
+`.cursor-plugin/marketplace.json`, which points to
+`plugins/gcore-fastedge-cursor`.
 
 The two in-repo descriptors below are retained as the **local-clone / air-gapped fallback** (add this repo directly by path). They keep their original marketplace names.
 
@@ -90,9 +104,16 @@ The two in-repo descriptors below are retained as the **local-clone / air-gapped
 - **Install:** Resolves `gcore-fastedge` plugin, sources from `./plugins/gcore-fastedge-codex/` per the `source.path` field.
 - **What ships to the user:** only files under `plugins/gcore-fastedge-codex/`. The sibling Claude folder is **not** present in the install.
 
-### Why both descriptors can coexist
+### Cursor (canonical descriptor)
 
-Claude Code's marketplace reader scans `.claude-plugin/marketplace.json`. Codex's reader scans `.agents/plugins/marketplace.json`. Different conventions, different scan paths, no collision. Each marketplace lists only the plugin its runtime can consume.
+- **Descriptor:** `.cursor-plugin/marketplace.json` at the repository root.
+- **Discovery:** Users run `agent plugin marketplace add https://github.com/G-Core/fastedge-plugin.git`.
+- **Install:** Run `agent`, enter `/plugin`, and install `gcore-fastedge` interactively at user or project scope.
+- **Source:** `./plugins/gcore-fastedge-cursor`, resolved within the same repository checkout.
+
+### Why all three descriptors can coexist
+
+Claude Code scans `.claude-plugin/marketplace.json`, Codex scans `.agents/plugins/marketplace.json`, and Cursor scans `.cursor-plugin/marketplace.json`. Different conventions and scan paths avoid collisions. Each marketplace lists only the plugin its runtime can consume.
 
 ---
 
@@ -135,7 +156,7 @@ Considered alternatives:
 
 | Option | Pros | Cons | Verdict |
 |---|---|---|---|
-| **Current: one repo with both plugins + pipeline** | Single source of truth for reference content; one PR queue; pipeline writes directly to plugin folders; lockstep versioning trivial | Repo hosts two install targets — needs clear README; sibling-folder coupling must be solved via vendoring | **Chosen** |
+| **Current: one repo with all plugins + pipeline** | Single source of truth for reference content; one PR queue; pipeline writes directly to plugin folders; lockstep versioning trivial | Repo hosts three install targets — needs clear README; sibling-folder coupling must be solved via generation and vendoring | **Chosen** |
 | Three repos: `fastedge-plugin-claude`, `fastedge-plugin-codex`, `fastedge-reference-docs` (pipeline) | Each plugin has its own marketplace URL; clean separation | Pipeline must fan out to multiple repos (3× PR review, 3× version drift risk); lockstep releases need cross-repo orchestration; coordinator-of-coordinators problem | Rejected — operational cost outweighs cosmetic benefit |
 | Two repos: one for plugins (both), one for pipeline | Pipeline isolation | Pipeline still has to publish to a separate repo; no real win | Rejected — adds boundary without separation of concern |
 
@@ -147,9 +168,9 @@ If we ever want to split, the natural seam is pulling the pipeline into its own 
 
 | Belongs here | Belongs elsewhere |
 |---|---|
-| Both plugin folders + skills + reference docs | Source repos' own examples (consumed by pipeline) |
+| All plugin folders + skills + reference docs | Source repos' own examples (consumed by pipeline) |
 | Sync pipeline scripts + workflows | MCP server implementation (`FastEdge-mcp-server` repo) |
-| Marketplace descriptors (both runtimes) | MCP server's `repository_dispatch` consumer (lives in MCP repo) |
+| Marketplace descriptors (all runtimes) | MCP server's `repository_dispatch` consumer (lives in MCP repo) |
 | Release workflow + version bumper | Docker image rebuild logic (lives in MCP repo) |
 | Reference-docs artifact emission | npm packages (none of the plugins are npm-published) |
 
@@ -157,9 +178,11 @@ If you find yourself wanting to add a Docker file, an MCP tool definition, or an
 
 ---
 
-## README updates owed
+## Installation documentation
 
-`README.md` and `docs/quickstart.md` were written when only the Claude plugin existed. They need a pass to add Codex install instructions and clarify the dual-runtime model. Track under `REFERENCE_ARTIFACT_PIPELINE.md` Task 7.
+Runtime-specific installation guides live in `docs/quickstart.md`,
+`docs/codex-quickstart.md`, and `docs/cursor-quickstart.md`. Keep the root README
+and each plugin README aligned with those guides when marketplace behavior changes.
 
 ---
 
@@ -180,7 +203,8 @@ If you find yourself wanting to add a Docker file, an MCP tool definition, or an
 
 | Date | Decision | Rationale |
 |---|---|---|
-| 2026-05-20 | Keep `fastedge-plugin` as a single repo hosting both plugins + pipeline | Pipeline-driven content is the core asset; splitting fans out the pipeline with no real separation gain |
+| 2026-05-20 | Keep `fastedge-plugin` as a single repo hosting all plugins + pipeline | Pipeline-driven content is the core asset; splitting fans out the pipeline with no real separation gain |
+| 2026-08-04 | Add a repository-local Cursor marketplace descriptor | Cursor marketplace sources are relative paths; indexing this repo directly avoids unsupported cross-repository sources |
 | 2026-05-20 | Reference docs ship as a GitHub Release tarball attachment, not npm | MCP server CI can pin and download by tag; npm publish adds an account/credential surface for marginal benefit |
 | 2026-05-20 | Codex plugin gets vendored reference docs (not runtime fetch) | Plugins must be offline-functional after install; runtime fetch adds a failure mode for no real win |
 | 2026-05-20 | Plugin version and reference-doc artifact version are the same string | One coordinate to reason about; MCP server pins to `vX.Y.Z` and that pin means "this exact plugin release + this exact docs content" |
