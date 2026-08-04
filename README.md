@@ -1,10 +1,10 @@
-# Gcore FastEdge Plugin for Claude Code
+# Gcore FastEdge Plugins
 
-Build, deploy, and manage serverless WebAssembly applications on [Gcore FastEdge](https://gcore.com/fastedge) — directly from Claude Code.
+Build, deploy, and manage serverless WebAssembly applications on [Gcore FastEdge](https://gcore.com/fastedge) from Claude Code, Codex, or Cursor.
 
-FastEdge runs Wasm workloads on 210+ global edge Points of Presence with sub-millisecond cold starts. This plugin gives Claude the skills to scaffold projects, deploy apps, and manage your edge infrastructure through natural language.
+FastEdge runs Wasm workloads on 210+ global edge Points of Presence with sub-millisecond cold starts. The plugins in this repository let AI coding agents scaffold projects, deploy apps, and manage edge infrastructure through natural language.
 
-## Installation
+## Claude Code Installation
 
 **Option 1: Install from GitHub (recommended)**
 
@@ -49,7 +49,7 @@ codex plugin add gcore-fastedge@gcore-marketplace
 
 **Option 2: Install from a local clone (for development or air-gapped use)**
 
-Clone the repo (same repo hosts both plugins):
+Clone the repo (the same repository hosts all runtime targets):
 
 ```bash
 git clone https://github.com/G-Core/fastedge-plugin.git
@@ -64,13 +64,35 @@ codex plugin add gcore-fastedge@gcore-fastedge-codex-marketplace
 
 See [docs/codex-quickstart.md](docs/codex-quickstart.md) for full Codex setup details.
 
+## Cursor Installation
+
+Add this repository as a personal Cursor marketplace:
+
+```bash
+agent plugin marketplace add https://github.com/G-Core/fastedge-plugin.git
+```
+
+Then run `agent`, enter `/plugin`, open the **Marketplace** tab, and install
+**Gcore FastEdge** at user or project scope. Cursor currently performs plugin
+installation interactively; the CLI command above registers the marketplace.
+
+To refresh or remove the marketplace later:
+
+```bash
+agent plugin marketplace update gcore-fastedge-marketplace
+agent plugin marketplace remove gcore-fastedge-marketplace
+```
+
+See [docs/cursor-quickstart.md](docs/cursor-quickstart.md) for credential setup,
+team marketplace installation, and troubleshooting.
+
 ---
 
 ## Setup
 
 ### Prerequisites
 
-The plugin runs build, deploy, and management operations through the [FastEdge MCP server](https://github.com/G-Core/FastEdge-mcp-server) — a Docker image that ships the toolchains (Rust, Node, wasm targets) and FastEdge API client. Installing the plugin auto-loads its bundled `.mcp.json`, which launches the MCP server on demand.
+The plugins run build, deploy, and management operations through the [FastEdge MCP server](https://github.com/G-Core/FastEdge-mcp-server) — a Docker image that ships the toolchains (Rust, Node, wasm targets) and FastEdge API client. Installing a plugin auto-loads its bundled MCP configuration, which launches the server on demand.
 
 You need:
 
@@ -137,6 +159,20 @@ An `export` in your shell rc gives you a personal default across all projects.
 
 > Whatever value is in the shell when you launch `codex` is the value forwarded to the server. If a stale `GCORE_API_KEY` is exported in your rc, it will shadow everything else — unset or fix it there.
 
+### Credentials for Cursor on macOS
+
+Cursor CLI inherits `GCORE_API_KEY` from the shell that launches it. The macOS
+GUI does not normally inherit variables exported from `.zshrc`, so set the key
+in the GUI session and restart Cursor:
+
+```bash
+launchctl setenv GCORE_API_KEY "your-api-key"
+launchctl setenv GCORE_API_BASE "https://api.gcore.com"
+```
+
+The Cursor plugin forwards these variables by name to the MCP Docker container;
+the key is not stored in the plugin or marketplace manifest.
+
 ### Optional: preprod testing
 
 Set `GCORE_API_BASE` (via any of the methods above) to override the API host (default: `https://api.gcore.com`; preprod: `https://api.preprod.world`). The MCP server appends `/fastedge/v1` itself.
@@ -147,12 +183,13 @@ If you decline to run Docker, the deploy and manage skills can fall back to your
 
 ## Available Skills
 
-The two plugins share the same skill set but use different command prefixes:
+The three plugins share the same skill set but use different invocation styles:
 
-| CLI             | Prefix                   | Example                        |
-| --------------- | ------------------------ | ------------------------------ |
-| **Claude Code** | `/gcore-fastedge:`       | `/gcore-fastedge:deploy`       |
+| CLI             | Prefix             | Example                  |
+| --------------- | ------------------ | ------------------------ |
+| **Claude Code** | `/gcore-fastedge:` | `/gcore-fastedge:deploy` |
 | **Codex**       | `$gcore-fastedge:` | `$gcore-fastedge:deploy` |
+| **Cursor**      | `/`                | `/deploy`                |
 
 | Skill         | Claude Code command                                                              | Description                                                                |
 | ------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
@@ -164,11 +201,13 @@ The two plugins share the same skill set but use different command prefixes:
 | **Live-test** | `/gcore-fastedge:live-test`                                                      | Build, deploy, and run scenario fixtures against the live edge             |
 | **Docs**      | Auto-invoked                                                                     | FastEdge platform docs, SDK reference, and best practices                  |
 
-Replace `/gcore-fastedge:` with `$gcore-fastedge:` for the equivalent Codex command.
+Replace `/gcore-fastedge:` with `$gcore-fastedge:` for Codex. In Cursor, invoke
+the corresponding skill as `/scaffold`, `/deploy`, `/manage`, `/test`, `/debug`,
+or `/live-test`, or ask the agent naturally.
 
 ## Example Usage
 
-Ask Claude naturally:
+Ask your coding agent naturally:
 
 - **"Scaffold a new HTTP app called my-api"** — creates a TypeScript project from SDK blueprints
 - **"Deploy this app to FastEdge"** — builds the Wasm binary and deploys it to the edge
@@ -182,6 +221,8 @@ fastedge-plugin/
 ├── .claude-plugin/
 │   ├── marketplace.json              # Claude Code marketplace descriptor
 │   └── plugin.json
+├── .cursor-plugin/
+│   └── marketplace.json              # Cursor marketplace descriptor
 └── plugins/
     ├── gcore-fastedge/               # Claude Code plugin
     │   ├── .claude-plugin/plugin.json
@@ -198,10 +239,16 @@ fastedge-plugin/
     │       ├── live-test/            # Verify against the deployed edge
     │       └── fastedge-docs/        # Auto-invoked SDK / platform docs
     │           └── reference/        # http/, cdn/, platform/ + SDK references
-    └── gcore-fastedge-codex/         # Codex plugin (shares the same MCP server)
-        ├── .codex-plugin/
-        ├── .mcp.json
+    ├── gcore-fastedge-codex/         # Codex plugin (shares the same MCP server)
+    │   ├── .codex-plugin/
+    │   ├── .mcp.json
+    │   ├── docs-index.json
+    │   └── skills/
+    └── gcore-fastedge-cursor/        # Cursor plugin
+        ├── .cursor-plugin/plugin.json
+        ├── mcp.json
         ├── docs-index.json
+        ├── rules/
         └── skills/
 ```
 

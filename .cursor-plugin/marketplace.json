@@ -1,0 +1,12 @@
+{
+  "name": "gcore-fastedge-marketplace",
+  "owner": {
+    "name": "Gcore"
+  },
+  "plugins": [
+    {
+      "name": "gcore-fastedge",
+      "source": "./plugins/gcore-fastedge-cursor"
+    }
+  ]
+}

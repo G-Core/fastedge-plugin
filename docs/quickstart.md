@@ -18,7 +18,7 @@ From inside Claude Code, add the Gcore marketplace from GitHub and install:
 /plugin install gcore-fastedge@gcore-marketplace
 ```
 
-This persists across sessions. For a local-clone or air-gapped install, see the [README](../README.md#installation).
+This persists across sessions. For a local-clone or air-gapped install, see the [README](../README.md#claude-code-installation).
 
 ## Create Your First App
 

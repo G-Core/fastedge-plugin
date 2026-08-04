@@ -21,6 +21,7 @@ Usage: bash scripts/validate-cursor-plugin.sh
 
 Checks:
   - Required committed and generated files exist (see header for generators)
+  - marketplace.json exposes the Cursor plugin from the repository root
   - plugin.json is valid; name and version in lockstep with the Claude plugin
   - mcp.json declares the fastedge-assistant docker server config
   - every Claude skill has a generated Cursor SKILL.md (frontmatter + no
@@ -45,6 +46,7 @@ command -v jq >/dev/null 2>&1 || { echo "ERROR: jq is required but not found. In
 
 CLAUDE_DIR="${REPO_ROOT}/plugins/gcore-fastedge"
 PLUGIN_DIR="${REPO_ROOT}/plugins/gcore-fastedge-cursor"
+MARKETPLACE_JSON="${REPO_ROOT}/.cursor-plugin/marketplace.json"
 PLUGIN_JSON="${PLUGIN_DIR}/.cursor-plugin/plugin.json"
 MCP_JSON="${PLUGIN_DIR}/mcp.json"
 RULE_MDC="${PLUGIN_DIR}/rules/fastedge-knowledge.mdc"
@@ -61,6 +63,7 @@ check_file() {
 
 GENERATE_HINT="run: node scripts/sync/generate-cursor-plugin.mjs && bash scripts/sync/mirror-reference.sh gcore-fastedge-cursor && bash scripts/sync/generate-docs-index.sh"
 
+check_file "$MARKETPLACE_JSON"
 check_file "$PLUGIN_JSON"
 check_file "$MCP_JSON"
 check_file "${PLUGIN_DIR}/README.md"
@@ -71,10 +74,18 @@ ok "Required committed files exist"
 [[ -f "$DOCS_INDEX_JSON" ]] || err "Missing generated docs-index: $DOCS_INDEX_JSON — $GENERATE_HINT"
 ok "Generated files exist"
 
+jq empty "$MARKETPLACE_JSON" >/dev/null || err "Invalid JSON: $MARKETPLACE_JSON"
 jq empty "$PLUGIN_JSON" >/dev/null || err "Invalid JSON: $PLUGIN_JSON"
 jq empty "$MCP_JSON" >/dev/null || err "Invalid JSON: $MCP_JSON"
 jq empty "$DOCS_INDEX_JSON" >/dev/null || err "Invalid JSON: $DOCS_INDEX_JSON"
 ok "JSON files parse"
+
+marketplace_name="$(jq -r '.name // empty' "$MARKETPLACE_JSON")"
+[[ "$marketplace_name" == "gcore-fastedge-marketplace" ]] || err "marketplace.json name must be gcore-fastedge-marketplace (got: ${marketplace_name:-<missing>})"
+
+marketplace_plugin_count="$(jq '[(.plugins // [])[] | select(.name == "gcore-fastedge" and .source == "./plugins/gcore-fastedge-cursor")] | length' "$MARKETPLACE_JSON")"
+[[ "$marketplace_plugin_count" -eq 1 ]] || err "marketplace.json must expose gcore-fastedge from ./plugins/gcore-fastedge-cursor exactly once"
+ok "marketplace.json Cursor plugin source valid"
 
 plugin_name="$(jq -r '.name' "$PLUGIN_JSON")"
 [[ "$plugin_name" == "gcore-fastedge" ]] || err "plugin.json name must be gcore-fastedge (got: $plugin_name)"
