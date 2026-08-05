@@ -14,8 +14,8 @@ name: Sync Reference Docs
 #   FASTEDGE_APP_ID          — GitHub App numeric ID (fastedge-plugin-sync)
 #   FASTEDGE_APP_PRIVATE_KEY — GitHub App private key (.pem)
 #                              Token generated via actions/create-github-app-token@v1
-#                              and exported as GH_TOKEN for all steps (validate,
-#                              fetch, PR creation/updates, baseline tag pushes)
+#                              and passed as GH_TOKEN to the steps that need it
+#                              (validate, git credentials, sync).
 
 on:
   workflow_dispatch:
@@ -55,35 +55,32 @@ permissions:
   contents: write # push annotated baseline tags + PR branch commits
   pull-requests: write # create / edit PRs via gh CLI
 
-env:
-  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-
 jobs:
   sync-reference-docs:
-    runs-on: [self-hosted, ubuntu-22-04, regular]
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout plugin repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           fetch-depth: 0
           ref: ${{ github.ref }}
 
       - name: Generate GitHub App token
         id: app-token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
         with:
           app-id: ${{ secrets.FASTEDGE_APP_ID }}
           private-key: ${{ secrets.FASTEDGE_APP_PRIVATE_KEY }}
 
-      - name: Export token for gh CLI
-        run: echo "GH_TOKEN=${{ steps.app-token.outputs.token }}" >> "$GITHUB_ENV"
-
       - name: Validate sources.json
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: bash scripts/sync/validate-sources.sh sources.json
 
       - name: Configure git credentials
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: gh auth setup-git
 
       - name: Setup Node.js
@@ -94,6 +91,9 @@ jobs:
 
       - name: Sync reference docs
         env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           # workflow_dispatch inputs (empty for repository_dispatch)
           DRY_RUN: ${{ inputs.dry_run || 'false' }}
           FORCE_RUN: ${{ inputs.force_run || 'false' }}

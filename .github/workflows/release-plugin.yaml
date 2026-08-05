@@ -48,17 +48,17 @@ concurrency:
 
 jobs:
   release:
-    runs-on: [self-hosted, ubuntu-22-04, regular]
+    runs-on: ubuntu-latest
     steps:
       - name: Generate GitHub App token (this repo)
         id: app-token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
         with:
           app-id: ${{ secrets.FASTEDGE_APP_ID }}
           private-key: ${{ secrets.FASTEDGE_APP_PRIVATE_KEY }}
 
       - name: Checkout main
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           fetch-depth: 0
           ref: main
@@ -179,7 +179,7 @@ jobs:
       - name: Generate cross-repo token for MCP server
         if: steps.detect.outputs.changed == 'true' || inputs.force == true
         id: mcp-token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
         with:
           app-id: ${{ secrets.FASTEDGE_APP_ID }}
           private-key: ${{ secrets.FASTEDGE_APP_PRIVATE_KEY }}
