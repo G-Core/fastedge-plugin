@@ -40,6 +40,16 @@
       "intent_dir": "agent-intent-skills/proxy-wasm-sdk-as/",
       "generator_agent": "claude",
       "reviewer_agent": "openai"
+    },
+    {
+      "id": "fastedge-templates",
+      "github_url": "https://github.com/G-Core/FastEdge-templates",
+      "ref": "main",
+      "trigger": "release",
+      "contract_path": "fastedge-plugin-source/",
+      "intent_dir": "agent-intent-skills/fastedge-templates/",
+      "generator_agent": "claude",
+      "reviewer_agent": "openai"
     }
   ]
 }
