@@ -33,6 +33,7 @@ on:
           - fastedge-sdk-js
           - fastedge-sdk-rust
           - proxy-wasm-sdk-as
+          - fastedge-templates
       dry_run:
         description: >
           When true, run fetch / generate / review but skip file writes,
