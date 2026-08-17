@@ -29,10 +29,19 @@ posture — this is an MFA gate, a wrong choice here is a real vulnerability, no
    lets the origin verify a signed proof via JWKS and bind it to `sub`. Preserve the security
    warning about not trusting an unsigned forwarded-identity header verbatim — this is the
    difference between a real MFA gate and a bypassable one (cite the header-smuggling CVE class
-   framing from source, don't soften it to a generic "be careful").
+   framing from source, don't soften it to a generic "be careful"). For Profile B, explicitly
+   instruct the origin's verification call to also check the proof's `aud` claim against
+   `MFA_AUDIENCE` (from `context/architecture/storage-and-secrets.md` — `MFA_AUDIENCE` is embedded
+   as `aud` in the proof by the edge, same as it is for `mfa_session`, but neither
+   `context/integration.md` nor a naive reading of the JWKS-verification step mentions the origin
+   needs to check it). Say this is a required check, not optional — verifying the signature alone
+   without checking `aud` accepts a proof that was never meant for this deployment.
 
 3. **Shared configuration table** — `HANDOFF_KEY` and JWKS, exactly which side (origin vs. edge)
-   holds which key/endpoint, preserved from the source table verbatim.
+   holds which key/endpoint, preserved from the source table verbatim, plus a `MFA_AUDIENCE` row:
+   embedded as `aud` on both `mfa_session` and the Profile-B proof by the edge; the edge filter
+   enforces it on `mfa_session` (Profile A) and the origin **must** enforce it on the proof
+   (Profile B) — this is a shared value, not edge-internal-only, unlike `MFA_SESSION_KEY`.
 
 4. **Required deployment precondition** — the origin must be reachable **only** through the CDN
    (IP allowlist / origin auth / tunnel); state this as a hard requirement, not a suggestion —
@@ -49,6 +58,10 @@ posture — this is an MFA gate, a wrong choice here is a real vulnerability, no
   implements or needs to know about)
 
 ## Quality bar
-Every env var name, route, and the HMAC/JWT shape must match `edge-totp/context/integration.md`
-and `edge-totp/README.md` verbatim. Security warnings must be preserved at their original
-strength — do not downgrade a "must"/"required" into a "should"/"recommended".
+Every env var name, route, and the HMAC/JWT shape must match `edge-totp/context/integration.md`,
+`edge-totp/README.md`, and `edge-totp/context/architecture/storage-and-secrets.md` verbatim.
+Security warnings must be preserved at their original strength — do not downgrade a
+"must"/"required" into a "should"/"recommended". A Profile B writeup that verifies the proof's
+signature but omits the `aud`/`MFA_AUDIENCE` check is incomplete — treat that as a required-
+content gap, not an acceptable simplification, the same way an `edge-sso` cookie/header writeup
+without a JWKS endpoint or exact header list is incomplete.
