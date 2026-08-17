@@ -3,10 +3,19 @@ name: Sync Reference Docs
 # Trigger 1: Manual dispatch (workflow_dispatch)
 # Processes repos with trigger "schedule" or "both", OR a specific repo by ID.
 #
-# Trigger 2: Repository dispatch (repository_dispatch) — T015 / US3.
+# Trigger 2: Weekly cron (schedule) — every Tuesday 06:00 UTC.
+# No inputs are available on a schedule event, so FILTER_REPO_ID/DRY_RUN/
+# FORCE_RUN all fall through to their "(all scheduled)" defaults below —
+# equivalent to a manual workflow_dispatch with no repo selected. Sweeps
+# every repo with trigger "schedule" or "both" and opens/updates PRs for
+# whatever changed. A dev reviews and merges these PRs, then
+# hand-triggers release-plugin whenever they're ready to ship.
+#
+# Trigger 3: Repository dispatch (repository_dispatch) — T015 / US3.
 # A source repo sends event_type "fastedge-ref-update" with client_payload:
 #   { "source_repo_id": "<id>", "ref": "<tag>", "commit": "<sha>" }
 # Processes only the identified repo (must exist in sources.json).
+# Not yet sent by any source repo — deferred, kept for when it's wired up.
 #
 # Secrets required:
 #   ANTHROPIC_API_KEY  — Claude generator agent
@@ -18,6 +27,8 @@ name: Sync Reference Docs
 #                              (validate, git credentials, sync).
 
 on:
+  schedule:
+    - cron: "0 6 * * 2" # Every Tuesday at 06:00 UTC
   workflow_dispatch:
     inputs:
       source_repo_id:
@@ -33,6 +44,7 @@ on:
           - fastedge-sdk-js
           - fastedge-sdk-rust
           - proxy-wasm-sdk-as
+          - fastedge-templates
       dry_run:
         description: >
           When true, run fetch / generate / review but skip file writes,

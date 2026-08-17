@@ -21,6 +21,9 @@ Answer FastEdge questions with high precision and low token usage using local in
 - Prefer 1-3 section reads by line range.
 - Use full-doc reads only if section-level data is insufficient.
 - Prioritize topics with matching `tags`, `languages`, and `app_types`.
+- Before proposing to hand-build a capability from scratch, check for a matching `templates`
+  topic in the index first — it may already exist as a maintained, ready-to-deploy bolt-on
+  installed from the Gcore portal, not something to scaffold.
 
 ## Output rules
 

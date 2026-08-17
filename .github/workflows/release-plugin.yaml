@@ -1,4 +1,4 @@
-# release-plugin.yml — Weekly release of fastedge-plugin.
+# release-plugin.yml — Manual release of fastedge-plugin.
 #
 # Checks whether reference docs changed since the last release tag.
 # If so: regenerates docs-index.json, bumps the plugin version, pushes a
@@ -6,6 +6,11 @@
 # reference-docs artifact, and dispatches to FastEdge-mcp-server — all
 # without waiting for PR approval. A PR is opened for human review; merging
 # it lands the version bump on main. The tag/release/dispatch are unblocked.
+#
+# Deliberately manual-only for now: sync-reference-docs runs on a weekly
+# cron and opens PRs for review, but nothing auto-releases once those PRs
+# are merged — a dev triggers this workflow by hand after reviewing what
+# landed on main. Revisit once repository_dispatch-driven sync is trusted.
 #
 # All three consumers (Claude plugin, Codex plugin, MCP server)
 # share the same version number after each release.
@@ -19,8 +24,6 @@
 name: Release Plugin
 
 on:
-  schedule:
-    - cron: "0 6 * * 2" # Every Tuesday at 06:00 UTC
   workflow_dispatch:
     inputs:
       bump_type:

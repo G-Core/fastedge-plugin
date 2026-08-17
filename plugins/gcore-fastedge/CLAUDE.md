@@ -35,6 +35,11 @@ Only after all three are confirmed, use **parallel sub-agents** to research. Do 
 - Explicit: "I want a CDN filter", "HTTP app in TypeScript", "Proxy-WASM filter in Rust"
 - Ambiguous (always ask): "gateway for CDN resources", "auth for CDN traffic", "edge middleware", "SAML at the edge", "protect my CDN"
 
+**Before scaffolding anything**, check `skills/fastedge-docs/reference/templates/catalog.md` — it's
+the current list of maintained, ready-to-deploy bolt-on templates (kept up to date automatically
+as new ones are added), and hand-building a capability it already covers is very likely the wrong
+call.
+
 ### Scaffolding new projects — HARD CONSTRAINT
 
 **Never manually create project files (package.json, tsconfig.json, src/index.ts, Cargo.toml, etc.) from scratch.** Always use the `/gcore-fastedge:scaffold` skill, which creates projects from **blueprint reference files** in `skills/scaffold/reference/`.
