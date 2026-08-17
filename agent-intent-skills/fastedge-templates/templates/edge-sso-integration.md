@@ -21,8 +21,21 @@ exact — a customer's origin code will call these literally.
 ## Required sections (in this order)
 
 1. **What `SSO_VARIANT` means for the origin** — the three modes (gate-only / cookie / header)
-   and, for each, what the origin actually receives (nothing / a verifiable JWT cookie / signed
-   `x-sso-*` headers) and what it's responsible for checking itself.
+   and, for each, what the origin actually receives and what it's responsible for checking
+   itself. This section must include, not just gesture at:
+   - The signing algorithm per variant (HS256 for gate-only/header, ES256 for cookie) — from
+     `context/architecture/auth-modes.md` / `security.md`.
+   - **For `cookie`**: the exact JWKS endpoint (`GET /auth/.well-known/jwks.json`, mounted only
+     for the cookie variant), and that the origin verifies with a standard JWKS client (e.g.
+     `createRemoteJWKSet`) — never invents its own verification approach. From
+     `context/architecture/overview.md`.
+   - **For `header`**: the complete, exact list of injected headers — `x-sso-user`, `x-sso-email`,
+     `x-sso-name`, `x-sso-picture`, `x-sso-given-name`, `x-sso-family-name` — pulled verbatim from
+     `cdn-filter/src/lib.rs` (these names exist nowhere in markdown source; the code comments are
+     the only ground truth, extract them like doc comments). State the anti-spoofing contract:
+     the filter clears any client-supplied `x-sso-*` header before injecting verified values, and
+     the origin **must** treat an empty `x-sso-*` header as absent (the platform blanks a cleared
+     header to empty rather than removing it) — from `context/architecture/security.md`.
 
 2. **Routes table** — every route the auth-app exposes under `AUTH_PREFIX`, method, and purpose,
    verbatim from source. Note which routes are meant to be called by a browser vs. by a
@@ -51,5 +64,10 @@ exact — a customer's origin code will call these literally.
   ever surfaced separately — not needed for origin integration)
 
 ## Quality bar
-Every route path, JSON field name, and env var name must match `edge-sso/context/design/
-integration.md` and `edge-sso/README.md` verbatim. Do not paraphrase route paths or field names.
+Every route path, JSON field name, env var name, and `x-sso-*` header name must match source
+verbatim — `edge-sso/context/design/integration.md`, `edge-sso/README.md`,
+`edge-sso/context/architecture/{auth-modes,overview,security}.md`, and
+`edge-sso/cdn-filter/src/lib.rs` for the header names specifically. Do not paraphrase route
+paths, field names, or header names. A `cookie` or `header` variant integration described
+without a JWKS endpoint or without the exact header list, respectively, is incomplete — treat
+that as a required-content gap, not an acceptable simplification.
