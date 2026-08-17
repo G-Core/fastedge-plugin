@@ -4,7 +4,7 @@
     - id: fastedge-sdk-js
       ref: main
       commit: 81145a9a43ec499240c687bd49376ab20c72b11c
-      updated: 2026-07-23
+      updated: 2026-08-17
 -->
 
 ---
@@ -40,7 +40,7 @@ Build script: `fastedge-build src/index.js dist/crypto-hmac-jwt.wasm`
 import { getSecret } from 'fastedge::secret';
 ```
 
-`TextEncoder` and `TextDecoder` are globals available in the FastEdge runtime. Instantiate them once as top-level singletons:
+`TextEncoder` and `TextDecoder` are globals available in the FastEdge runtime. Instantiate them once as top-level singletons reused across requests:
 
 ```js
 const encoder = new TextEncoder();
@@ -153,6 +153,16 @@ async function verifyJwtHs256(token, secret) {
 
 Returns `boolean`. Throw `'invalid signature'` when `false`.
 
+#### Token structure
+
+The token is split into three `.`-separated segments and destructured:
+
+```js
+const [encodedHeader, encodedPayload, encodedSignature] = parts;
+```
+
+The signed data is the concatenation `encodedHeader + '.' + encodedPayload` encoded as UTF-8 bytes.
+
 #### Expiry check
 
 ```js
@@ -254,13 +264,6 @@ Configure via the FastEdge secrets API or the manage skill before deploying.
 | `verifyJwtHs256` throws | 401 | Auth-layer errors: bad signature, expired token, malformed token |
 | `JWT_SECRET` not configured | 500 | Infrastructure/config fault — not a client error |
 
-## See Also
-
-- fastedge::secret reference (getSecret API)
-- WebCrypto API (crypto.subtle) — available as a global in the FastEdge JS runtime
-- http-base skeleton (base event listener and Response patterns)
-- FastEdge deploy skill (building and uploading WASM, configuring secrets)
-
 ## Source Material
 
 ### FILE: examples/crypto-hmac-jwt/src/index.js
@@ -357,3 +360,10 @@ addEventListener('fetch', (event) => {
   }
 }
 ```
+
+## See Also
+
+- fastedge::secret reference (getSecret API)
+- WebCrypto API (crypto.subtle) — available as a global in the FastEdge JS runtime
+- http-base skeleton (base event listener and Response patterns)
+- FastEdge deploy skill (building and uploading WASM, configuring secrets)

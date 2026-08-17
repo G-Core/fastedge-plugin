@@ -4,7 +4,7 @@
     - id: fastedge-sdk-js
       ref: main
       commit: 81145a9a43ec499240c687bd49376ab20c72b11c
-      updated: 2026-07-23
+      updated: 2026-08-17
 -->
 
 ---
@@ -145,3 +145,49 @@ From `package.json`:
 - sdk-reference-js (fetch API, Response constructor, addEventListener)
 - deploy skill reference (uploading and registering the compiled WASM binary)
 - outbound-fetch feature blueprint (fetch without body transformation)
+
+## Source Material
+
+### FILE: examples/outbound-modify-response/src/index.js
+
+```js
+async function app(event) {
+  const outboundResponse = await fetch('http://jsonplaceholder.typicode.com/users');
+  const users = await outboundResponse.json();
+  return new Response(
+    JSON.stringify({
+      users: users.slice(0, 5),
+      total: 5,
+      skip: 0,
+      limit: 30,
+    }),
+    {
+      status: 200,
+      headers: {
+        'content-type': 'application/json',
+      },
+    },
+  );
+}
+
+addEventListener('fetch', (event) => {
+  event.respondWith(app(event));
+});
+```
+
+### FILE: examples/outbound-modify-response/package.json
+
+```json
+{
+  "name": "fastedge-example-outbound-modify-response",
+  "version": "1.0.0",
+  "description": "FastEdge JS example: fetch and modify outbound response",
+  "type": "module",
+  "scripts": {
+    "build": "fastedge-build src/index.js dist/outbound-modify-response.wasm"
+  },
+  "dependencies": {
+    "@gcoredev/fastedge-sdk-js": "^2.2.2"
+  }
+}
+```

@@ -4,7 +4,7 @@
     - id: fastedge-sdk-js
       ref: main
       commit: 81145a9a43ec499240c687bd49376ab20c72b11c
-      updated: 2026-07-23
+      updated: 2026-08-17
 -->
 
 ---
@@ -153,7 +153,6 @@ addEventListener('fetch', (event) => {
   event.respondWith(eventHandler(event));
 });
 ```
-
 
 ### FILE: examples/headers/package.json
 

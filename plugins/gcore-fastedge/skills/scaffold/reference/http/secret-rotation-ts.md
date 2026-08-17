@@ -4,7 +4,7 @@
     - id: fastedge-sdk-js
       ref: main
       commit: 81145a9a43ec499240c687bd49376ab20c72b11c
-      updated: 2026-07-23
+      updated: 2026-08-17
 -->
 
 ---
@@ -45,10 +45,10 @@ import { getSecret, getSecretEffectiveAt } from 'fastedge::secret';
 
 #### `getSecretEffectiveAt(name, slot)`
 
-| Parameter | Type   | Description                                  |
-|-----------|--------|----------------------------------------------|
-| `name`    | string | Secret name (key)                            |
-| `slot`    | number | Slot index or unix timestamp (non-negative integer) |
+| Parameter | Type   | Description                                                        |
+|-----------|--------|--------------------------------------------------------------------|
+| `name`    | string | Secret name (key)                                                  |
+| `slot`    | number | Slot index or unix timestamp (non-negative integer)                |
 
 - **Returns**: `string | null` — the value from the highest slot `<= slot`, or `null` if no slot satisfies the constraint.
 - **Slot model**: slots are interpreted as either indices (`0, 1, 2, …`) or unix timestamps. The host resolves by returning the value stored at the highest slot number that is less than or equal to the supplied slot number.
