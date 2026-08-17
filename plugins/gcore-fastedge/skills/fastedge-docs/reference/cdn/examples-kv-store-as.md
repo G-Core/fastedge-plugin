@@ -3,8 +3,8 @@
   sources:
     - id: proxy-wasm-sdk-as
       ref: master
-      commit: 60f25c7bd35564e5bafb421be7f37aa4acf1bf81
-      updated: 2026-05-20
+      commit: 8e3bb621bc013a0aed7e52122066b417ad62a207
+      updated: 2026-08-17
 -->
 
 ---
@@ -165,12 +165,14 @@ if (!end_of_stream) {
 
 **Execution flow**:
 1. Read query string: `get_property("request.query")` → `ArrayBuffer`, decode to string
-2. Validate query params via `validateQueryParams(query)` → `Map<string, string>`
-3. Open store: `KvStore.open(store)` — send error response if `null`
-4. Dispatch on `action` parameter
-5. Serialize result map with `stringifyMap` → JSON string
-6. Replace response body: `set_buffer_bytes(BufferTypeValues.HttpResponseBody, 0, body_buffer_length, encoded)`
-7. Returns `FilterDataStatusValues.Continue`
+2. If query string is empty, send error response
+3. Validate query params via `validateQueryParams(query)` → `Map<string, string>`
+4. If params map has key `"error"`, send error response
+5. Open store: `KvStore.open(store)` — send error response if `null`
+6. Dispatch on `action` parameter
+7. Serialize result map with `stringifyMap` → JSON string
+8. Replace response body: `set_buffer_bytes(BufferTypeValues.HttpResponseBody, 0, body_buffer_length, encoded)`
+9. Returns `FilterDataStatusValues.Continue`
 
 **Error path**: calls `sendErrorResponse(msg, body_buffer_length)` which:
 - Sets `response.status` to `545` via `set_property("response.status", ...)`
@@ -321,6 +323,7 @@ npm run asbuild:release # release only
 - `onResponseBody` must buffer until `end_of_stream` is `true`; return `StopIterationAndBuffer` otherwise
 - `min` and `max` for `zrange` are received as strings from query params and must be parsed with `parseFloat`
 - `response.status` set via `set_property` in `onResponseBody` is advisory only — the origin HTTP status passes through to the client; the JSON error body is the authoritative error signal
+- Empty query string (`byteLength === 0`) is handled before `validateQueryParams` is called; results in a `545` error response with message `"App must be called with query parameters"`
 
 ---
 

@@ -3,8 +3,8 @@
   sources:
     - id: proxy-wasm-sdk-as
       ref: master
-      commit: 60f25c7bd35564e5bafb421be7f37aa4acf1bf81
-      updated: 2026-05-20
+      commit: 8e3bb621bc013a0aed7e52122066b417ad62a207
+      updated: 2026-08-17
 -->
 
 ---
@@ -132,7 +132,21 @@ const countrySpecificOrigin = getEnv(countryCode);
 - Returns `""` (empty string) when no matching env var is set.
 - Do **not** use a null/undefined check; use an empty-string check.
 
-### Step 4 — Read request path
+### Step 4 — Read request host (optional)
+
+```typescript
+const hostArrBuf = get_property("request.host");
+if (hostArrBuf.byteLength > 0) {
+  const host = String.UTF8.decode(hostArrBuf);
+  log(LogLevelValues.info, `Provided Host: ${host}`);
+}
+```
+
+- `get_property("request.host")` returns `ArrayBuffer`; decode with `String.UTF8.decode`.
+- Host is read for observability (logging) only; it does not affect routing logic.
+- A zero-length buffer means the Host header was absent — no error is raised.
+
+### Step 5 — Read request path
 
 ```typescript
 const pathArrBuf = get_property("request.path");
@@ -151,7 +165,7 @@ const path = String.UTF8.decode(pathArrBuf);
 - `get_property("request.path")` returns `ArrayBuffer`; decode with `String.UTF8.decode`.
 - Missing path → 500 response, stop iteration.
 
-### Step 5 — Build and set target URL
+### Step 6 — Build and set target URL
 
 ```typescript
 const origin = countrySpecificOrigin === "" ? defaultOrigin : countrySpecificOrigin;
@@ -212,13 +226,15 @@ registerRootContext((context_id: u32) => {
 ## Logging
 
 ```typescript
-log(LogLevelValues.info, `Country code: ( ${countryCode} ): ${matchedOrigin}`);
+log(LogLevelValues.info, "onRequestHeaders >> ");
+log(LogLevelValues.info, `Country code: ( ${countryCode} ): ${countrySpecificOrigin === "" ? "no matching origin" : countrySpecificOrigin}`);
 log(LogLevelValues.info, `Provided Host: ${host}`);
 log(LogLevelValues.info, `request-url: ${requestUrl}`);
 ```
 
 - Log level is set to `info` in `createContext` via `setLogLevel(LogLevelValues.info)`.
 - Logs are visible in FastEdge application logs.
+- Country code log shows `"no matching origin"` when no country-specific env var is set.
 
 ## Build
 
@@ -252,3 +268,185 @@ Build outputs:
 - platform-overview (runtime properties, Geo-IP data)
 - deploy skill reference
 - manage skill reference (environment variable configuration)
+
+## Source Material
+
+### FILE: examples/geoRedirect/assembly/index.ts
+
+```ts
+export * from "@gcoredev/proxy-wasm-sdk-as/assembly/proxy"; // this exports the required functions for the proxy to interact with us.
+import {
+  Context,
+  FilterHeadersStatusValues,
+  get_property,
+  log,
+  LogLevelValues,
+  registerRootContext,
+  RootContext,
+  send_http_response,
+  set_property,
+} from "@gcoredev/proxy-wasm-sdk-as/assembly";
+import {
+  getEnv,
+  setLogLevel,
+} from "@gcoredev/proxy-wasm-sdk-as/assembly/fastedge";
+
+const BAD_GATEWAY: u32 = 502;
+const INTERNAL_SERVER_ERROR: u32 = 500;
+
+class GeoRedirectRoot extends RootContext {
+  createContext(context_id: u32): Context {
+    setLogLevel(LogLevelValues.info);
+    return new GeoRedirect(context_id, this);
+  }
+}
+
+class GeoRedirect extends Context {
+  constructor(context_id: u32, root_context: GeoRedirectRoot) {
+    super(context_id, root_context);
+  }
+
+  onRequestHeaders(a: u32, end_of_stream: bool): FilterHeadersStatusValues {
+    log(LogLevelValues.info, "onRequestHeaders >> ");
+
+    const defaultOrigin = getEnv("DEFAULT");
+
+    if (!defaultOrigin) {
+      send_http_response(
+        INTERNAL_SERVER_ERROR,
+        "internal server error",
+        String.UTF8.encode("App misconfigured - DEFAULT must be set"),
+        [],
+      );
+      return FilterHeadersStatusValues.StopIteration;
+    }
+
+    const countryArrBuf = get_property("request.country");
+    if (countryArrBuf.byteLength === 0) {
+      send_http_response(
+        BAD_GATEWAY,
+        "bad gateway",
+        String.UTF8.encode("Missing country information"),
+        [],
+      );
+      return FilterHeadersStatusValues.StopIteration;
+    }
+    const countryCode = String.UTF8.decode(countryArrBuf);
+    const countrySpecificOrigin = getEnv(countryCode);
+
+    log(
+      LogLevelValues.info,
+      `Country code: ( ${countryCode} ): ${
+        countrySpecificOrigin === "" ? "no matching origin" : countrySpecificOrigin
+      }`,
+    );
+
+    const hostArrBuf = get_property("request.host");
+    if (hostArrBuf.byteLength > 0) {
+      const host = String.UTF8.decode(hostArrBuf);
+      log(LogLevelValues.info, `Provided Host: ${host}`);
+    }
+
+    const pathArrBuf = get_property("request.path");
+    if (pathArrBuf.byteLength === 0) {
+      send_http_response(
+        INTERNAL_SERVER_ERROR,
+        "internal server error",
+        String.UTF8.encode("Internal server error - no request path"),
+        [],
+      );
+      return FilterHeadersStatusValues.StopIteration;
+    }
+
+    const path = String.UTF8.decode(pathArrBuf);
+    const origin = countrySpecificOrigin === "" ? defaultOrigin : countrySpecificOrigin;
+    // remove trailing slashes from the origin
+    const cleanedOrigin = origin.endsWith("/") ? origin.slice(0, -1) : origin;
+
+    const requestUrl = `${cleanedOrigin}${path}`;
+
+    log(LogLevelValues.info, `request-url: ${requestUrl}`);
+
+    set_property("request.url", String.UTF8.encode(requestUrl));
+
+    return FilterHeadersStatusValues.Continue;
+  }
+}
+
+registerRootContext((context_id: u32) => {
+  return new GeoRedirectRoot(context_id);
+}, "geoRedirect");
+```
+
+
+### FILE: examples/geoRedirect/package.json
+
+```json
+{
+  "name": "fastedge-as-example-georedirect",
+  "version": "1.0.0",
+  "description": "FastEdge AssemblyScript example: Geo Redirect",
+  "scripts": {
+    "asbuild:debug": "asc assembly/index.ts --target debug",
+    "asbuild:release": "asc assembly/index.ts --target release",
+    "asbuild": "npm run asbuild:debug && npm run asbuild:release"
+  },
+  "dependencies": {
+    "@gcoredev/proxy-wasm-sdk-as": "^1.2.3"
+  },
+  "devDependencies": {
+    "@assemblyscript/wasi-shim": "^0.1.0",
+    "assemblyscript": "^0.28.9"
+  }
+}
+```
+
+
+### FILE: examples/geoRedirect/README.md
+
+```
+[← Back to examples](../README.md)
+
+# Geo Redirect
+
+This application redirects requests to different origin URLs based on the client's country code.
+
+## What it does
+
+In `onRequestHeaders`, the app reads the client's country code from the `request.country` runtime property (populated by FastEdge's Geo-IP data) and looks up a matching environment variable by that country code. The `request.url` runtime property is then set to route the upstream fetch to the corresponding origin.
+
+- If a country-specific origin is configured (e.g. env var `DE=https://de.example.com`), the request is routed there.
+- Otherwise it falls back to the `DEFAULT` origin.
+- Uses [ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2) country codes.
+
+> **Routing mechanism:** This is not an HTTP redirect (no `Location` header, no 302 response). Setting `request.url` rewrites the upstream fetch target transparently — the client sees a normal 200 response from the matched origin.
+
+> **Observability:** The app logs the country code, matched origin, and final request URL at INFO level, visible in the FastEdge application logs.
+
+## Configuration
+
+Set the following environment variables on your FastEdge application:
+
+| Variable | Example | Description |
+|----------|---------|-------------|
+| `DEFAULT` | `https://origin.example.com` | Fallback origin URL (required) |
+| `<COUNTRY_CODE>` | `DE=https://de.example.com` | Per-country origin URL (optional, one per country) |
+
+## Build
+
+```sh
+pnpm install
+pnpm run asbuild
+```
+
+Build output:
+
+| File | Description |
+|------|-------------|
+| `build/geoRedirect.wasm` | Optimised release binary — upload this to FastEdge |
+| `build/geoRedirect-debug.wasm` | Debug binary with source maps |
+
+## Deploy
+
+Upload `build/geoRedirect.wasm` to the FastEdge portal and attach it to your CDN application. Configure the `DEFAULT` environment variable and any per-country overrides in the application settings.
+```

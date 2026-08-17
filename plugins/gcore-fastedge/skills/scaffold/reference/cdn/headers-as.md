@@ -3,8 +3,8 @@
   sources:
     - id: proxy-wasm-sdk-as
       ref: master
-      commit: 60f25c7bd35564e5bafb421be7f37aa4acf1bf81
-      updated: 2026-05-20
+      commit: 8e3bb621bc013a0aed7e52122066b417ad62a207
+      updated: 2026-08-17
 -->
 
 ---
@@ -279,6 +279,32 @@ Resulting effective request headers after mutation:
 | `new-header-03` | `value-03` and `value-03-a` (multi-value) |
 
 The same add/remove/replace sequence is repeated identically in `onResponseHeaders` for response headers.
+
+## Complete Mutation Sequence (Response Phase)
+
+```typescript
+// Add headers
+stream_context.headers.response.add("new-header-01", "value-01");
+stream_context.headers.response.add("new-header-02", "value-02");
+stream_context.headers.response.add("new-header-03", "value-03");
+
+// Remove (sets to empty string in nginx — does not delete)
+stream_context.headers.response.remove("new-header-01");
+
+// Replace value
+stream_context.headers.response.replace("new-header-02", "new-value-02");
+
+// Add a second value for the same header name
+stream_context.headers.response.add("new-header-03", "value-03-a");
+```
+
+Resulting effective response headers after mutation:
+
+| Header | Value |
+|---|---|
+| `new-header-01` | `""` (empty — nginx cannot delete) |
+| `new-header-02` | `new-value-02` |
+| `new-header-03` | `value-03` and `value-03-a` (multi-value) |
 
 ## Class Structure
 

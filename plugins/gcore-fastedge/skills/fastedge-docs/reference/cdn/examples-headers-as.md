@@ -3,8 +3,8 @@
   sources:
     - id: proxy-wasm-sdk-as
       ref: master
-      commit: 60f25c7bd35564e5bafb421be7f37aa4acf1bf81
-      updated: 2026-05-20
+      commit: 8e3bb621bc013a0aed7e52122066b417ad62a207
+      updated: 2026-08-17
 -->
 
 ---
@@ -149,6 +149,10 @@ Expected post-mutation response headers (new headers only):
 | `new-header-01` | `` (empty string)           |
 | `new-header-02` | `new-value-02`              |
 | `new-header-03` | `value-03`, `value-03-a`    |
+
+## Multi-Value Headers
+
+`new-header-03` is deliberately added twice using `add()` with the same name. This produces a multi-value header that reaches the upstream as two separate `new-header-03` entries. The validation pattern uses `Set<string>` of `"name:value"` pairs to assert both values are present.
 
 ## Header Validation Pattern
 

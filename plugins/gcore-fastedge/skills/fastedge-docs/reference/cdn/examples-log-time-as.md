@@ -3,8 +3,8 @@
   sources:
     - id: proxy-wasm-sdk-as
       ref: master
-      commit: 60f25c7bd35564e5bafb421be7f37aa4acf1bf81
-      updated: 2026-05-20
+      commit: 8e3bb621bc013a0aed7e52122066b417ad62a207
+      updated: 2026-08-17
 -->
 
 ---
@@ -47,6 +47,21 @@ log(level: LogLevelValues, message: string): void
 - Emits a log message via the proxy-wasm host.
 - Do NOT use `console.log` — it is not available in the proxy-wasm runtime.
 - `LogLevelValues` members: `trace`, `debug`, `info`, `warn`, `error`, `critical`.
+
+---
+
+### `setLogLevel`
+
+```typescript
+import { setLogLevel } from "@gcoredev/proxy-wasm-sdk-as/assembly/fastedge";
+
+setLogLevel(level: LogLevelValues): void
+```
+
+- Controls the minimum log verbosity level for the plugin.
+- Messages below the configured level are suppressed by the host.
+- Call once during root context initialization (e.g., in `onConfigure` or `onStart`) to set the desired level before processing begins.
+- Example: `setLogLevel(LogLevelValues.info)` suppresses `trace` and `debug` messages.
 
 ---
 
@@ -139,6 +154,7 @@ registerRootContext((context_id: u32) => {
 | Symbol | Module |
 |---|---|
 | `getCurrentTime` | `@gcoredev/proxy-wasm-sdk-as/assembly/fastedge` |
+| `setLogLevel` | `@gcoredev/proxy-wasm-sdk-as/assembly/fastedge` |
 | `log`, `LogLevelValues` | `@gcoredev/proxy-wasm-sdk-as/assembly` |
 | `Context`, `RootContext`, `FilterHeadersStatusValues`, `registerRootContext` | `@gcoredev/proxy-wasm-sdk-as/assembly` |
 
@@ -172,6 +188,7 @@ Always include `export * from "@gcoredev/proxy-wasm-sdk-as/assembly/proxy"` — 
 - Logging uses the proxy-wasm host ABI via `log()`. `console.log` is not available and will not emit output.
 - `FilterHeadersStatusValues.Continue` must be returned from header hooks to allow request/response to proceed.
 - The root context plugin name (`"logtime"` in `registerRootContext`) must match the configured plugin name in the FastEdge platform.
+- `setLogLevel` controls host-side filtering; messages below the configured level are suppressed before any output is produced.
 
 ---
 

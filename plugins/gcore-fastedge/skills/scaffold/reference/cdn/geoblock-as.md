@@ -3,8 +3,8 @@
   sources:
     - id: proxy-wasm-sdk-as
       ref: master
-      commit: 60f25c7bd35564e5bafb421be7f37aa4acf1bf81
-      updated: 2026-05-20
+      commit: 8e3bb621bc013a0aed7e52122066b417ad62a207
+      updated: 2026-08-17
 -->
 
 ---
@@ -154,14 +154,24 @@ registerRootContext((context_id: u32) => {
 
 ---
 
+## Constants
+
+```typescript
+const BAD_GATEWAY: u32 = 502;
+const FORBIDDEN: u32 = 403;
+const INTERNAL_SERVER_ERROR: u32 = 500;
+```
+
+---
+
 ## Logging
 
 Both blocked and allowed requests are logged at `INFO` level, providing an audit trail for all traffic decisions.
 
-| Event            | Log message                                    |
-| ---------------- | ---------------------------------------------- |
-| Request blocked  | `"geoBlock: blocked request from " + countryStr` |
-| Request allowed  | `"geoBlock: allowed request from " + countryStr` |
+| Event           | Log message                                      |
+| --------------- | ------------------------------------------------ |
+| Request blocked | `"geoBlock: blocked request from " + countryStr` |
+| Request allowed | `"geoBlock: allowed request from " + countryStr` |
 
 Log level is set via `setLogLevel(LogLevelValues.info)` inside `createContext`.
 
@@ -169,11 +179,11 @@ Log level is set via `setLogLevel(LogLevelValues.info)` inside `createContext`.
 
 ## Status Codes Used
 
-| Constant                | Value | Condition                                               |
-| ----------------------- | ----- | ------------------------------------------------------- |
-| `FORBIDDEN`             | 403   | Request's country code is in the blacklist              |
-| `BAD_GATEWAY`           | 502   | `request.country` property is empty/unavailable         |
-| `INTERNAL_SERVER_ERROR` | 500   | `BLACKLIST` env var is missing or parses to empty list  |
+| Constant                | Value | Condition                                              |
+| ----------------------- | ----- | ------------------------------------------------------ |
+| `FORBIDDEN`             | 403   | Request's country code is in the blacklist             |
+| `BAD_GATEWAY`           | 502   | `request.country` property is empty/unavailable        |
+| `INTERNAL_SERVER_ERROR` | 500   | `BLACKLIST` env var is missing or parses to empty list |
 
 ---
 
@@ -242,10 +252,10 @@ pnpm install
 pnpm run asbuild
 ```
 
-| Output File                 | Description                          |
-| --------------------------- | ------------------------------------ |
-| `build/geoBlock.wasm`       | Release binary — upload to FastEdge  |
-| `build/geoBlock-debug.wasm` | Debug binary with source maps        |
+| Output File                 | Description                         |
+| --------------------------- | ----------------------------------- |
+| `build/geoBlock.wasm`       | Release binary — upload to FastEdge |
+| `build/geoBlock-debug.wasm` | Debug binary with source maps       |
 
 Build scripts defined in `package.json`:
 - `asbuild:debug` — `asc assembly/index.ts --target debug`
@@ -256,23 +266,23 @@ Build scripts defined in `package.json`:
 
 ## Dependencies
 
-| Package                          | Role                                        |
-| -------------------------------- | ------------------------------------------- |
-| `@gcoredev/proxy-wasm-sdk-as`    | Core proxy-wasm SDK for AssemblyScript      |
-| `@assemblyscript/wasi-shim`      | WASI compatibility shim (dev)               |
-| `assemblyscript`                 | AssemblyScript compiler (dev)               |
+| Package                       | Role                                   |
+| ----------------------------- | -------------------------------------- |
+| `@gcoredev/proxy-wasm-sdk-as` | Core proxy-wasm SDK for AssemblyScript |
+| `@assemblyscript/wasi-shim`   | WASI compatibility shim (dev)          |
+| `assemblyscript`              | AssemblyScript compiler (dev)          |
 
 ---
 
 ## Error Conditions
 
-| Condition                                     | Response                                         | Status |
-| --------------------------------------------- | ------------------------------------------------ | ------ |
-| `BLACKLIST` env var not set                   | `StopIteration`, body: "App misconfigured"       | 500    |
-| `BLACKLIST` parses to empty list              | `StopIteration`, body: "App misconfigured"       | 500    |
-| `request.country` property empty/unavailable | `StopIteration`, body: "Missing country information" | 502 |
-| Country code found in blacklist               | `StopIteration`, body: "Request blacklisted"     | 403    |
-| Country code not in blacklist                 | `Continue`                                       | —      |
+| Condition                                    | Response                                             | Status |
+| -------------------------------------------- | ---------------------------------------------------- | ------ |
+| `BLACKLIST` env var not set                  | `StopIteration`, body: "App misconfigured"           | 500    |
+| `BLACKLIST` parses to empty list             | `StopIteration`, body: "App misconfigured"           | 500    |
+| `request.country` property empty/unavailable | `StopIteration`, body: "Missing country information" | 502    |
+| Country code found in blacklist              | `StopIteration`, body: "Request blacklisted"         | 403    |
+| Country code not in blacklist                | `Continue`                                           | —      |
 
 ---
 

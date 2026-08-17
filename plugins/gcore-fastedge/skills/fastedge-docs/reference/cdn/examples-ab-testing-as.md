@@ -3,8 +3,8 @@
   sources:
     - id: proxy-wasm-sdk-as
       ref: master
-      commit: 60f25c7bd35564e5bafb421be7f37aa4acf1bf81
-      updated: 2026-05-20
+      commit: 8e3bb621bc013a0aed7e52122066b417ad62a207
+      updated: 2026-08-17
 -->
 
 # A/B Testing — AssemblyScript (CDN)
@@ -98,6 +98,8 @@ query  = String.UTF8.decode(get_property("request.query"))   // empty string if 
 newUrl = scheme + "://" + host + newPath + (query.length > 0 ? "?" + query : "")
 set_property("request.url", String.UTF8.encode(newUrl))
 ```
+
+URL reconstruction is guarded: only executed when both `schemeBuf.byteLength > 0` and `hostBuf.byteLength > 0`.
 
 `set_property` / `get_property` key: `"request.url"`, `"request.path"`, `"request.scheme"`, `"request.host"`, `"request.query"`.
 

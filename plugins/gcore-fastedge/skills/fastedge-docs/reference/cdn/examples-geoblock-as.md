@@ -3,8 +3,8 @@
   sources:
     - id: proxy-wasm-sdk-as
       ref: master
-      commit: 60f25c7bd35564e5bafb421be7f37aa4acf1bf81
-      updated: 2026-05-20
+      commit: 8e3bb621bc013a0aed7e52122066b417ad62a207
+      updated: 2026-08-17
 -->
 
 ---
@@ -182,3 +182,169 @@ Build outputs:
 - FastEdge environment variable configuration (setting `BLACKLIST` at deploy time)
 - examples-geoblock-rust reference (equivalent Rust implementation with time-window support)
 - FastEdge error codes reference (530–533 runtime errors)
+
+## Source Material
+
+### FILE: examples/geoBlock/assembly/index.ts
+
+```ts
+export * from "@gcoredev/proxy-wasm-sdk-as/assembly/proxy"; // this exports the required functions for the proxy to interact with us.
+import {
+  Context,
+  FilterHeadersStatusValues,
+  get_property,
+  log,
+  LogLevelValues,
+  registerRootContext,
+  RootContext,
+  send_http_response,
+} from "@gcoredev/proxy-wasm-sdk-as/assembly";
+import {
+  getEnv,
+  setLogLevel,
+} from "@gcoredev/proxy-wasm-sdk-as/assembly/fastedge";
+
+const BAD_GATEWAY: u32 = 502;
+const FORBIDDEN: u32 = 403;
+const INTERNAL_SERVER_ERROR: u32 = 500;
+
+class GeoBlockRoot extends RootContext {
+  createContext(context_id: u32): Context {
+    setLogLevel(LogLevelValues.info);
+    return new GeoBlock(context_id, this);
+  }
+}
+
+class GeoBlock extends Context {
+  constructor(context_id: u32, root_context: GeoBlockRoot) {
+    super(context_id, root_context);
+  }
+
+  onRequestHeaders(a: u32, end_of_stream: bool): FilterHeadersStatusValues {
+    const blacklist = getEnv("BLACKLIST");
+    if (!blacklist) {
+      send_http_response(
+        INTERNAL_SERVER_ERROR,
+        "internal server error",
+        String.UTF8.encode("App misconfigured"),
+        [],
+      );
+      return FilterHeadersStatusValues.StopIteration;
+    }
+
+    const blacklistedCountries = blacklist
+      .split(",")
+      .map<string>((c) => c.trim());
+
+    if (blacklistedCountries.length === 0) {
+      send_http_response(
+        INTERNAL_SERVER_ERROR,
+        "internal server error",
+        String.UTF8.encode("App misconfigured"),
+        [],
+      );
+      return FilterHeadersStatusValues.StopIteration;
+    }
+
+    const country = get_property("request.country");
+    if (country.byteLength === 0) {
+      send_http_response(
+        BAD_GATEWAY,
+        "internal server error",
+        String.UTF8.encode("Missing country information"),
+        [],
+      );
+      return FilterHeadersStatusValues.StopIteration;
+    }
+
+    const countryStr = String.UTF8.decode(country);
+    if (blacklistedCountries.includes(countryStr)) {
+      log(LogLevelValues.info, "geoBlock: blocked request from " + countryStr);
+      send_http_response(
+        FORBIDDEN,
+        "forbidden",
+        String.UTF8.encode("Request blacklisted"),
+        [],
+      );
+      return FilterHeadersStatusValues.StopIteration;
+    }
+
+    log(LogLevelValues.info, "geoBlock: allowed request from " + countryStr);
+    return FilterHeadersStatusValues.Continue;
+  }
+}
+
+registerRootContext((context_id: u32) => {
+  return new GeoBlockRoot(context_id);
+}, "geoBlock");
+```
+
+
+### FILE: examples/geoBlock/package.json
+
+```json
+{
+  "name": "fastedge-as-example-geoblock",
+  "version": "1.0.0",
+  "description": "FastEdge AssemblyScript example: Geo Block",
+  "scripts": {
+    "asbuild:debug": "asc assembly/index.ts --target debug",
+    "asbuild:release": "asc assembly/index.ts --target release",
+    "asbuild": "npm run asbuild:debug && npm run asbuild:release"
+  },
+  "dependencies": {
+    "@gcoredev/proxy-wasm-sdk-as": "^1.2.3"
+  },
+  "devDependencies": {
+    "@assemblyscript/wasi-shim": "^0.1.0",
+    "assemblyscript": "^0.28.9"
+  }
+}
+```
+
+
+### FILE: examples/geoBlock/README.md
+
+```
+[← Back to examples](../README.md)
+
+# Geo Block
+
+This application blocks incoming requests based on the client's country code.
+
+## What it does
+
+In `onRequestHeaders`, the app reads a `BLACKLIST` environment variable containing a comma-separated list of [ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2) country codes (e.g. `RU,CN,KP`). The request's country code is obtained from the `request.country` runtime property, which FastEdge populates from its Geo-IP data — no additional configuration is required to access it.
+
+- If the country code appears in the blacklist, an INFO log is emitted and the request is rejected with a `403 Forbidden`.
+- Allowed requests are also logged at INFO level, providing an audit trail for both blocked and permitted traffic.
+- If the `BLACKLIST` env var is missing or the country cannot be determined, an appropriate error is returned.
+
+> **Note on country code matching:** Comparison is exact-match and case-sensitive. FastEdge always provides uppercase ISO 3166-1 alpha-2 codes (e.g. `CN`, `RU`). Ensure your `BLACKLIST` values use uppercase accordingly.
+
+## Configuration
+
+Set the following environment variable on your FastEdge application:
+
+| Variable    | Example    | Description                                   |
+| ----------- | ---------- | --------------------------------------------- |
+| `BLACKLIST` | `RU,CN,KP` | Comma-separated list of blocked country codes |
+
+## Build
+
+```sh
+pnpm install
+pnpm run asbuild
+```
+
+Build output:
+
+| File                        | Description                                        |
+| --------------------------- | -------------------------------------------------- |
+| `build/geoBlock.wasm`       | Optimised release binary — upload this to FastEdge |
+| `build/geoBlock-debug.wasm` | Debug binary with source maps                      |
+
+## Deploy
+
+Upload `build/geoBlock.wasm` to the FastEdge portal and attach it to your CDN application. Configure the `BLACKLIST` environment variable in the application settings.
+```

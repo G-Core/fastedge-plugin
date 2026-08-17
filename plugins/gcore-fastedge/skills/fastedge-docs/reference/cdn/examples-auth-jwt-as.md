@@ -3,8 +3,8 @@
   sources:
     - id: proxy-wasm-sdk-as
       ref: master
-      commit: 60f25c7bd35564e5bafb421be7f37aa4acf1bf81
-      updated: 2026-05-20
+      commit: 8e3bb621bc013a0aed7e52122066b417ad62a207
+      updated: 2026-08-17
 -->
 ---
 capabilities:
@@ -62,7 +62,7 @@ Reads a named secret variable configured on the FastEdge application.
 
 - **Parameter**: `name` — secret variable name (string)
 - **Returns**: secret value as a UTF-8 string, or `null` if not found
-- **Type note**: returns `string`, not `ArrayBuffer`; pass directly to `jwtVerify`
+- **Type note**: returns `string`, not `ArrayBuffer`; pass directly to `jwtVerify` without encoding
 
 ```typescript
 const secret = getSecret("SECRET");
@@ -81,7 +81,8 @@ Verifies a JWT token against an HMAC-SHA256 secret.
   - `token` — raw JWT string (without `Bearer ` prefix)
   - `secret` — HMAC signing secret (string)
 - **Returns**: `JwtValidation` enum value
-- **Package**: `@gcoredev/as-jwt` (separate dependency, not part of proxy-wasm-sdk-as)
+- **Does not throw** — always check the return value
+- **Package**: `@gcoredev/as-jwt` (separate dependency, not bundled in proxy-wasm-sdk-as)
 
 ### `JwtValidation` enum
 
@@ -150,7 +151,23 @@ All blocked responses return `FilterHeadersStatusValues.StopIteration`.
 |---|---|---|
 | `SECRET` | HMAC-SHA256 signing key | String; minimum 256 bits / 32 characters |
 
-Configure this secret variable on the FastEdge application before deployment. For secret rotation, see `getSecretEffectiveAt` in the FastEdge secrets reference.
+Configure this secret variable on the FastEdge application before deployment. For secret rotation, use `getSecretEffectiveAt` instead of `getSecret` — see the FastEdge secrets reference for slot-based rotation.
+
+---
+
+## Testing Tokens
+
+Both tokens use the secret `a-string-secret-at-least-256-bits-long-thats-hard-to-break`.
+
+**Expired token** (returns `403 Forbidden`):
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjk3ODMxMDg2MX0.egSSDoDdAHz8Kqee7be9N168CDEwOiOej96Idm2c1yQ
+```
+
+**Valid token** (expiry: 2035-01-01, returns `200 OK`):
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjIwNTEyMjYwNjF9.zn_pSdcBo8T3SvNgMVYzWc5CU_MKqOlms7TpZXhPtJU
+```
 
 ---
 
@@ -166,6 +183,15 @@ Configure this secret variable on the FastEdge application before deployment. Fo
 
 - `@gcoredev/as-jwt` is a required peer dependency — it is NOT bundled in proxy-wasm-sdk-as.
 - `assemblyscript-json` is declared as a dependency but not directly used in this example.
+
+**Dev dependencies:**
+
+```json
+{
+  "@assemblyscript/wasi-shim": "^0.1.0",
+  "assemblyscript": "^0.28.9"
+}
+```
 
 ---
 
