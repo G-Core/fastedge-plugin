@@ -4,7 +4,7 @@
     - id: fastedge-sdk-rust
       ref: main
       commit: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-      updated: 2026-07-23
+      updated: 2026-08-17
 -->
 
 ---
@@ -310,3 +310,207 @@ Edit `public/styles.css` directly. No build tools required. Styles are embedded 
 - host-services-rust reference (property API)
 - platform-overview reference (CDN app lifecycle)
 - body-rust blueprint (general body manipulation pattern)
+
+## Source Material
+
+### FILE: examples/cdn/custom_error_pages/src/lib.rs
+
+```rust
+use handlebars::Handlebars;
+use proxy_wasm::traits::*;
+use proxy_wasm::types::*;
+use serde_json::json;
+use std::collections::HashMap;
+use std::env;
+
+// Include the generated image map
+include!(concat!(env!("OUT_DIR"), "/image_map.rs"));
+include!(concat!(env!("OUT_DIR"), "/message_map.rs"));
+
+proxy_wasm::main! {{
+    proxy_wasm::set_log_level(LogLevel::Trace);
+    proxy_wasm::set_root_context(|_| -> Box<dyn RootContext> { Box::new(HttpBodyRoot) });
+}}
+
+struct HttpBodyRoot;
+
+impl Context for HttpBodyRoot {}
+
+impl RootContext for HttpBodyRoot {
+    fn get_type(&self) -> Option<ContextType> {
+        Some(ContextType::HttpContext)
+    }
+
+    fn create_http_context(&self, _: u32) -> Option<Box<dyn HttpContext>> {
+        Some(Box::new(HttpBody))
+    }
+}
+
+struct HttpBody;
+
+impl Context for HttpBody {}
+
+impl HttpContext for HttpBody {
+    fn on_http_response_headers(&mut self, _: usize, _: bool) -> Action {
+        if let Some(status) = self.get_property(vec!["response.status"]) {
+            if status.len() == 2 {
+                let status_code = u16::from_be_bytes([status[0], status[1]]);
+                if (400..600).contains(&status_code) {
+                    // Remove the Content-Length header if it exists, we are going to change the response body
+                    self.set_http_response_header("Content-Length", None);
+                    self.set_http_response_header("Transfer-Encoding", Some("Chunked"));
+                    self.set_http_response_header("Content-Type", Some("text/html"));
+                }
+            }
+        }
+        Action::Continue
+    }
+
+    fn on_http_response_body(&mut self, body_size: usize, end_of_stream: bool) -> Action {
+        // only process 4xx/5xx error responses
+        let Some(status) = self.get_property(vec!["response.status"]) else {
+            return Action::Continue;
+        };
+        if status.len() != 2 {
+            return Action::Continue;
+        }
+        let status_code = u16::from_be_bytes([status[0], status[1]]);
+        if !(400..600).contains(&status_code) {
+            return Action::Continue;
+        }
+
+        if !end_of_stream {
+            // wait for complete body
+            return Action::Pause;
+        }
+
+        // Get the image and message maps
+        let image_map = get_image_map();
+        let message_map = get_message_map();
+
+        // Get the Base64-encoded image for the status code or its fallback
+        let base64_image = image_map
+            .get(&status_code)
+            .or_else(|| {
+                if (400..500).contains(&status_code) {
+                    image_map.get(&4000)
+                } else if (500..600).contains(&status_code) {
+                    image_map.get(&5000)
+                } else {
+                    None
+                }
+            })
+            .unwrap_or(&"");
+
+        // Get the message and description for the status code or its fallback
+        let (message, description) = message_map
+            .get(&status_code)
+            .or_else(|| {
+                if (400..500).contains(&status_code) {
+                    message_map.get(&4000)
+                } else if (500..600).contains(&status_code) {
+                    message_map.get(&5000)
+                } else {
+                    None
+                }
+            })
+            .map(|(msg, desc)| (msg.to_string(), desc.to_string()))
+            .unwrap_or_else(|| {
+                (
+                    "Unexpected Error".to_string(),
+                    "The server responded with a {{status}} error.".to_string(),
+                )
+            });
+
+        let mut handlebars = Handlebars::new();
+        // Use handlebars to complete message and description text allowing for usage of {{ status }} variable
+        handlebars
+            .register_template_string("message_template", message)
+            .unwrap();
+        handlebars
+            .register_template_string("description_template", description)
+            .unwrap();
+
+        let msg_data = json!({
+            "status": status_code.to_string(),
+        });
+
+        let complete_message = handlebars.render("message_template", &msg_data).unwrap();
+        let complete_description = handlebars
+            .render("description_template", &msg_data)
+            .unwrap();
+
+        // Render the error page using Handlebars
+        let error_template = include_str!("../templates/error_page.hbs");
+        handlebars
+            .register_template_string("error_template", error_template)
+            .unwrap();
+
+        let styles = include_str!("../public/styles.css");
+        let page_data = json!({
+            "styles": styles,
+            "status": status_code.to_string(),
+            "message": complete_message,
+            "description": complete_description,
+            "image": base64_image,
+        });
+
+        let html_body = handlebars.render("error_template", &page_data).unwrap();
+        let body = html_body.as_bytes();
+        self.set_http_response_body(0, body_size, body);
+
+        Action::Continue
+    }
+}
+```
+
+### FILE: examples/cdn/custom_error_pages/Cargo.toml
+
+```toml
+[workspace]
+
+[package]
+name = "custom_error_pages"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+proxy-wasm = "0.2"
+handlebars = "6.3"
+serde_json = "1.0"
+regex = "1.10"
+
+[build-dependencies]
+base64 = "0.22"
+```
+
+### FILE: examples/cdn/custom_error_pages/README.md
+
+```
+[← Back to examples](../../README.md)
+
+# Custom Error Pages (CDN)
+
+Intercepts 4xx and 5xx error responses and replaces them with branded HTML error pages using Handlebars templates.
+
+## How it works
+
+A [build script](./build.rs) runs at compile time to embed images and messages from the `public/` folder into the WASM binary (since there is no filesystem at runtime).
+
+At runtime, when an error response is detected:
+1. **on_response_headers** — sets `Content-Type` to `text/html` for error responses
+2. **on_response_body** — looks up the status code in the embedded image/message maps, falls back to generic `4xx`/`5xx` templates, and renders the error page using Handlebars
+
+## Adding a custom error page
+
+1. Add an image: `public/images/<status>.jpg`
+2. Add a message file: `public/messages/<status>.hbs` (first line = title, second line = description)
+3. Recompile and deploy
+
+## Styling
+
+Styles are in [`public/styles.css`](./public/styles.css) — plain CSS, no build tools required. Edit directly.
+```

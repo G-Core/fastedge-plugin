@@ -4,7 +4,7 @@
     - id: fastedge-sdk-rust
       ref: main
       commit: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-      updated: 2026-07-23
+      updated: 2026-08-17
 -->
 
 ---
@@ -41,6 +41,15 @@ get_effective_at("TOKEN_SECRET", 9999999999) → "new-password"
 ```
 
 Slot `0` serves as the baseline — always matched when no higher slot qualifies.
+
+Usage as indices:
+```
+get_effective_at("token-secret", 0) -> "original_password"
+get_effective_at("token-secret", 3) -> "original_password"
+get_effective_at("token-secret", 5) -> slot 5's value (if exists)
+```
+
+Usage as timestamps: a token's `iat` claim determines which password to validate against. `get_effective_at("token-secret", claims.iat)` returns the password that was effective when the token was issued.
 
 ## API Reference
 
@@ -158,6 +167,12 @@ let slot: u32 = request
             .as_secs() as u32
     });
 
+let secret_name = request
+    .headers()
+    .get("x-secret-name")
+    .and_then(|v| v.to_str().ok())
+    .unwrap_or("TOKEN_SECRET");
+
 // Current (latest) value
 let current = secret::get(secret_name)
     .map_err(|e| anyhow!("secret::get failed: {e}"))?;
@@ -165,59 +180,19 @@ let current = secret::get(secret_name)
 // Value effective at the given slot
 let effective = secret::get_effective_at(secret_name, slot)
     .map_err(|e| anyhow!("secret::get_effective_at failed: {e}"))?;
+
+let result = json!({
+    "secret_name": secret_name,
+    "slot": slot,
+    "current": current,
+    "effective_at_slot": effective,
+    "is_same": current == effective,
+});
 ```
 
-## Build
-
-```sh
-cargo build --release
-# Output: target/wasm32-wasip2/release/secret_rollover.wasm
-```
-
-## See Also
-
-- fastedge::secret module reference (Rust SDK reference)
-- http-base skeleton (base HTTP app structure)
-- platform-overview (secret management configuration)
-- best-practices (secret rotation strategies)
-
-## Source Material
-
-### FILE: examples/http/wasi/secret_rollover/src/lib.rs
+## Full Source
 
 ```rust
-/*
- * Copyright 2025 G-Core Innovations SARL
- */
-/*
-Secret rollover example using slot-based secret retrieval.
-
-Demonstrates how to use `secret::get_effective_at()` with slots to support
-secret rotation. Slots use a greatest matching rule: the slot with the highest
-value that is <= the requested `effective_at` is returned.
-
-Example secret configuration:
-{
-  "secret": {
-    "name": "token-secret",
-    "secret_slots": [
-      { "slot": 0, "value": "original_password" },
-      { "slot": 1741790697, "value": "new_password" }
-    ]
-  }
-}
-
-Usage as indices:
-  get_effective_at("token-secret", 0) -> "original_password"
-  get_effective_at("token-secret", 3) -> "original_password"
-  get_effective_at("token-secret", 5) -> slot 5's value (if exists)
-
-Usage as timestamps:
-  A token's `iat` claim determines which password to validate against.
-  get_effective_at("token-secret", claims.iat) returns the password
-  that was effective when the token was issued.
-*/
-
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::anyhow;
@@ -228,7 +203,6 @@ use wstd::http::{Request, Response};
 
 #[wstd::http_server]
 async fn main(request: Request<Body>) -> anyhow::Result<Response<Body>> {
-    // Read the slot from the x-slot header, defaulting to current timestamp
     let slot: u32 = request
         .headers()
         .get("x-slot")
@@ -247,10 +221,8 @@ async fn main(request: Request<Body>) -> anyhow::Result<Response<Body>> {
         .and_then(|v| v.to_str().ok())
         .unwrap_or("TOKEN_SECRET");
 
-    // Get the current secret value (latest slot)
     let current = secret::get(secret_name).map_err(|e| anyhow!("secret::get failed: {e}"))?;
 
-    // Get the secret effective at the requested slot
     let effective = secret::get_effective_at(secret_name, slot)
         .map_err(|e| anyhow!("secret::get_effective_at failed: {e}"))?;
 
@@ -269,73 +241,6 @@ async fn main(request: Request<Body>) -> anyhow::Result<Response<Body>> {
 }
 ```
 
-
-### FILE: examples/http/wasi/secret_rollover/Cargo.toml
-
-```toml
-[workspace]
-
-[package]
-name = "secret_rollover"
-version = "0.1.0"
-edition = "2021"
-
-[lib]
-crate-type = ["cdylib"]
-
-[dependencies]
-wstd = "0.6"
-fastedge = "0.4"
-anyhow = "1"
-serde_json = "1"
-```
-
-
-### FILE: examples/http/wasi/secret_rollover/README.md
-
-```
-[← Back to examples](../../../README.md)
-
-# Secret Rollover (WASI)
-
-Demonstrates slot-based secret retrieval for secret rotation scenarios using `secret::get_effective_at()`.
-
-Compares the current secret value with the value effective at a given slot, returning both as JSON. This lets you validate that rotation is working correctly before removing the old slot.
-
-## Usage
-
-| Request header | Default | Description |
-|---|---|---|
-| `x-secret-name` | `TOKEN_SECRET` | Name of the secret to query |
-| `x-slot` | current Unix timestamp | Slot value passed to `get_effective_at` |
-
-## How slots work
-
-Slots use a **greatest-match rule**: the slot with the highest value that is `<= effective_at` is returned.
-
-```
-Secret slots: { 0: "old-password", 1741790697: "new-password" }
-
-get_effective_at("TOKEN_SECRET", 0)          → "old-password"
-get_effective_at("TOKEN_SECRET", 100)        → "old-password"
-get_effective_at("TOKEN_SECRET", 1741790697) → "new-password"
-get_effective_at("TOKEN_SECRET", 9999999999) → "new-password"
-```
-
-When used with token `iat` (issued-at) timestamps, `get_effective_at(name, claims.iat)` returns the password that was active when the token was issued — enabling zero-downtime rotation without invalidating existing tokens.
-
-## What it returns
-
-```json
-{
-  "secret_name": "TOKEN_SECRET",
-  "slot": 0,
-  "current": "new-password",
-  "effective_at_slot": "old-password",
-  "is_same": false
-}
-```
-
 ## Build
 
 ```sh
@@ -343,8 +248,9 @@ cargo build --release
 # Output: target/wasm32-wasip2/release/secret_rollover.wasm
 ```
 
-## APIs used
+## See Also
 
-- `fastedge::secret::get(name)` — current (latest-slot) secret value; `Ok(Option<String>)`
-- `fastedge::secret::get_effective_at(name, slot)` — secret value at a given slot; `Ok(Option<String>)`
-```
+- fastedge::secret module reference (Rust SDK reference)
+- http-base skeleton (base HTTP app structure)
+- platform-overview (secret management configuration)
+- best-practices (secret rotation strategies)
