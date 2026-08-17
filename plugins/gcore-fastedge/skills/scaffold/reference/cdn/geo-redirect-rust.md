@@ -4,7 +4,7 @@
     - id: fastedge-sdk-rust
       ref: main
       commit: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-      updated: 2026-07-23
+      updated: 2026-08-17
 -->
 
 ---
@@ -46,7 +46,7 @@ All routing logic executes in `on_http_request_headers`. No body hooks are used.
 5. Read `request.path` property; default to `"/"` if absent.
 6. Preserve the `Host` header by reading `request.host` and calling `set_http_request_header`.
 7. Construct the target URL as `format!("{}{}", origin, path)`.
-8. Log the target URL at `Info` level.
+8. Log the target URL at `Info` level via `println!`.
 9. Write the URL to `request.url` via `set_property` and return `Action::Continue`.
 
 ### Country Detection
@@ -125,6 +125,8 @@ crate-type = ["cdylib"]
 proxy-wasm = "0.2"
 ```
 
+Note: the workspace-level `[workspace]` key is present in the source Cargo.toml but omitted here as it is not relevant to the library package configuration.
+
 ## Struct Layout
 
 | Struct | Traits | Role |
@@ -134,6 +136,15 @@ proxy-wasm = "0.2"
 
 `GeoRedirectRoot::get_type` returns `Some(ContextType::HttpContext)`.
 `GeoRedirectRoot::create_http_context` returns `Some(Box::new(GeoRedirectContext))`.
+
+## Entry Point
+
+```rust
+proxy_wasm::main! {{
+    proxy_wasm::set_log_level(LogLevel::Info);
+    proxy_wasm::set_root_context(|_| -> Box<dyn RootContext> { Box::new(GeoRedirectRoot) });
+}}
+```
 
 ## See Also
 

@@ -4,7 +4,7 @@
     - id: fastedge-sdk-rust
       ref: main
       commit: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-      updated: 2026-07-23
+      updated: 2026-08-17
 -->
 
 ---
@@ -246,14 +246,14 @@ let headers = self.get_http_request_headers()
     .collect::<HashSet<(String, String)>>();
 
 // After add/set operations, expected new entries include:
-// ("new-header-01", "")              // removed → empty string
-// ("new-header-bytes-01", "")        // removed → empty string
-// ("new-header-02", "new-value-02")  // replaced
-// ("new-header-bytes-02", "new-value-bytes-02") // replaced
-// ("new-header-03", "value-03")      // original add
-// ("new-header-bytes-03", "value-bytes-03") // original add
-// ("new-header-03", "value-03-a")    // duplicate add preserved
-// ("new-header-bytes-03", "value-bytes-03-a") // duplicate add preserved
+// ("new-header-01", "")                          // removed → empty string
+// ("new-header-bytes-01", "")                    // removed → empty string
+// ("new-header-02", "new-value-02")              // replaced
+// ("new-header-bytes-02", "new-value-bytes-02")  // replaced
+// ("new-header-03", "value-03")                  // original add
+// ("new-header-bytes-03", "value-bytes-03")      // original add
+// ("new-header-03", "value-03-a")                // duplicate add preserved
+// ("new-header-bytes-03", "value-bytes-03-a")    // duplicate add preserved
 
 let diff = headers
     .difference(&original_headers)
@@ -265,7 +265,7 @@ if !diff.is_empty() {
 }
 ```
 
-The same diff pattern applies to bytes variants using `get_http_request_headers_bytes()` and a `HashSet<(String, Bytes)>`.
+The same diff pattern applies to bytes variants using `get_http_request_headers_bytes()` and a `HashSet<(String, Bytes)>`. The response phase (`on_http_response_headers`) applies an identical add/set/diff sequence using response header methods.
 
 ---
 
