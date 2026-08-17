@@ -4,7 +4,7 @@
     - id: fastedge-sdk-js
       ref: main
       commit: 81145a9a43ec499240c687bd49376ab20c72b11c
-      updated: 2026-07-23
+      updated: 2026-08-17
 -->
 
 ---
@@ -40,7 +40,7 @@ Build script: `fastedge-build src/index.js dist/crypto-hmac-jwt.wasm`
 import { getSecret } from 'fastedge::secret';
 ```
 
-`TextEncoder` and `TextDecoder` are globals available in the FastEdge runtime. Instantiate them once as top-level singletons:
+`TextEncoder` and `TextDecoder` are globals available in the FastEdge runtime. Instantiate them once as top-level singletons reused across requests:
 
 ```js
 const encoder = new TextEncoder();
