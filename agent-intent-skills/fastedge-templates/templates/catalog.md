@@ -1,7 +1,7 @@
 # Synthesis Instructions: catalog.md
 
 > For shared cross-referencing rules, extraction rules, and exclusions see
-> [_docs-pattern-base.md](./_docs-pattern-base.md)
+> [_docs-pattern-base.md](../_docs-pattern-base.md)
 
 ## Target file
 `plugins/gcore-fastedge/skills/fastedge-docs/reference/templates/catalog.md`
