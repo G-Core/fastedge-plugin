@@ -4,7 +4,7 @@
     - id: fastedge-sdk-rust
       ref: main
       commit: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-      updated: 2026-07-23
+      updated: 2026-08-17
 -->
 
 ---
@@ -14,7 +14,7 @@ languages: [rust]
 template_origin: http-base
 source_repo: fastedge-sdk-rust
 source_ref: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-updated: 2026-07-23
+updated: 2026-08-17
 
 ---
 

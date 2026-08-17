@@ -4,7 +4,7 @@
     - id: fastedge-sdk-rust
       ref: main
       commit: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-      updated: 2026-07-23
+      updated: 2026-08-17
 -->
 
 ---
@@ -18,7 +18,7 @@ capabilities: [s3-upload, presigned-url, outbound-fetch, env-config, file-size-l
 
 Edge function that accepts a file upload via `POST` or `PUT`, generates a presigned S3 `PUT` URL on the fly using `rusty_s3`, forwards the file body to the S3-compatible endpoint via `fastedge::send_request`, and returns the clean object URL to the caller.
 
-**Handler type:** `#[fastedge::http]` (sync, `wasm32-wasip1` target). For new apps, prefer the async WASI handler.
+**Handler type:** `#[fastedge::http]` (sync, `wasm32-wasip1` target). Legacy handler — for new apps, prefer the async WASI handler.
 
 **Crate:** `s3upload` — `crate-type = ["cdylib"]`
 
@@ -53,7 +53,7 @@ fn main(req: Request<Body>) -> Result<Response<Body>, Error>
 3. **Body check** — Empty body → `400 BAD_REQUEST`.
 4. **Content-Type extraction** — Reads `Content-Type` header; falls back to `"application/octet-stream"`.
 5. **Body consumption** — `req.into_body()` consumes the request. All headers, method, and query params must be extracted before this call.
-6. **File size enforcement** — If `MAX_FILE_SIZE` env var is set and parseable as `usize`, rejects bodies exceeding that byte count with `413 PAYLOAD_TOO_LARGE`.
+6. **File size enforcement** — If `MAX_FILE_SIZE` env var is set and parseable as `usize`, rejects bodies exceeding that byte count with `413 PAYLOAD_TOO_LARGE`. Error message includes the limit: `"File exceeds allowed limit of {v} bytes\n"`.
 7. **S3 URL preparation** — Calls `prepare_s3(fname)` → returns `(signed_url: Url, host: String)` or `500 INTERNAL_SERVER_ERROR` on failure.
 8. **Outbound PUT** — Constructs a `PUT` request to the signed URL with explicit `Host`, `Accept-Encoding: identity`, `Content-Length`, and `Content-Type` headers. Sends via `fastedge::send_request`.
 9. **Response construction**:
@@ -89,6 +89,8 @@ Reads S3 credentials and configuration from environment variables, constructs th
 
 Example: `http://s-ed1.cloud.gcore.lu/mybucket/photo.jpg`
 
+The `host` value returned (used for the `Host` header on the outbound request) is `<REGION>.<BASE_HOSTNAME>` — no scheme, no bucket.
+
 ---
 
 ## Environment Variables
@@ -121,6 +123,7 @@ Request::builder()
 - `Content-Length` must be set explicitly — `fastedge::send_request` does not auto-compute it.
 - `Accept-Encoding: identity` prevents compressed transfer encoding issues.
 - `host` is `<REGION>.<BASE_HOSTNAME>` (no scheme, no bucket).
+- Request builder failure → `500 INTERNAL_SERVER_ERROR` with body `"Malformed request\n"`.
 
 ---
 
@@ -133,7 +136,7 @@ Request::builder()
 | `400 BAD_REQUEST` | Missing `name` query param or empty body |
 | `405 METHOD_NOT_ALLOWED` | Method is not `POST`, `PUT`, or `OPTIONS` |
 | `413 PAYLOAD_TOO_LARGE` | Body exceeds `MAX_FILE_SIZE` |
-| `500 INTERNAL_SERVER_ERROR` | `prepare_s3` failed (missing env var or parse error), or request builder failed |
+| `500 INTERNAL_SERVER_ERROR` | `prepare_s3` failed (missing env var or parse error), request builder failed, or `send_request` failed |
 | Forwarded from S3 | Any non-200 S3 response — status and body passed through |
 
 ---
@@ -169,8 +172,9 @@ cargo build --release
 - The presigned URL expires after 1 hour. Because the upload is performed server-side immediately, expiry has no practical impact.
 - `OPTIONS` returns `204` without CORS headers. Add `Access-Control-Allow-*` headers manually if browser preflight support is required.
 - `MAX_FILE_SIZE` is silently ignored (no error, no log) when set to a non-numeric string.
-- On S3 success, the response body is replaced entirely with the clean object URL — the original S3 response body is discarded.
-- The `UrlStyle::Path` style is used for `Bucket::new` — bucket name appears in the URL path, not the hostname.
+- On S3 success, the response body is replaced entirely with the clean object URL — the original S3 response body is discarded. The URL is the signed URL with `set_query(None)` applied.
+- `UrlStyle::Path` is used for `Bucket::new` — bucket name appears in the URL path, not the hostname.
+- `send_request` failure returns `500 INTERNAL_SERVER_ERROR` with an empty body.
 
 ---
 

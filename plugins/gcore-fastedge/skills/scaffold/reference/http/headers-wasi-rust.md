@@ -4,7 +4,7 @@
     - id: fastedge-sdk-rust
       ref: main
       commit: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-      updated: 2026-07-23
+      updated: 2026-08-17
 -->
 
 ---
@@ -164,7 +164,6 @@ async fn main(request: Request<Body>) -> anyhow::Result<Response<Body>> {
 }
 ```
 
-
 ### FILE: examples/http/wasi/headers/Cargo.toml
 
 ```toml
@@ -182,7 +181,6 @@ crate-type = ["cdylib"]
 wstd = "0.6"
 anyhow = "1"
 ```
-
 
 ### FILE: examples/http/wasi/headers/README.md
 

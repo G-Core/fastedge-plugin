@@ -4,7 +4,7 @@
     - id: fastedge-sdk-rust
       ref: main
       commit: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-      updated: 2026-07-23
+      updated: 2026-08-17
 -->
 
 ---
@@ -265,7 +265,7 @@ if !diff.is_empty() {
 }
 ```
 
-The same diff pattern applies to bytes variants using `get_http_request_headers_bytes()` and a `HashSet<(String, Bytes)>`.
+The same diff pattern applies to bytes variants using `get_http_request_headers_bytes()` and a `HashSet<(String, Bytes)>`. The same diff verification pattern is applied identically in `on_http_response_headers` using `get_http_response_headers()` and `get_http_response_headers_bytes()`.
 
 ---
 
@@ -318,6 +318,7 @@ Called after the request/response cycle completes. Use for per-request logging o
 - `get_http_response_header("host")` returns `None` during `on_http_request_headers` because the upstream response has not been received yet.
 - After `set_*(name, None)`, `get_*` returns `Some("")` (empty string) rather than `None` on the FastEdge platform.
 - Both string and bytes variants (`_bytes` suffix) are available for all read, add, and set operations; behavior is identical except for the value type (`&str`/`String` vs `&[u8]`/`Bytes`).
+- The diff verification pattern (using `HashSet::difference`) applies identically for both request-phase and response-phase header manipulation, and for both string and bytes variants.
 
 ---
 

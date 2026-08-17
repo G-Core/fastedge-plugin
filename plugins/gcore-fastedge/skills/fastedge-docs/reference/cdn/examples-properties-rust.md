@@ -4,7 +4,7 @@
     - id: fastedge-sdk-rust
       ref: main
       commit: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-      updated: 2026-07-23
+      updated: 2026-08-17
 -->
 
 ---
@@ -380,7 +380,7 @@ querystring = "1.1"
 - **Case-insensitive parameter matching**: The example uses `.eq_ignore_ascii_case` to match query parameter keys (`url`, `host`, `path`). Query parameter names are treated as case-insensitive.
 - **`set_property` for URL rewrite**: Modifying `request.url`, `request.host`, or `request.path` rewrites the upstream request before it is forwarded. Changes take effect for the proxied request, not for in-flight headers already sent.
 - **`nginx.log_field1`**: Writing to this property injects a value into the CDN access log. It is write-only from the filter; reading it back is not guaranteed.
-- **Error code for `request.asn`**: The source uses status code 560 for `request.asn` absence (not 561 as stated in older documentation). Status 561 is reserved for `request.geo.long` absence.
+- **Error code for `request.asn`**: The source uses status code 560 for `request.asn` absence. Status 561 is reserved for `request.geo.long` absence.
 
 ---
 

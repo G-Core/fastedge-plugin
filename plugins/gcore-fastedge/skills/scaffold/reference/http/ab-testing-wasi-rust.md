@@ -4,7 +4,7 @@
     - id: fastedge-sdk-rust
       ref: main
       commit: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-      updated: 2026-07-23
+      updated: 2026-08-17
 -->
 
 ---
@@ -210,13 +210,6 @@ Response::builder()
 | `cookie` | Replaced with abid-stripped version; omitted entirely if result is blank |
 | `ab-test-<name>` | Added for each test in `TESTS` with the assigned variant value |
 | All other headers | Forwarded verbatim if value converts to a valid string |
-
-## See Also
-
-- http-base (base skeleton for HTTP apps)
-- fastedge-sdk-rust platform overview
-- host-services-rust reference (outbound HTTP, environment variables)
-- best-practices reference (cookie security, entropy sources)
 
 ## Source Material
 
@@ -428,3 +421,10 @@ crate-type = ["cdylib"]
 wstd = "0.6"
 anyhow = "1"
 ```
+
+## See Also
+
+- http-base (base skeleton for HTTP apps)
+- fastedge-sdk-rust platform overview
+- host-services-rust reference (outbound HTTP, environment variables)
+- best-practices reference (cookie security, entropy sources)

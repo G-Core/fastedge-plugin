@@ -4,7 +4,7 @@
     - id: fastedge-sdk-rust
       ref: main
       commit: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-      updated: 2026-07-23
+      updated: 2026-08-17
 -->
 
 ---
@@ -156,14 +156,14 @@ Secrets are accessed via `fastedge::proxywasm::secret::get("API_KEY")`. This is 
 - **`Action::Continue`** — allows the request to proceed to origin.
 - **`Action::Pause` + `send_http_response`** — rejects the request; no further processing occurs.
 - **`self.send_http_response(status: u32, headers: Vec<(&str, &str)>, body: Option<&[u8]>)`** — sends an immediate HTTP response to the client.
-- **`fastedge::proxywasm::secret::get(name: &str) -> Result<Option<Vec<u8>>, _>`** — reads a secret variable by name; returns raw bytes.
+- **`fastedge::proxywasm::secret::get(name: &str) -> Result<Option<Vec<u8>>, u32>`** — reads a secret variable by name; returns raw bytes. Both `Err(_)` and `Ok(None)` (secret not configured) are treated identically.
 - **`self.get_http_request_header(name: &str) -> Option<String>`** — retrieves a request header value by name.
 - **`self.set_http_request_header(name: &str, value: Option<&str>)`** — sets or removes a request header. Pass `None` to strip the header before forwarding.
 - **`println!`** — used for log output within CDN filter hooks (e.g. validation success/failure messages).
 
 ## Secret Retrieval Pattern
 
-`secret::get` returns `Result<Option<Vec<u8>>, _>`. Safe conversion to a non-empty `String`:
+`secret::get` returns `Result<Option<Vec<u8>>, u32>`. Safe conversion to a non-empty `String`:
 
 ```rust
 let expected_key = match secret::get("API_KEY") {
@@ -181,7 +181,17 @@ let expected_key = match secret::get("API_KEY") {
 };
 ```
 
-Both the `Err(_)` case and `Ok(None)` case (secret not configured) are handled identically — return 500.
+Both the `Err(_)` case and `Ok(None)` case (secret not configured) are handled identically — return 500. For a more idiomatic single-expression form:
+
+```rust
+secret::get("API_KEY")
+    .ok()
+    .flatten()
+    .and_then(|v| String::from_utf8(v).ok())
+    .filter(|s| !s.is_empty())
+```
+
+The source example uses the explicit `match` form for clarity; both are equivalent.
 
 ## HTTP Status Code Reference
 
@@ -212,3 +222,122 @@ target = "wasm32-wasip1"
 - FastEdge secrets configuration (dashboard secret variable setup)
 - auth-jwt-rust reference (JWT-based authentication — use when token expiry and claims are needed)
 - platform-overview reference (CDN vs HTTP app type distinction)
+
+## Source Material
+
+### FILE: examples/cdn/api_key/src/lib.rs
+
+```rust
+/*
+* Copyright 2025 G-Core Innovations SARL
+*/
+/*
+Example CDN app demonstrating API key validation.
+
+Validates requests using an X-API-Key header checked against a stored
+secret. Simpler alternative to JWT when token expiry and claims are
+not needed.
+
+Required configuration:
+  - Secret: API_KEY
+*/
+
+use fastedge::proxywasm::secret;
+use proxy_wasm::traits::*;
+use proxy_wasm::types::*;
+
+proxy_wasm::main! {{
+    proxy_wasm::set_log_level(LogLevel::Info);
+    proxy_wasm::set_root_context(|_| -> Box<dyn RootContext> { Box::new(ApiKeyRoot) });
+}}
+
+struct ApiKeyRoot;
+
+impl Context for ApiKeyRoot {}
+
+impl RootContext for ApiKeyRoot {
+    fn get_type(&self) -> Option<ContextType> {
+        Some(ContextType::HttpContext)
+    }
+
+    fn create_http_context(&self, _: u32) -> Option<Box<dyn HttpContext>> {
+        Some(Box::new(ApiKeyContext))
+    }
+}
+
+struct ApiKeyContext;
+
+impl Context for ApiKeyContext {}
+
+impl HttpContext for ApiKeyContext {
+    fn on_http_request_headers(&mut self, _: usize, _: bool) -> Action {
+        let expected_key = match secret::get("API_KEY") {
+            Ok(Some(bytes)) => match String::from_utf8(bytes) {
+                Ok(s) if !s.is_empty() => s,
+                _ => {
+                    self.send_http_response(500, vec![], Some(b"App misconfigured"));
+                    return Action::Pause;
+                }
+            },
+            _ => {
+                self.send_http_response(500, vec![], Some(b"App misconfigured"));
+                return Action::Pause;
+            }
+        };
+
+        let provided_key = match self.get_http_request_header("X-API-Key") {
+            Some(k) if !k.is_empty() => k,
+            _ => {
+                self.send_http_response(
+                    401,
+                    vec![("WWW-Authenticate", "API-Key")],
+                    Some(b"Missing X-API-Key header"),
+                );
+                return Action::Pause;
+            }
+        };
+
+        if provided_key != expected_key {
+            println!("API key validation failed");
+            self.send_http_response(403, vec![], Some(b"Invalid API key"));
+            return Action::Pause;
+        }
+
+        // Strip the API key header before forwarding to upstream
+        self.set_http_request_header("X-API-Key", None);
+
+        println!("API key validated successfully");
+        Action::Continue
+    }
+}
+```
+
+
+### FILE: examples/cdn/api_key/Cargo.toml
+
+```toml
+[workspace]
+
+[package]
+name = "api_key"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+proxy-wasm = "0.2"
+fastedge = { version = "0.4", features = ["proxywasm"] }
+```
+
+
+### FILE: examples/cdn/api_key/README.md
+
+```
+[← Back to examples](../../README.md)
+
+# API Key (CDN)
+
+Validates requests using an `X-API-Key` header checked against a stored secret. Returns 401 if missing, 403 if invalid, and strips the header before forwarding to upstream.
+```
