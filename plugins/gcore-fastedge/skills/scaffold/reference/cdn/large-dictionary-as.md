@@ -3,8 +3,8 @@
   sources:
     - id: proxy-wasm-sdk-as
       ref: master
-      commit: 60f25c7bd35564e5bafb421be7f37aa4acf1bf81
-      updated: 2026-05-20
+      commit: 8e3bb621bc013a0aed7e52122066b417ad62a207
+      updated: 2026-08-17
 -->
 
 ---
@@ -76,13 +76,9 @@ class LargeDictionaryContext extends Context {
   }
 
   onRequestHeaders(a: u32, end_of_stream: bool): FilterHeadersStatusValues {
+    // Use getDictionary for environment variables that may exceed 64KB.
+    // For normal-sized env vars (< 64KB), use getEnv instead.
     const config = getDictionary("LARGE_CONFIG");
-
-    // getDictionary returns "" (never null) when variable is not set
-    if (config.length === 0) {
-      log(LogLevelValues.info, "LARGE_CONFIG is not set");
-      return FilterHeadersStatusValues.Continue;
-    }
 
     const size = config.length;
     log(LogLevelValues.info, "LARGE_CONFIG size: " + size.toString() + " bytes");
