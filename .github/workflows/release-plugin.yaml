@@ -208,7 +208,7 @@ jobs:
         if: steps.detect.outputs.changed == 'true' || inputs.force == true
         continue-on-error: true
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           VERSION="${{ steps.bump.outputs.version }}"
           BRANCH="release/v${VERSION}"
