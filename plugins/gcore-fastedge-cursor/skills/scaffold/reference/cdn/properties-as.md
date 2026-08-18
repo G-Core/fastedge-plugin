@@ -3,8 +3,8 @@
   sources:
     - id: proxy-wasm-sdk-as
       ref: master
-      commit: 60f25c7bd35564e5bafb421be7f37aa4acf1bf81
-      updated: 2026-05-20
+      commit: 8e3bb621bc013a0aed7e52122066b417ad62a207
+      updated: 2026-08-17
 -->
 
 ---
@@ -130,7 +130,7 @@ set_property("request.path", String.UTF8.encode(newPath));
 Parse the raw query string and rewrite properties based on matching parameter keys.
 
 ```typescript
-const query = get_property("request.query");
+const query = get_property(REQUEST_QUERY);
 if (query.byteLength !== 0) {
   const queryString = String.UTF8.decode(query);
   const params = queryString
@@ -145,11 +145,11 @@ if (query.byteLength !== 0) {
     const key = param[0];
     const value = param[1];
     if (key.toLowerCase() === "url") {
-      set_property("request.url", String.UTF8.encode(value));
+      set_property(REQUEST_URI, String.UTF8.encode(value));
     } else if (key.toLowerCase() === "host") {
-      set_property("request.host", String.UTF8.encode(value));
+      set_property(REQUEST_HOST, String.UTF8.encode(value));
     } else if (key.toLowerCase() === "path") {
-      set_property("request.path", String.UTF8.encode(value));
+      set_property(REQUEST_PATH, String.UTF8.encode(value));
     }
   }
 }

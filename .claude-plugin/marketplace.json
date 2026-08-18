@@ -13,7 +13,7 @@
       "name": "gcore-fastedge",
       "source": "./plugins/gcore-fastedge",
       "description": "Build, deploy, and manage serverless edge applications on Gcore FastEdge",
-      "version": "0.2.5"
+      "version": "0.2.6"
     }
   ]
 }

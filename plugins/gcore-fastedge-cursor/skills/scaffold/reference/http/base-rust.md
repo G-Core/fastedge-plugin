@@ -4,7 +4,7 @@
     - id: fastedge-sdk-rust
       ref: main
       commit: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-      updated: 2026-07-23
+      updated: 2026-08-17
 -->
 
 ---
@@ -14,7 +14,7 @@ languages: [rust]
 template_origin: http-base
 source_repo: fastedge-sdk-rust
 source_ref: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-updated: 2026-07-23
+updated: 2026-08-17
 
 ---
 
@@ -174,3 +174,45 @@ cargo build --release --target wasm32-wasip2
 - **Handler signature**: `async fn main(request: Request<Body>) -> anyhow::Result<Response<Body>>`
 - **Crate type**: `cdylib` (required for WASM output)
 - **Workspace**: Single-project workspace pattern (`[workspace]` declared in Cargo.toml)
+
+## Source Material
+
+### FILE: examples/http/wasi/hello_world/src/lib.rs
+
+```rust
+use wstd::http::body::Body;
+use wstd::http::{Request, Response};
+
+#[wstd::http_server]
+async fn main(request: Request<Body>) -> anyhow::Result<Response<Body>> {
+    let url = request.uri().to_string();
+
+    Ok(Response::builder()
+        .status(200)
+        .header("content-type", "text/plain;charset=UTF-8")
+        .body(Body::from(format!(
+            "Hello, you made a wasi request to {url}"
+        )))?)
+}
+
+```
+
+
+### FILE: examples/http/wasi/hello_world/Cargo.toml
+
+```toml
+[workspace]
+
+[package]
+name = "hello_world"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wstd = "0.6"
+anyhow = "1"
+
+```
