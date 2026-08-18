@@ -3,8 +3,8 @@
   sources:
     - id: proxy-wasm-sdk-as
       ref: master
-      commit: 60f25c7bd35564e5bafb421be7f37aa4acf1bf81
-      updated: 2026-05-20
+      commit: 8e3bb621bc013a0aed7e52122066b417ad62a207
+      updated: 2026-08-17
 -->
 
 ---
@@ -205,6 +205,14 @@ The `validateQueryParams` function:
 - Validates `action` against `ALL_ACTIONS = ["get", "scan", "zscan", "zrange", "bfExists"]`
 - Checks all required parameters for the resolved action are present and non-empty
 
+**Required parameters by action** (as defined in `validateQueryParams`):
+- `store` — required for all actions
+- `key` — required for `get`, `zrange`, `zscan`, `bfExists`
+- `match` — required for `scan`, `zscan`
+- `min` — required for `zrange`
+- `max` — required for `zrange`
+- `item` — required for `bfExists`
+
 ---
 
 ## Error Handling
@@ -247,6 +255,18 @@ set_buffer_bytes(
 ```
 
 The response body is a JSON object built from a `Map<string, string>` using `stringifyMap`. It includes fields such as `Store`, `Action`, `Key`, `Response`, and action-specific fields (`Match`, `Min`, `Max`, `Item`).
+
+**`stringifyMap` format:**
+```typescript
+// Output: {"key1": "value1", "key2": "value2"}
+function stringifyMap(map: Map<string, string>): string
+```
+
+**`stringifyValueScoreTuples` format:**
+```typescript
+// Output: "{ value: <val>, score: <score> }, ..."
+function stringifyValueScoreTuples(arr: Array<ValueScoreTuple>): string
+```
 
 ---
 
@@ -294,6 +314,11 @@ registerRootContext → KvStoreRoot.createContext (sets log level to info)
 ## Deploy Requirement
 
 The KV Store must be configured and linked to the FastEdge application before use. `KvStore.open` will return `null` if the named store is not attached. The `store` query parameter at runtime must exactly match the binding name configured on the application.
+
+KV Store setup steps:
+1. Create a KV Store in the FastEdge portal under the Key-Value storage section.
+2. Populate it with the keys and values you want to query.
+3. Link the store to the app — when configuring the FastEdge application, add the store under the app's KV store bindings. The name given to the binding is what the `store` query parameter must match at runtime.
 
 ---
 

@@ -3,8 +3,8 @@
   sources:
     - id: proxy-wasm-sdk-as
       ref: master
-      commit: 60f25c7bd35564e5bafb421be7f37aa4acf1bf81
-      updated: 2026-05-20
+      commit: 8e3bb621bc013a0aed7e52122066b417ad62a207
+      updated: 2026-08-17
 -->
 
 ---
@@ -91,12 +91,12 @@ function handleHttpCallResponse(
 
 **Parameters:**
 
-| Parameter  | Type        | Description |
-|------------|-------------|-------------|
+| Parameter  | Type          | Description |
+|------------|---------------|-------------|
 | `ctx`      | `BaseContext` | Originating context |
-| `hdrs`     | `u32`       | Number of response headers; `0` indicates failure (timeout, DNS error, etc.) |
-| `bodySize` | `usize`     | Size of the response body in bytes |
-| `trls`     | `u32`       | Number of response trailers |
+| `hdrs`     | `u32`         | Number of response headers; `0` indicates failure (timeout, DNS error, etc.) |
+| `bodySize` | `usize`       | Size of the response body in bytes |
+| `trls`     | `u32`         | Number of response trailers |
 
 ---
 

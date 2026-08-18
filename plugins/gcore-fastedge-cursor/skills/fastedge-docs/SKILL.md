@@ -89,6 +89,19 @@ The reference directory is organised in two layers:
 - `./reference/http/` — HTTP-app patterns extracted from `FastEdge-sdk-js/examples/` (fetch, headers, kv-store, cache, geo-redirect, ab-testing, plus Hono routing/middleware, auth-bearer/JWT, proxy-with-transform)
 - `./reference/cdn/` — CDN-app patterns from `FastEdge-sdk-rust/examples/cdn/` and `proxy-wasm-sdk-as/examples/` (jwt, geoblock, headers, body, env-secrets, kv-store, properties, ab-testing, etc.)
 
+### Bolt-on templates (pipeline-generated, from `FastEdge-templates`)
+
+**Read `./reference/templates/catalog.md` before scaffolding or hand-building any capability.**
+It lists Gcore's maintained, ready-to-deploy bolt-on templates (installed via the Gcore portal
+template gallery, not `/gcore-fastedge:scaffold`) and is kept current automatically as new
+templates are added — do not rely on this file's prose to know what's covered, always check the
+catalog itself. If the user's request matches an entry, recommend the template instead of
+hand-building the same capability.
+
+If the user has **already deployed** a template and needs help wiring it into their own origin
+codebase, the catalog links each template to its own `templates/<name>-integration.md` reference
+(when one exists) — use that for the origin-side contract instead of scaffolding anything.
+
 ## Common Questions
 
 **Q: How do I set environment variables for my app?**

@@ -3,8 +3,8 @@
   sources:
     - id: proxy-wasm-sdk-as
       ref: master
-      commit: 60f25c7bd35564e5bafb421be7f37aa4acf1bf81
-      updated: 2026-05-20
+      commit: 8e3bb621bc013a0aed7e52122066b417ad62a207
+      updated: 2026-08-17
 -->
 
 ---
@@ -70,7 +70,7 @@ registerRootContext() →  registers the root context factory with a plugin name
 ```typescript
 class HttpBodyRoot extends RootContext {
   createContext(context_id: u32): Context {
-    setLogLevel(LogLevelValues.info);
+    setLogLevel(LogLevelValues.info); // reduce to LogLevelValues.debug for more logging
     return new HttpBody(context_id, this);
   }
 }
@@ -97,6 +97,7 @@ Called when request headers arrive. Must remove `content-length` before the body
 
 ```typescript
 onRequestHeaders(headers: u32, end_of_stream: bool): FilterHeadersStatusValues {
+  log(LogLevelValues.debug, "onRequestHeaders >>");
   stream_context.headers.request.remove("content-length");
   return FilterHeadersStatusValues.Continue;
 }
@@ -112,6 +113,7 @@ Called (possibly multiple times) as request body chunks arrive. Buffer until `en
 
 ```typescript
 onRequestBody(body_buffer_length: usize, end_of_stream: bool): FilterDataStatusValues {
+  log(LogLevelValues.debug, "onRequestBody >>");
   if (!end_of_stream) {
     return FilterDataStatusValues.StopIterationAndBuffer;
   }
@@ -124,6 +126,7 @@ onRequestBody(body_buffer_length: usize, end_of_stream: bool): FilterDataStatusV
 
   if (bodyBytes.byteLength > 0) {
     const bodyStr = String.UTF8.decode(bodyBytes);
+    log(LogLevelValues.debug, "onRequestBody >> bodyStr: " + bodyStr);
     if (bodyStr.includes("Client")) {
       const newBody = `Original message body (${body_buffer_length.toString()} bytes) redacted.\n`;
       set_buffer_bytes(
@@ -154,10 +157,11 @@ onRequestBody(body_buffer_length: usize, end_of_stream: bool): FilterDataStatusV
 
 ### `onResponseHeaders(a: u32, end_of_stream: bool): FilterHeadersStatusValues`
 
-Called when response headers arrive. Must remove `content-length` and set chunked transfer encoding before the response body is modified.
+Called when response headers arrive. Must remove `content-length` and set chunked transfer encoding before the response body is modified. Captures the `content-type` header into a runtime property for use in `onResponseBody`.
 
 ```typescript
 onResponseHeaders(a: u32, end_of_stream: bool): FilterHeadersStatusValues {
+  log(LogLevelValues.debug, "onResponseHeaders >>");
   stream_context.headers.response.remove("content-length");
   stream_context.headers.response.replace("transfer-encoding", "Chunked");
 
@@ -185,15 +189,31 @@ Called (possibly multiple times) as response body chunks arrive. Buffer until `e
 
 ```typescript
 onResponseBody(body_buffer_length: usize, end_of_stream: bool): FilterDataStatusValues {
+  log(LogLevelValues.debug, "onResponseBody >>" + end_of_stream.toString());
+
   if (!end_of_stream) {
     return FilterDataStatusValues.StopIterationAndBuffer;
   }
 
+  log(
+    LogLevelValues.debug,
+    "onResponseBody >> body_buffer_length: " + body_buffer_length.toString()
+  );
+
   const urlBytes = get_property("request.url");
   const url = urlBytes.byteLength === 0 ? "" : String.UTF8.decode(urlBytes);
+  if (url !== "") {
+    log(LogLevelValues.info, `url=${url}`);
+  }
 
   const contentTypeBytes = get_property("response.content_type");
-  const contentType = contentTypeBytes.byteLength === 0 ? "" : String.UTF8.decode(contentTypeBytes);
+  const contentType =
+    contentTypeBytes.byteLength === 0
+      ? ""
+      : String.UTF8.decode(contentTypeBytes);
+  if (contentType !== "") {
+    log(LogLevelValues.info, `contentType=${contentType}`);
+  }
 
   const bodyBytes = get_buffer_bytes(
     BufferTypeValues.HttpResponseBody,
@@ -203,7 +223,7 @@ onResponseBody(body_buffer_length: usize, end_of_stream: bool): FilterDataStatus
 
   if (bodyBytes.byteLength > 0) {
     const bodyStr = String.UTF8.decode(bodyBytes);
-    log(LogLevelValues.info, "onHttpResponseBody >> bodyStr: " + bodyStr);
+    log(LogLevelValues.info, "onResponseBody >> bodyStr: " + bodyStr);
   }
   return FilterDataStatusValues.Continue;
 }
@@ -217,13 +237,7 @@ onResponseBody(body_buffer_length: usize, end_of_stream: bool): FilterDataStatus
 
 ### `onLog(): void`
 
-Called at the end of the request lifecycle. Used for final audit logging.
-
-```typescript
-onLog(): void {
-  log(LogLevelValues.info, "onLog >> completed (contextId): " + this.context_id.toString());
-}
-```
+Called at the end of the request lifecycle. Not present in this example's source but inherited from `Context`. Used for final audit logging.
 
 ## Registration
 
@@ -334,7 +348,7 @@ pnpm run asbuild
 Build scripts defined in `package.json`:
 - `asbuild:debug` — `asc assembly/index.ts --target debug`
 - `asbuild:release` — `asc assembly/index.ts --target release`
-- `asbuild` — runs both
+- `asbuild` — runs both (`npm run asbuild:debug && npm run asbuild:release`)
 
 ## Deploy
 

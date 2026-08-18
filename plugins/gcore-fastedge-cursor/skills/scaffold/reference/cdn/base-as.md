@@ -3,8 +3,8 @@
   sources:
     - id: proxy-wasm-sdk-as
       ref: master
-      commit: 60f25c7bd35564e5bafb421be7f37aa4acf1bf81
-      updated: 2026-05-20
+      commit: 8e3bb621bc013a0aed7e52122066b417ad62a207
+      updated: 2026-08-17
 -->
 
 ---
@@ -14,8 +14,8 @@ languages: [assemblyscript]
 template_origin: cdn-base
 source_example: proxy-wasm-sdk-as/examples/helloWorld
 source_repo: proxy-wasm-sdk-as
-source_ref: 60f25c7bd35564e5bafb421be7f37aa4acf1bf81
-updated: 2026-05-20
+source_ref: 8e3bb621bc013a0aed7e52122066b417ad62a207
+updated: 2026-08-17
 ---
 
 # Base Skeleton: CDN AssemblyScript
@@ -263,112 +263,3 @@ registerRootContext((context_id: u32) => {
 - platform-overview (CDN filter pipeline, hook execution order)
 - examples-headers-cdn-assemblyscript (header manipulation feature blueprint)
 - examples-body-cdn-assemblyscript (body transformation feature blueprint)
-
-## Source Material
-
-### FILE: examples/helloWorld/assembly/index.ts
-
-export * from "@gcoredev/proxy-wasm-sdk-as/assembly/proxy"; // this exports the required functions for the proxy to interact with us.
-import {
-  Context,
-  FilterDataStatusValues,
-  FilterHeadersStatusValues,
-  log,
-  LogLevelValues,
-  registerRootContext,
-  RootContext,
-} from "@gcoredev/proxy-wasm-sdk-as/assembly";
-
-class HelloWorldRoot extends RootContext {
-  createContext(context_id: u32): Context {
-    return new HelloWorld(context_id, this);
-  }
-}
-
-class HelloWorld extends Context {
-  constructor(context_id: u32, root_context: HelloWorldRoot) {
-    super(context_id, root_context);
-  }
-
-  onRequestHeaders(
-    headers: u32,
-    end_of_stream: bool,
-  ): FilterHeadersStatusValues {
-    log(LogLevelValues.info, "onRequestHeaders >> Hello World!");
-    return FilterHeadersStatusValues.Continue;
-  }
-
-  onRequestBody(
-    body_buffer_length: usize,
-    end_of_stream: bool,
-  ): FilterDataStatusValues {
-    log(LogLevelValues.info, "onRequestBody >> Hello World!");
-    return FilterDataStatusValues.Continue;
-  }
-
-  onResponseHeaders(a: u32, end_of_stream: bool): FilterHeadersStatusValues {
-    log(LogLevelValues.info, "onResponseHeaders >> Hello World!");
-    return FilterHeadersStatusValues.Continue;
-  }
-
-  onResponseBody(
-    body_buffer_length: usize,
-    end_of_stream: bool,
-  ): FilterDataStatusValues {
-    log(LogLevelValues.info, "onResponseBody >> Hello World!");
-    return FilterDataStatusValues.Continue;
-  }
-}
-
-registerRootContext((context_id: u32) => {
-  return new HelloWorldRoot(context_id);
-}, "helloWorld");
-
-
-### FILE: examples/helloWorld/package.json
-
-{
-  "name": "fastedge-as-example-hello-world",
-  "version": "1.0.0",
-  "description": "FastEdge AssemblyScript example: Hello World — minimal CDN app skeleton",
-  "scripts": {
-    "asbuild:debug": "asc assembly/index.ts --target debug",
-    "asbuild:release": "asc assembly/index.ts --target release",
-    "asbuild": "npm run asbuild:debug && npm run asbuild:release"
-  },
-  "dependencies": {
-    "@gcoredev/proxy-wasm-sdk-as": "^1.2.3"
-  },
-  "devDependencies": {
-    "@assemblyscript/wasi-shim": "^0.1.0",
-    "assemblyscript": "^0.28.9"
-  }
-}
-
-
-### FILE: examples/helloWorld/asconfig.json
-
-{
-  "extends": "./node_modules/@assemblyscript/wasi-shim/asconfig.json",
-  "targets": {
-    "debug": {
-      "outFile": "build/helloWorld-debug.wasm",
-      "textFile": "build/helloWorld-debug.wat",
-      "sourceMap": true,
-      "debug": true
-    },
-    "release": {
-      "outFile": "build/helloWorld.wasm",
-      "textFile": "build/helloWorld.wat",
-      "sourceMap": true,
-      "optimizeLevel": 3,
-      "shrinkLevel": 0,
-      "converge": false,
-      "noAssert": false
-    }
-  },
-  "options": {
-    "bindings": "esm",
-    "use": "abort=abort_proc_exit"
-  }
-}
