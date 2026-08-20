@@ -4,7 +4,7 @@
     - id: fastedge-sdk-rust
       ref: main
       commit: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-      updated: 2026-08-17
+      updated: 2026-08-20
 -->
 
 ---
@@ -130,6 +130,19 @@ use wstd::http::{Client, Request, Response};
 | Outbound send failure | `map_err` converts to `anyhow::Error`; propagated via `?` |
 | Missing `x-fetch-url` header | Falls back to `https://httpbin.org/get` |
 | Non-UTF-8 header value | `to_str().ok()` returns `None`; fallback default applied |
+
+## Build
+
+```bash
+cargo component build --release
+# Output: target/wasm32-wasip2/release/simple_fetch.wasm
+```
+
+## Example Usage
+
+```bash
+curl -H "x-fetch-url: https://httpbin.org/uuid" https://<your-app-domain>/
+```
 
 ## Source Material
 
