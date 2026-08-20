@@ -4,7 +4,7 @@
     - id: fastedge-sdk-rust
       ref: main
       commit: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-      updated: 2026-08-17
+      updated: 2026-08-20
 -->
 
 ---
@@ -127,3 +127,90 @@ Both errors propagate via `?` and result in a 500-class response from the FastEd
 - `outbound-modify-response` (WASI, Rust) — fetches upstream and reshapes the body into a new JSON response
 - `streaming` (WASI, Rust) — handler that generates its own streaming response without an upstream fetch
 - `outbound-fetch` (JavaScript) — mirror of this example in the FastEdge SDK JS
+
+## Source Material
+
+### FILE: examples/http/wasi/outbound_fetch/src/lib.rs
+
+```rust
+/*
+ * Copyright 2025 G-Core Innovations SARL
+ */
+/*
+Minimal outbound fetch example.
+
+Makes a GET request to an upstream HTTP origin and returns the upstream
+response verbatim — status, headers, and body pass through unchanged.
+
+For a variant that reads and transforms the upstream body, see
+`outbound_modify_response/`. For a streaming-response demo, see `streaming/`.
+
+Mirror of the FastEdge-sdk-js `outbound-fetch` example.
+*/
+
+use anyhow::anyhow;
+use wstd::http::body::Body;
+use wstd::http::{Client, Request, Response};
+
+#[wstd::http_server]
+async fn main(_request: Request<Body>) -> anyhow::Result<Response<Body>> {
+    let upstream_req = Request::get("http://jsonplaceholder.typicode.com/users")
+        .body(Body::empty())
+        .map_err(|e| anyhow!("failed to build request: {e}"))?;
+
+    let upstream_resp = Client::new()
+        .send(upstream_req)
+        .await
+        .map_err(|e| anyhow!("outbound request failed: {e}"))?;
+
+    // Return the upstream response verbatim. The body is passed through
+    // without calling `.contents()`, so it streams to the client as upstream
+    // produces it.
+    let (parts, body) = upstream_resp.into_parts();
+    let mut response = Response::new(body);
+    *response.status_mut() = parts.status;
+    *response.headers_mut() = parts.headers;
+    Ok(response)
+}
+```
+
+
+### FILE: examples/http/wasi/outbound_fetch/Cargo.toml
+
+```toml
+[workspace]
+
+[package]
+name = "outbound_fetch"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wstd = "0.6"
+anyhow = "1"
+```
+
+
+### FILE: examples/http/wasi/outbound_fetch/README.md
+
+```
+[← Back to examples](../../../README.md)
+
+# Outbound Fetch (WASI)
+
+Fetch data from an outbound HTTP origin and return the response directly — status, headers,
+and body pass through unchanged.
+
+The body is never buffered (no `.contents().await`), so upstream chunks stream to the client
+as they arrive.
+
+## Related
+
+- [outbound_modify_response](../outbound_modify_response/) — same fetch, but reads the body
+  and reshapes it into a new JSON response.
+- [streaming](../streaming/) — a handler that generates its own streaming response body.
+- Mirror of `FastEdge-sdk-js/examples/outbound-fetch/`.
+```

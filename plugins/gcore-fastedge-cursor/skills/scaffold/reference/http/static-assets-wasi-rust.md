@@ -4,7 +4,7 @@
     - id: fastedge-sdk-rust
       ref: main
       commit: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-      updated: 2026-07-23
+      updated: 2026-08-20
 -->
 
 ---
@@ -32,6 +32,7 @@ include_str!("../assets/filename.ext")
 - Embeds a UTF-8 text file into the binary at compile time.
 - Path is relative to the source file containing the macro.
 - Returns `&'static str`.
+- Build fails if the target file does not exist at compile time.
 
 ```rust
 include_bytes!("../assets/filename.ext")
@@ -127,6 +128,13 @@ async fn main(req: Request<Body>) -> anyhow::Result<Response<Body>> {
 }
 ```
 
+## Imports
+
+```rust
+use wstd::http::body::Body;
+use wstd::http::{Request, Response, StatusCode};
+```
+
 ## Cargo.toml
 
 ```toml
@@ -165,6 +173,7 @@ All files in `assets/` must exist at compile time; the build will fail if `inclu
 - Asset paths in `include_str!` are relative to the `.rs` source file, not the crate root.
 - All assets are compiled into the WASM binary — large assets increase binary size proportionally.
 - No dynamic file loading is possible at runtime; adding an asset requires a rebuild.
+- The WASM runtime has no filesystem; there is no alternative to compile-time embedding.
 
 ## See Also
 
