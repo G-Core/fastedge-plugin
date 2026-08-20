@@ -4,7 +4,7 @@
     - id: proxy-wasm-sdk-as
       ref: master
       commit: 8e3bb621bc013a0aed7e52122066b417ad62a207
-      updated: 2026-08-17
+      updated: 2026-08-20
 -->
 
 ---
@@ -237,7 +237,7 @@ onResponseBody(body_buffer_length: usize, end_of_stream: bool): FilterDataStatus
 
 ### `onLog(): void`
 
-Called at the end of the request lifecycle. Not present in this example's source but inherited from `Context`. Used for final audit logging.
+Called at the end of the request lifecycle. Inherited from `Context`. Used for final audit logging. Not implemented in this example's source.
 
 ## Registration
 

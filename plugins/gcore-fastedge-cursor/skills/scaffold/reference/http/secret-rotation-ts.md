@@ -4,7 +4,7 @@
     - id: fastedge-sdk-js
       ref: main
       commit: 81145a9a43ec499240c687bd49376ab20c72b11c
-      updated: 2026-07-23
+      updated: 2026-08-20
 -->
 
 ---
@@ -45,13 +45,14 @@ import { getSecret, getSecretEffectiveAt } from 'fastedge::secret';
 
 #### `getSecretEffectiveAt(name, slot)`
 
-| Parameter | Type   | Description                                  |
-|-----------|--------|----------------------------------------------|
-| `name`    | string | Secret name (key)                            |
-| `slot`    | number | Slot index or unix timestamp (non-negative integer) |
+| Parameter | Type   | Description                                                         |
+|-----------|--------|---------------------------------------------------------------------|
+| `name`    | string | Secret name (key)                                                   |
+| `slot`    | number | Slot index or unix timestamp (non-negative integer)                 |
 
 - **Returns**: `string | null` — the value from the highest slot `<= slot`, or `null` if no slot satisfies the constraint.
 - **Slot model**: slots are interpreted as either indices (`0, 1, 2, …`) or unix timestamps. The host resolves by returning the value stored at the highest slot number that is less than or equal to the supplied slot number.
+- Both functions are synchronous — no `await` required.
 
 ---
 
@@ -207,3 +208,65 @@ This shape is the diagnostic surface for verifying that rotation is working corr
 - http-base skeleton
 - deploy skill (for uploading secrets via the API before deploying)
 - manage skill (`secrets` subcommand for secret CRUD operations)
+
+## Source Material
+
+### FILE: examples/secret-rotation/src/index.js
+
+```js
+import { getSecret, getSecretEffectiveAt } from 'fastedge::secret';
+
+function app(event) {
+  const { request } = event;
+
+  // Read the slot from the x-slot header, defaulting to the current unix timestamp.
+  // Slots can be interpreted either as indices (0, 1, 2...) or as unix timestamps;
+  // the host returns the value from the highest slot <= this number.
+  const slotHeader = request.headers.get('x-slot');
+  const slot =
+    slotHeader !== null ? Number.parseInt(slotHeader, 10) : Math.floor(Date.now() / 1000);
+
+  if (!Number.isFinite(slot) || slot < 0) {
+    return new Response('x-slot header must be a non-negative integer', { status: 400 });
+  }
+
+  const secretName = request.headers.get('x-secret-name') ?? 'TOKEN_SECRET';
+
+  const current = getSecret(secretName);
+  const effective = getSecretEffectiveAt(secretName, slot);
+
+  const body = JSON.stringify({
+    secret_name: secretName,
+    slot,
+    current,
+    effective_at_slot: effective,
+    is_same: current === effective,
+  });
+
+  return new Response(body, {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+  });
+}
+
+addEventListener('fetch', (event) => {
+  event.respondWith(app(event));
+});
+```
+
+### FILE: examples/secret-rotation/package.json
+
+```json
+{
+  "name": "fastedge-example-secret-rotation",
+  "version": "1.0.0",
+  "description": "FastEdge JS example: slot-based secret retrieval for rotation",
+  "type": "module",
+  "scripts": {
+    "build": "fastedge-build src/index.js dist/secret-rotation.wasm"
+  },
+  "dependencies": {
+    "@gcoredev/fastedge-sdk-js": "^2.2.2"
+  }
+}
+```
