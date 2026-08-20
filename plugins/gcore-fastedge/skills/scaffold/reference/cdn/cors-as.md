@@ -4,7 +4,7 @@
     - id: proxy-wasm-sdk-as
       ref: master
       commit: 8e3bb621bc013a0aed7e52122066b417ad62a207
-      updated: 2026-08-17
+      updated: 2026-08-20
 -->
 
 ---
@@ -139,13 +139,6 @@ Build scripts:
 - Origin matching is exact string equality after `trim()` — no wildcard subdomains, no regex
 - `Vary: Origin` is always added alongside `Access-Control-Allow-Origin` to prevent cache poisoning
 - OPTIONS preflights are answered by the FastEdge edge layer before this hook fires — configure preflight behaviour (allowed methods, max-age) in CDN application settings, not in WASM
-
-## See Also
-
-- cdn-base skeleton reference
-- proxy-wasm-sdk-as SDK reference
-- FastEdge CDN application environment variable configuration
-- FastEdge portal deployment guide
 
 ## Source Material
 
@@ -300,3 +293,10 @@ Build output:
 
 Upload `build/cors.wasm` to the FastEdge portal and attach it to your CDN application. Configure the `ALLOWED_ORIGINS` environment variable in the application settings.
 ```
+
+## See Also
+
+- cdn-base skeleton reference
+- proxy-wasm-sdk-as SDK reference
+- FastEdge CDN application environment variable configuration
+- FastEdge portal deployment guide
