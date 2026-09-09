@@ -3,8 +3,8 @@
   sources:
     - id: fastedge-test
       ref: main
-      commit: e3f917bbddc6bd1a6a87853bc21bbb310f14aff7
-      updated: 2026-09-01
+      commit: 93d8046c3b98a65b18e189d435f760c8861d481f
+      updated: 2026-09-09
 -->
 
 # FastEdge Test Framework API
