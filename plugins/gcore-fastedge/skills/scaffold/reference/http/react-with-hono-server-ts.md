@@ -3,8 +3,8 @@
   sources:
     - id: fastedge-sdk-js
       ref: main
-      commit: 81145a9a43ec499240c687bd49376ab20c72b11c
-      updated: 2026-08-20
+      commit: 9c8c7886f0d1ec5ac2296b4080805966a96ca817
+      updated: 2026-09-22
 -->
 
 ---
@@ -35,7 +35,7 @@ Over `http-base`, add the following to `package.json`.
 **Runtime dependencies:**
 ```json
 "@gcoredev/fastedge-sdk-js": "^2.3.0",
-"hono": "^4.12.25",
+"hono": "^4.13.5",
 "react": "^19.1.1",
 "react-dom": "^19.1.1"
 ```
@@ -43,7 +43,7 @@ Over `http-base`, add the following to `package.json`.
 **Dev dependencies:**
 ```json
 "@eslint/js": "^9.36.0",
-"@hono/node-server": "^1.19.14",
+"@hono/node-server": "^1.19.15",
 "@types/node": "^24.6.0",
 "@types/react": "^19.1.16",
 "@types/react-dom": "^19.1.9",
@@ -125,13 +125,13 @@ Script semantics:
   },
   "dependencies": {
     "@gcoredev/fastedge-sdk-js": "^2.3.0",
-    "hono": "^4.12.25",
+    "hono": "^4.13.5",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
-    "@hono/node-server": "^1.19.14",
+    "@hono/node-server": "^1.19.15",
     "@types/node": "^24.6.0",
     "@types/react": "^19.1.16",
     "@types/react-dom": "^19.1.9",

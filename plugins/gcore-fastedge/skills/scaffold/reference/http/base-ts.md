@@ -3,8 +3,8 @@
   sources:
     - id: fastedge-sdk-js
       ref: main
-      commit: 81145a9a43ec499240c687bd49376ab20c72b11c
-      updated: 2026-08-20
+      commit: 9c8c7886f0d1ec5ac2296b4080805966a96ca817
+      updated: 2026-09-22
 -->
 
 ---
@@ -13,8 +13,8 @@ app_type: http
 languages: [typescript, javascript]
 template_origin: http-base
 source_repo: https://github.com/G-Core/FastEdge-sdk-js
-source_ref: 81145a9a43ec499240c687bd49376ab20c72b11c
-updated: 2026-08-20
+source_ref: 9c8c7886f0d1ec5ac2296b4080805966a96ca817
+updated: 2026-09-22
 ---
 
 # Base Skeleton: HTTP TypeScript/JavaScript
