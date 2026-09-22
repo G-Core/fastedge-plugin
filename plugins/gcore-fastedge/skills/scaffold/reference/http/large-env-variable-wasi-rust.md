@@ -3,8 +3,8 @@
   sources:
     - id: fastedge-sdk-rust
       ref: main
-      commit: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-      updated: 2026-08-20
+      commit: 6eedcca9d5c0ddd4ff79ca475965393891da2d75
+      updated: 2026-09-22
 -->
 
 ---
@@ -131,3 +131,92 @@ The crate type must be `cdylib` for WASM/WASI compilation.
 - http-base reference (base skeleton for WASI HTTP apps)
 - fastedge-sdk-rust SDK reference (full `fastedge` crate API)
 - platform-overview reference (environment variable limits and configuration)
+
+## Source Material
+
+### FILE: examples/http/wasi/large_env_variable/src/lib.rs
+
+```rust
+/*
+* Copyright 2025 G-Core Innovations SARL
+*/
+/*
+Example WASI-HTTP app demonstrating access to large environment variables.
+
+Uses `fastedge::dictionary` to read environment variables that may exceed
+the 64KB WASI environment variable size limit.
+
+For normal-sized environment variables (< 64KB), prefer `std::env::var()`
+instead. The dictionary API is only required when your variable value
+may be larger than 64KB.
+
+Required configuration:
+  - Environment variable: LARGE_CONFIG (a large configuration payload, e.g. JSON)
+*/
+
+use fastedge::dictionary;
+use wstd::http::body::Body;
+use wstd::http::{Request, Response};
+
+#[wstd::http_server]
+async fn main(_request: Request<Body>) -> anyhow::Result<Response<Body>> {
+    // Use dictionary::get for environment variables that may exceed 64KB.
+    // For normal-sized env vars, use std::env::var() instead.
+    let config = dictionary::get("LARGE_CONFIG").unwrap_or_default();
+
+    let size = config.len();
+
+    Ok(Response::builder()
+        .status(200)
+        .body(Body::from(format!(
+            "LARGE_CONFIG loaded: {} bytes",
+            size
+        )))?)
+}
+```
+
+
+### FILE: examples/http/wasi/large_env_variable/Cargo.toml
+
+```toml
+[workspace]
+
+[package]
+name = "large_env_variable"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wstd = "0.6"
+fastedge = "0.4"
+anyhow = "1"
+```
+
+
+### FILE: examples/http/wasi/large_env_variable/README.md
+
+```
+[← Back to examples](../../../README.md)
+
+# Large Environment Variable (WASI)
+
+Demonstrates how to read **large environment variables** (> 64KB) using `fastedge::dictionary`.
+
+## When to use `dictionary` vs `std::env`
+
+| Method | Use when |
+|--------|----------|
+| `std::env::var("KEY")` | Variable value is under 64KB (most cases) |
+| `fastedge::dictionary::get("KEY")` | Variable value may exceed the 64KB WASI env var size limit |
+
+The WASI environment variable interface has a **64KB size limit** per variable. If your app needs to read larger values (e.g. large JSON configs, certificates, policy documents), use the `dictionary` API which bypasses this limit.
+
+For all other environment variable access, prefer `std::env::var()` as it is the standard, idiomatic Rust approach.
+
+## Required configuration
+
+- **Environment variable**: `LARGE_CONFIG` - a large configuration payload (e.g. JSON, PEM certificate)
+```
