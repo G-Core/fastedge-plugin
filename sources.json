@@ -4,7 +4,7 @@
     {
       "id": "fastedge-test",
       "github_url": "https://github.com/G-Core/fastedge-test",
-      "ref": "main",
+      "ref": "latest-release",
       "trigger": "schedule",
       "contract_path": "fastedge-plugin-source/",
       "intent_dir": "agent-intent-skills/fastedge-test/",
@@ -14,7 +14,7 @@
     {
       "id": "fastedge-sdk-js",
       "github_url": "https://github.com/G-Core/FastEdge-sdk-js",
-      "ref": "main",
+      "ref": "latest-release",
       "trigger": "schedule",
       "contract_path": "fastedge-plugin-source/",
       "intent_dir": "agent-intent-skills/fastedge-sdk-js/",
@@ -24,7 +24,7 @@
     {
       "id": "fastedge-sdk-rust",
       "github_url": "https://github.com/G-Core/FastEdge-sdk-rust",
-      "ref": "main",
+      "ref": "latest-release",
       "trigger": "schedule",
       "contract_path": "fastedge-plugin-source/",
       "intent_dir": "agent-intent-skills/fastedge-sdk-rust/",
@@ -34,7 +34,7 @@
     {
       "id": "proxy-wasm-sdk-as",
       "github_url": "https://github.com/G-Core/proxy-wasm-sdk-as",
-      "ref": "master",
+      "ref": "latest-release",
       "trigger": "schedule",
       "contract_path": "fastedge-plugin-source/",
       "intent_dir": "agent-intent-skills/proxy-wasm-sdk-as/",
