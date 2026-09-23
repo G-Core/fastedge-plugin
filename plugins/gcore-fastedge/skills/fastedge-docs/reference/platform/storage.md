@@ -66,13 +66,13 @@ Provenance tags: `[live]` measured on a deployed app · `[source]` read from the
 
 `[source + live]`
 
-- **TTLs are silently clamped** to a deployment ceiling (default 4 days). `set` without a TTL receives that default rather than "no expiry" — do not rely on an entry outliving it. There is no TTL-read primitive, so the clamp is invisible.
+- **TTLs are silently clamped** to a deployment ceiling (default 4 days). The JS and Rust SDK references describe `set` without a TTL as "no expiry"; the host actually applies the default ceiling (runtime source, and a no-TTL `set` key measured gone within 22 days). **Treat the host behaviour as authoritative** — do not rely on any entry outliving ~4 days. There is no TTL-read primitive, so the clamp is invisible.
 - **`incr` sets no TTL and does not index the key.** `incr`-created keys escape both the default-TTL cleanup and `purge_prefix` — measured still present after 22 days. **Always follow `incr` with `expire`**, whether the caller won or lost, or the key leaks permanently.
 - `expire` returns `false` for an absent key and `Err` for a failure. Do not collapse the two.
 
 ### Failures are real — retry
 
-`[live, production]` Cache operations fail outright with explicit errors (not timeouts) at ~0.44% overall, bursty and PoP-specific (one PoP showed 1.5%). A retry cap of 1 is not sound — use 3–4, and decide deliberately whether a failure fails open or closed.
+`[live, production]` Cache operations fail outright with explicit errors (not timeouts) at ~0.44% overall, bursty and PoP-specific (one PoP showed 1.5%). Plan for retries rather than assuming success, but bound them by the remaining execution budget — a single op can take ~100 ms at the tail, beyond the Basic plan's 50 ms limit. Decide deliberately whether an exhausted retry fails open or closed.
 
 > **CDN filters:** the figures and TTL behaviour on this page were measured through HTTP apps. Proxy-wasm cache support is newer and is `[unverified]` to share the same backend behaviour.
 

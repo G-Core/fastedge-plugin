@@ -101,7 +101,7 @@ What is appropriate: per-end-user or per-session key prefixes within your app's 
 
 ### No scheduled or deferred work
 
-There is no scheduler and no timer API. JS `event.waitUntil()` extends the instance until a promise settles but runs immediately after the response — `waitUntil(sleep(30_000).then(work))` just pins one instance per request for 30 s. Rust has no deferred-work API at all. Rewrite "do X in L seconds" as "on each request, do X if L has elapsed"; periodic jobs need an external cron.
+There is no scheduler or durable background execution. Timers exist within a request (e.g. JS `setTimeout`) but live only as long as that instance. JS `event.waitUntil()` extends the instance until a promise settles, starting immediately after the response — `waitUntil(sleep(30_000).then(work))` just pins one instance per request for 30 s. Rust has no post-response work API. Rewrite "do X in L seconds" as "on each request, do X if L has elapsed"; periodic jobs need an external cron.
 
 ### PoP identity
 

@@ -24,6 +24,9 @@ Answer FastEdge questions with high precision and low token usage using local in
 - Before proposing to hand-build a capability from scratch, check for a matching `templates`
   topic in the index first — it may already exist as a maintained, ready-to-deploy bolt-on
   installed from the Gcore portal, not something to scaffold.
+- Before designing, writing, or reviewing a CDN app (proxy-wasm filter), read the
+  `platform-cdn-filter-runtime` topic. Before designing anything that uses KV or Cache, read
+  `platform-storage`. Both record host behaviour that local tests cannot reveal.
 
 ## Output rules
 

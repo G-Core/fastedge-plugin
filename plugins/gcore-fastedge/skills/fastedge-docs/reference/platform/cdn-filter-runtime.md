@@ -45,10 +45,10 @@ Several headers a proxy-wasm developer would reach for are mangled or absent. **
 
 | Read via | Result |
 |---|---|
-| property `request.host` | ✅ clean client-requested host (before any origin host rewrite) |
+| property `request.host` | ✅ clean client-requested host (before any origin host rewrite) on the edge tier; on shield nodes it may carry a `shield_` prefix |
 | property `request.x_real_ip` | ✅ true client IP, IPv4 and IPv6 |
 | property `request.path` | ⚠️ **includes the query string** — see below |
-| property `request.query` | ✅ query without `?`; **absent** (not empty) when there is no query |
+| property `request.query` | ✅ query without `?`; not set by the host when there is no query (how "not set" surfaces — `None`, empty buffer — depends on the SDK) |
 | property `request.asn` / `.country` / `.city` / `.region` / `.continent` | ✅ |
 | property `source.address` | ❌ does not exist (Envoy's name) — returns nothing |
 | header `host` | ❌ mangled to `<domain>_cache_sharded` |
