@@ -99,6 +99,14 @@ What is appropriate: per-end-user or per-session key prefixes within your app's 
 5. **Response Delivery** — Response sent back to client
 6. **Cleanup** — Wasm instance destroyed, memory freed
 
+### No scheduled or deferred work
+
+There is no scheduler and no timer API. JS `event.waitUntil()` extends the instance until a promise settles but runs immediately after the response — `waitUntil(sleep(30_000).then(work))` just pins one instance per request for 30 s. Rust has no deferred-work API at all. Rewrite "do X in L seconds" as "on each request, do X if L has elapsed"; periodic jobs need an external cron.
+
+### PoP identity
+
+`getEnv("dc")` returns the PoP's lowercase short code (e.g. `ls1`, `am3`) — the only PoP identifier available to an app. **It can be empty**; an empty-string fallback silently merges every PoP's keys into one namespace. Fail loudly instead. Node count per PoP varies, and the number of active PoPs is not discoverable from inside an app.
+
 ## Resource Limits
 
 | Resource | Basic Plan | Pro Plan |
