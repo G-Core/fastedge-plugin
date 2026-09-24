@@ -97,8 +97,7 @@ Start here. Read only what your task requires.
 
 ### Post-Onboarding Cleanup
 
-- **`sources.json`: fastedge-sdk-js and fastedge-sdk-rust refs are temporarily `"main"`** — changed from `"latest-release"` during onboarding because the `fastedge-plugin-source/` contracts didn't exist at the latest tagged releases. Once contracts are merged and new releases are cut, reset both to `"latest-release"` so doc syncs are release-gated.
-- **`sources.json`: proxy-wasm-sdk-as ref is `"latest-release"`** — added April 2026. Pipeline test (AS-07) pending. Deploy workflow dispatch (AS-09) not yet wired.
+- **`sources.json`: all SDK repos + fastedge-test are on `"latest-release"`** (Sep 2026) — every latest release now contains `fastedge-plugin-source/`, so doc syncs are release-gated. fastedge-templates stays on `"main"` (no releases; the portal deploys from main).
 
 ### MCP Integration — Planned (after 002-scaffold-redesign)
 
@@ -115,5 +114,3 @@ Build/deploy delegation to FastEdge-mcp-server. Phase 1 (delegate build + deploy
 - Pipeline PRs merged for all 3 source repos (fastedge-test #35, fastedge-sdk-js #34, fastedge-sdk-rust #33/#36). proxy-wasm-sdk-as pending first run (AS-07).
 - Blueprint format contract: `specs/002-scaffold-redesign/contracts/blueprint-format.md`
 - Dual-intent manifest pattern: `specs/002-scaffold-redesign/contracts/manifest-dual-intent.md`
-
-**Note:** `sources.json` refs for fastedge-sdk-js and fastedge-sdk-rust are still `"main"` — reset to `"latest-release"` once new releases are cut.
