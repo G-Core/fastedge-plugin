@@ -67,7 +67,9 @@ Provenance tags: `[live]` measured on a deployed app · `[source]` read from the
 `[source + live]`
 
 - **TTLs are silently clamped** to a deployment ceiling (default 4 days). The JS and Rust SDK references describe `set` without a TTL as "no expiry"; the host actually applies the default ceiling (runtime source, and a no-TTL `set` key measured gone within 22 days). **Treat the host behaviour as authoritative** — do not rely on any entry outliving ~4 days. There is no TTL-read primitive, so the clamp is invisible.
-- **`incr` sets no TTL and does not index the key.** `incr`-created keys escape both the default-TTL cleanup and `purge_prefix` — measured still present after 22 days. **Always follow `incr` with `expire`**, whether the caller won or lost, or the key leaks permanently.
+- **`incr` sets no TTL and does not index the key.** `incr`-created keys escape both the default-TTL cleanup and `purge_prefix` — measured still present after 22 days. Every `incr` key needs an `expire`, but *when* depends on the key shape — `expire` sets a deadline relative to now, so calling it again pushes the deadline out:
+  - **Fixed key** (e.g. `rl:<ip>`): call `expire` only when `incr` returns `1`, and retry that `expire` within the request budget. Expiring on every call resets the window and keeps the key alive under continuous traffic. If the one `expire` fails for good, the key never expires — there is no TTL-read to detect it.
+  - **Time-bucketed key** (window id in the name, e.g. `rl:<ip>:<window>`): calling `expire` on every call is safe and self-healing — writes stop when the window passes, so the key expires one TTL after its last write even if earlier `expire` calls failed. Prefer this shape when a permanently leaked key is costly.
 - `expire` returns `false` for an absent key and `Err` for a failure. Do not collapse the two.
 
 ### Failures are real — retry
