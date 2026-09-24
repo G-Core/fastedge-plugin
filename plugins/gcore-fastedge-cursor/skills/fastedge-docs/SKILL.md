@@ -69,7 +69,9 @@ The reference directory is organised in two layers:
 
 - `./reference/platform/overview.md` — Architecture, PoPs, app types, request lifecycle, resource limits
 - `./reference/platform/error-codes.md` — 530–533 debugging strategies
-- `./reference/platform/cdn-integration.md` — How CDN apps attach to CDN resources via `options.fastedge`, lifecycle hook configuration, ruleset-based path overrides (replace-not-merge), public-route disable pattern
+- `./reference/platform/cdn-filter-runtime.md` — **MANDATORY before designing, writing, or reviewing any CDN app (proxy-wasm filter).** Filter-vs-HTTP-app capability boundary, which request properties/headers are reliable, path non-normalisation (auth-bypass risk), filters-before-cache, what local tests cannot prove.
+- `./reference/platform/storage.md` — **Read before designing anything that uses KV or Cache.** KV per-node read caching, write API shape, missing operations, Cache TTL/`incr` rules, failure rate, measured performance, preprod-vs-production.
+- `./reference/platform/cdn-integration.md` — How CDN apps attach to CDN resources via `options.fastedge`, lifecycle hook configuration, ruleset-based path overrides (replace-not-merge), API merge semantics, purge after rule changes, public-route disable pattern
 - `./reference/platform/operations.md` — Operational knobs with time-bounded behaviour (the 30-min `debug` logging toggle)
 - `./reference/platform/best-practices.md` — Agent-quality guidance: confirmation discipline, scaffold-first, TDD loop, resource preconditions, observation vs. request, ask-don't-guess
 - `./reference/platform/as-constraints.md` — **MANDATORY before writing or reviewing any AssemblyScript CDN app code.** Hard compile-time and runtime constraints where AssemblyScript diverges from TypeScript. Violating these produces wasm that traps at runtime or silently returns wrong values — not a compiler error.

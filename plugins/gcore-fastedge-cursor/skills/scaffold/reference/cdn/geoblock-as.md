@@ -3,8 +3,8 @@
   sources:
     - id: proxy-wasm-sdk-as
       ref: master
-      commit: 8e3bb621bc013a0aed7e52122066b417ad62a207
-      updated: 2026-08-17
+      commit: ddb8d2e76e8f4fab30de6bce8dd0150231cd7d31
+      updated: 2026-09-22
 -->
 
 ---
@@ -158,10 +158,10 @@ registerRootContext((context_id: u32) => {
 
 Both blocked and allowed requests are logged at `INFO` level, providing an audit trail for all traffic decisions.
 
-| Event            | Log message                                      |
-| ---------------- | ------------------------------------------------ |
-| Request blocked  | `"geoBlock: blocked request from " + countryStr` |
-| Request allowed  | `"geoBlock: allowed request from " + countryStr` |
+| Event           | Log message                                      |
+| --------------- | ------------------------------------------------ |
+| Request blocked | `"geoBlock: blocked request from " + countryStr` |
+| Request allowed | `"geoBlock: allowed request from " + countryStr` |
 
 Log level is set via `setLogLevel(LogLevelValues.info)` inside `createContext`.
 
