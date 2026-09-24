@@ -3,8 +3,8 @@
   sources:
     - id: fastedge-sdk-js
       ref: main
-      commit: 81145a9a43ec499240c687bd49376ab20c72b11c
-      updated: 2026-07-23
+      commit: 9c8c7886f0d1ec5ac2296b4080805966a96ca817
+      updated: 2026-09-22
 -->
 
 ---
@@ -312,7 +312,7 @@ footer a {
   "license": "ISC",
   "dependencies": {
     "@gcoredev/fastedge-sdk-js": "^2.3.0",
-    "hono": "^4.12.25"
+    "hono": "^4.13.5"
   },
   "devDependencies": {
     "npm-run-all2": "^9.0.2"
@@ -348,7 +348,7 @@ Additions over `http-base`:
 | Package | Type | Version |
 |---|---|---|
 | `@gcoredev/fastedge-sdk-js` | runtime | `^2.3.0` |
-| `hono` | runtime | `^4.12.25` |
+| `hono` | runtime | `^4.13.5` |
 | `npm-run-all2` | devDependency | `^9.0.2` |
 
 ## Key API Patterns

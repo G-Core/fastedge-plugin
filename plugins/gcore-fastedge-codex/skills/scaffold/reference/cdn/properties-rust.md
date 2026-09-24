@@ -3,8 +3,8 @@
   sources:
     - id: fastedge-sdk-rust
       ref: main
-      commit: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-      updated: 2026-07-23
+      commit: 6eedcca9d5c0ddd4ff79ca475965393891da2d75
+      updated: 2026-09-22
 -->
 
 ---
@@ -416,19 +416,31 @@ impl HttpContext for PropertiesContext {
         let params = querystring::querify(query_str);
 
         if let Some(url) = params.iter().find_map(|(k, v)| {
-            if "url".eq_ignore_ascii_case(k) { Some(v) } else { None }
+            if "url".eq_ignore_ascii_case(k) {
+                Some(v)
+            } else {
+                None
+            }
         }) {
             self.set_property(vec![REQUEST_URI], Some(url.as_bytes()));
         }
 
         if let Some(host) = params.iter().find_map(|(k, v)| {
-            if "host".eq_ignore_ascii_case(k) { Some(v) } else { None }
+            if "host".eq_ignore_ascii_case(k) {
+                Some(v)
+            } else {
+                None
+            }
         }) {
             self.set_property(vec![REQUEST_HOST], Some(host.as_bytes()));
         }
 
         if let Some(path) = params.iter().find_map(|(k, v)| {
-            if "path".eq_ignore_ascii_case(k) { Some(v) } else { None }
+            if "path".eq_ignore_ascii_case(k) {
+                Some(v)
+            } else {
+                None
+            }
         }) {
             self.set_property(vec![REQUEST_PATH], Some(path.as_bytes()));
         }
