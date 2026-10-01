@@ -370,6 +370,177 @@ fi
 # Restore stub so any future tests added below see the expected default
 run_agents() { OVERALL_VERDICT="ACCEPT"; CHANGED_FILES="plugins/test/ref.md"; }
 
+# ── (8) npm_package: sdk args forwarded to both generator and reviewer ────────
+#
+# Exercises run_agents directly with a real manifest + npm_package in sources.json.
+# A stub npm returns a known version; a stub invoke-agent.sh records which roles
+# received --sdk-package. Asserts both generator and reviewer calls carry it.
+
+eval "$_real_run_agents"
+
+_ra8_work="${TMPWORK}/run-agents-npm"
+_ra8_checkout="${_ra8_work}/checkout"
+_ra8_staging="${_ra8_work}/staging"
+_ra8_mocks="${_ra8_work}/mocks"
+_ra8_contract="fastedge-plugin-source/"
+mkdir -p "${_ra8_checkout}/${_ra8_contract}" "$_ra8_staging" "$_ra8_mocks"
+
+cat > "${_ra8_checkout}/${_ra8_contract}manifest.json" <<'MANIFEST'
+{
+  "target_mapping": {
+    "key-a": {"reference_file": "docs/a.md"}
+  },
+  "sources": {
+    "key-a": {"files": ["src/a.rs"]}
+  }
+}
+MANIFEST
+
+cat > "${_ra8_work}/sources.json" <<EOF
+{
+  "version": "2.0",
+  "repos": [
+    {
+      "id": "test-repo-npm",
+      "github_url": "https://github.com/test/test-repo-npm",
+      "ref": "latest-release",
+      "trigger": "schedule",
+      "contract_path": "${_ra8_contract}",
+      "intent_dir": "agent-intent/",
+      "generator_agent": "claude",
+      "reviewer_agent": "kimi",
+      "npm_package": "@gcoredev/fastedge-sdk-js"
+    }
+  ]
+}
+EOF
+
+# Stub invoke-agent.sh: records role name to SDK_ARGS_LOG when --sdk-package present
+cat > "${_ra8_mocks}/invoke-agent.sh" <<'STUB'
+#!/usr/bin/env bash
+role="" output_file="" has_sdk=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --role)        role="$2";        shift 2 ;;
+    --output-file) output_file="$2"; shift 2 ;;
+    --sdk-package) has_sdk=1;        shift 2 ;;
+    --sdk-version) shift 2 ;;
+    *)             shift ;;
+  esac
+done
+[[ "$has_sdk" -eq 1 ]] && echo "$role" >> "${SDK_ARGS_LOG}"
+[[ "$role" == "generator" ]] && echo "# Generated"                        > "$output_file"
+[[ "$role" == "reviewer"  ]] && printf 'VERDICT=ACCEPT\n\nLooks good.\n'  > "$output_file"
+exit 0
+STUB
+chmod +x "${_ra8_mocks}/invoke-agent.sh"
+
+# Stub npm: returns a known version
+cat > "${_ra8_mocks}/npm" <<'NPM'
+#!/usr/bin/env bash
+echo "3.1.4"
+NPM
+chmod +x "${_ra8_mocks}/npm"
+
+export SDK_ARGS_LOG="${_ra8_work}/sdk-args.log"
+export SOURCES_FILE="${_ra8_work}/sources.json"
+RESOLVED_REF="v3.1.4"
+COMMIT="abc123"
+SCRIPT_DIR="$_ra8_mocks"
+_ra8_old_path="$PATH"
+export PATH="${_ra8_mocks}:$PATH"
+
+run_agents 0 "$_ra8_staging" "$_ra8_checkout" 2>/dev/null
+rc8=$?
+
+export PATH="$_ra8_old_path"
+SCRIPT_DIR="$_ra_orig_script_dir"
+export SOURCES_FILE="${TMPWORK}/sources.json"
+
+if [[ "$rc8" -eq 0 ]] \
+   && grep -qF "generator" "${SDK_ARGS_LOG}" \
+   && grep -qF "reviewer"  "${SDK_ARGS_LOG}"; then
+  pass "(8) npm_package: sdk args forwarded to both generator and reviewer"
+else
+  fail "(8) npm_package: sdk args forwarded to both generator and reviewer" \
+    "exit=${rc8}, log=$(cat "${SDK_ARGS_LOG:-/dev/null}" 2>/dev/null)"
+fi
+
+run_agents() { OVERALL_VERDICT="ACCEPT"; CHANGED_FILES="plugins/test/ref.md"; }
+
+# ── (9) npm lookup failure → run_agents returns 1 ────────────────────────────
+#
+# Same setup as (8) but the stub npm exits 1 (simulating registry/auth failure).
+# Asserts run_agents hard-fails so the baseline is never advanced with stale output.
+
+eval "$_real_run_agents"
+
+_ra9_work="${TMPWORK}/run-agents-npm-fail"
+_ra9_checkout="${_ra9_work}/checkout"
+_ra9_staging="${_ra9_work}/staging"
+_ra9_mocks="${_ra9_work}/mocks"
+_ra9_contract="fastedge-plugin-source/"
+mkdir -p "${_ra9_checkout}/${_ra9_contract}" "$_ra9_staging" "$_ra9_mocks"
+
+cat > "${_ra9_checkout}/${_ra9_contract}manifest.json" <<'MANIFEST'
+{
+  "target_mapping": {
+    "key-a": {"reference_file": "docs/a.md"}
+  },
+  "sources": {
+    "key-a": {"files": ["src/a.rs"]}
+  }
+}
+MANIFEST
+
+cat > "${_ra9_work}/sources.json" <<EOF
+{
+  "version": "2.0",
+  "repos": [
+    {
+      "id": "test-repo-npm-fail",
+      "github_url": "https://github.com/test/test-repo-npm-fail",
+      "ref": "latest-release",
+      "trigger": "schedule",
+      "contract_path": "${_ra9_contract}",
+      "intent_dir": "agent-intent/",
+      "generator_agent": "claude",
+      "reviewer_agent": "kimi",
+      "npm_package": "@gcoredev/fastedge-sdk-js"
+    }
+  ]
+}
+EOF
+
+# Stub npm: fails (simulates registry or auth error)
+cat > "${_ra9_mocks}/npm" <<'NPM'
+#!/usr/bin/env bash
+exit 1
+NPM
+chmod +x "${_ra9_mocks}/npm"
+
+export SOURCES_FILE="${_ra9_work}/sources.json"
+RESOLVED_REF="v1.0.0"
+COMMIT="abc123"
+SCRIPT_DIR="$_ra9_mocks"
+_ra9_old_path="$PATH"
+export PATH="${_ra9_mocks}:$PATH"
+
+run_agents 0 "$_ra9_staging" "$_ra9_checkout" 2>/dev/null
+rc9=$?
+
+export PATH="$_ra9_old_path"
+SCRIPT_DIR="$_ra_orig_script_dir"
+export SOURCES_FILE="${TMPWORK}/sources.json"
+
+if [[ "$rc9" -eq 1 ]]; then
+  pass "(9) npm lookup failure → run_agents returns 1"
+else
+  fail "(9) npm lookup failure → run_agents returns 1" "exit=${rc9}"
+fi
+
+run_agents() { OVERALL_VERDICT="ACCEPT"; CHANGED_FILES="plugins/test/ref.md"; }
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 
 echo ""
