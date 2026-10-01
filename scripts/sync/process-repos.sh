@@ -133,7 +133,8 @@ run_agents() {
     if [[ -n "$sdk_version" ]]; then
       echo "INFO: Resolved npm version for ${npm_package}: ${sdk_version}" >&2
     else
-      echo "WARN: Could not resolve npm version for ${npm_package} — skipping version substitution" >&2
+      echo "ERROR: Could not resolve npm version for ${npm_package} — aborting to avoid advancing baseline with stale versions" >&2
+      return 1
     fi
   fi
 
