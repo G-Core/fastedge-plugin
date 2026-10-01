@@ -39,6 +39,7 @@ on:
         description: "Run even if no reference changes detected"
         type: boolean
         required: false
+        
         default: false
 
 permissions:

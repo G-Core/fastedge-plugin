@@ -19,7 +19,8 @@
       "contract_path": "fastedge-plugin-source/",
       "intent_dir": "agent-intent-skills/fastedge-sdk-js/",
       "generator_agent": "claude",
-      "reviewer_agent": "openai"
+      "reviewer_agent": "openai",
+      "npm_package": "@gcoredev/fastedge-sdk-js"
     },
     {
       "id": "fastedge-sdk-rust",
@@ -39,7 +40,8 @@
       "contract_path": "fastedge-plugin-source/",
       "intent_dir": "agent-intent-skills/proxy-wasm-sdk-as/",
       "generator_agent": "claude",
-      "reviewer_agent": "openai"
+      "reviewer_agent": "openai",
+      "npm_package": "@gcoredev/proxy-wasm-sdk-as"
     },
     {
       "id": "fastedge-templates",

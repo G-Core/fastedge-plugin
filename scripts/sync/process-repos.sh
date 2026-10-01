@@ -126,6 +126,8 @@ run_agents() {
   repo_id=$(jq -r ".repos[$idx].id" "$SOURCES_FILE")
   contract_path=$(jq -r ".repos[$idx].contract_path" "$SOURCES_FILE")
   intent_dir=$(jq -r ".repos[$idx].intent_dir" "$SOURCES_FILE")
+  local npm_package
+  npm_package=$(jq -r ".repos[$idx].npm_package // empty" "$SOURCES_FILE")
 
   local manifest_file="${checkout_dir}/${contract_path}manifest.json"
 
@@ -214,16 +216,20 @@ run_agents() {
         echo "MISSING_INTENT=true" >> "$result_file"
       fi
 
-      local section_args=() intent_args=() source_files_args=()
+      local section_args=() intent_args=() source_files_args=() sdk_args=()
       [[ -n "$section" ]]           && section_args=(--section "$section")
       [[ -n "$intent_file" ]]       && intent_args=(--intent-file "$intent_file")
       [[ -n "$source_files_list" ]] && source_files_args=(--source-files "$source_files_list")
+      if [[ -n "$npm_package" && -n "$RESOLVED_REF" ]]; then
+        sdk_args=(--sdk-package "$npm_package" --sdk-version "${RESOLVED_REF#v}")
+      fi
 
       bash "${SCRIPT_DIR}/invoke-agent.sh" \
         --role generator \
         "${section_args[@]}" \
         "${intent_args[@]}" \
         "${source_files_args[@]}" \
+        "${sdk_args[@]}" \
         --reference-file "$reference_file" \
         --source-dir     "$checkout_dir" \
         --repo-id        "$repo_id" \
