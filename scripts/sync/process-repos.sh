@@ -126,6 +126,17 @@ run_agents() {
   repo_id=$(jq -r ".repos[$idx].id" "$SOURCES_FILE")
   contract_path=$(jq -r ".repos[$idx].contract_path" "$SOURCES_FILE")
   intent_dir=$(jq -r ".repos[$idx].intent_dir" "$SOURCES_FILE")
+  local npm_package sdk_version=""
+  npm_package=$(jq -r ".repos[$idx].npm_package // empty" "$SOURCES_FILE")
+  if [[ -n "$npm_package" ]]; then
+    sdk_version=$(npm view "$npm_package" version 2>/dev/null) || sdk_version=""
+    if [[ -n "$sdk_version" ]]; then
+      echo "INFO: Resolved npm version for ${npm_package}: ${sdk_version}" >&2
+    else
+      echo "ERROR: Could not resolve npm version for ${npm_package} — aborting to avoid advancing baseline with stale versions" >&2
+      return 1
+    fi
+  fi
 
   local manifest_file="${checkout_dir}/${contract_path}manifest.json"
 
@@ -214,16 +225,20 @@ run_agents() {
         echo "MISSING_INTENT=true" >> "$result_file"
       fi
 
-      local section_args=() intent_args=() source_files_args=()
+      local section_args=() intent_args=() source_files_args=() sdk_args=()
       [[ -n "$section" ]]           && section_args=(--section "$section")
       [[ -n "$intent_file" ]]       && intent_args=(--intent-file "$intent_file")
       [[ -n "$source_files_list" ]] && source_files_args=(--source-files "$source_files_list")
+      if [[ -n "$npm_package" && -n "$sdk_version" ]]; then
+        sdk_args=(--sdk-package "$npm_package" --sdk-version "$sdk_version")
+      fi
 
       bash "${SCRIPT_DIR}/invoke-agent.sh" \
         --role generator \
         "${section_args[@]}" \
         "${intent_args[@]}" \
         "${source_files_args[@]}" \
+        "${sdk_args[@]}" \
         --reference-file "$reference_file" \
         --source-dir     "$checkout_dir" \
         --repo-id        "$repo_id" \
@@ -240,6 +255,7 @@ run_agents() {
         --input-file     "$gen_output" \
         --source-dir     "$checkout_dir" \
         "${source_files_args[@]}" \
+        "${sdk_args[@]}" \
         --output-file    "$rev_output" < /dev/null || {
           echo "ERROR: Reviewer failed for '${source_key}'" >&2
           echo "FAILED=1" >> "$result_file"

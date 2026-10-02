@@ -350,7 +350,7 @@ PROMPT
 }
 
 _run_generator() {
-  local REFERENCE_FILE="" SECTION="" SOURCE_DIR="" SOURCE_FILES="" REPO_ID="" REF="" COMMIT="" OUTPUT_FILE="" INTENT_FILE=""
+  local REFERENCE_FILE="" SECTION="" SOURCE_DIR="" SOURCE_FILES="" REPO_ID="" REF="" COMMIT="" OUTPUT_FILE="" INTENT_FILE="" SDK_PACKAGE="" SDK_VERSION=""
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -363,6 +363,8 @@ _run_generator() {
       --commit)         COMMIT="$2";         shift 2 ;;
       --output-file)    OUTPUT_FILE="$2";    shift 2 ;;
       --intent-file)    INTENT_FILE="$2";    shift 2 ;;
+      --sdk-package)    SDK_PACKAGE="$2";    shift 2 ;;
+      --sdk-version)    SDK_VERSION="$2";    shift 2 ;;
       *) echo "ERROR: Unknown argument: $1" >&2; exit 1 ;;
     esac
   done
@@ -390,6 +392,12 @@ _run_generator() {
   # Load source files (specific files if --source-files provided, else all)
   local source_content
   source_content=$(load_source_files "$SOURCE_DIR" "$SOURCE_FILES")
+
+  # Substitute pinned SDK version with the resolved release version
+  if [[ -n "$SDK_PACKAGE" && -n "$SDK_VERSION" ]]; then
+    source_content=$(sed "s|\"${SDK_PACKAGE}\": *\"[^\"]*\"|\"${SDK_PACKAGE}\": \"^${SDK_VERSION}\"|g" <<< "$source_content")
+    echo "INFO: Substituted ${SDK_PACKAGE} version → ^${SDK_VERSION} in source material" >&2
+  fi
 
   local today
   today=$(date -u +"%Y-%m-%d")
@@ -487,7 +495,7 @@ PROMPT
 }
 
 _run_reviewer() {
-  local INPUT_FILE="" SOURCE_DIR="" SOURCE_FILES="" OUTPUT_FILE=""
+  local INPUT_FILE="" SOURCE_DIR="" SOURCE_FILES="" OUTPUT_FILE="" SDK_PACKAGE="" SDK_VERSION=""
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -495,6 +503,8 @@ _run_reviewer() {
       --source-dir)   SOURCE_DIR="$2";   shift 2 ;;
       --source-files) SOURCE_FILES="$2"; shift 2 ;;
       --output-file)  OUTPUT_FILE="$2";  shift 2 ;;
+      --sdk-package)  SDK_PACKAGE="$2";  shift 2 ;;
+      --sdk-version)  SDK_VERSION="$2";  shift 2 ;;
       *) echo "ERROR: Unknown argument: $1" >&2; exit 1 ;;
     esac
   done
@@ -516,6 +526,10 @@ _run_reviewer() {
 
   local source_content
   source_content=$(load_source_files "$SOURCE_DIR" "$SOURCE_FILES")
+
+  if [[ -n "$SDK_PACKAGE" && -n "$SDK_VERSION" ]]; then
+    source_content=$(sed "s|\"${SDK_PACKAGE}\": *\"[^\"]*\"|\"${SDK_PACKAGE}\": \"^${SDK_VERSION}\"|g" <<< "$source_content")
+  fi
 
   local prompt
   prompt=$(_build_reviewer_prompt "$generated_content" "$source_content")

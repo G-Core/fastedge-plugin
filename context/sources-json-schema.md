@@ -77,6 +77,22 @@ The pipeline:
 }
 ```
 
+For repos that publish an npm package, add `npm_package`:
+
+```json
+{
+  "id": "fastedge-sdk-js",
+  "github_url": "https://github.com/G-Core/FastEdge-sdk-js",
+  "ref": "latest-release",
+  "trigger": "schedule",
+  "contract_path": "fastedge-plugin-source/",
+  "intent_dir": "agent-intent-skills/fastedge-sdk-js/",
+  "generator_agent": "claude",
+  "reviewer_agent": "openai",
+  "npm_package": "@gcoredev/fastedge-sdk-js"
+}
+```
+
 | Field             | Type   | Required | Description |
 | ----------------- | ------ | -------- | ----------- |
 | `id`              | string | yes      | Unique identifier. Used in baseline tags and traceability frontmatter. Kebab-case. |
@@ -87,6 +103,13 @@ The pipeline:
 | `intent_dir`      | string | yes      | Path to synthesis intent files in the plugin repo, relative to `sources.json`. Must end with `/`. Directory must exist. |
 | `generator_agent` | string | yes      | AI agent that generates content. See **Agent Values** below. |
 | `reviewer_agent`  | string | yes      | AI agent that reviews content. **Must differ from `generator_agent`**. |
+| `npm_package`     | string | no       | npm package name published by this repo (e.g. `@gcoredev/fastedge-sdk-js`). When present, the pipeline resolves the latest published version via `npm view <package> version` and substitutes that version into source material before the generator and reviewer run, so generated blueprints always reference the current release. Must be a valid npm package name (scoped `@scope/name` or unscoped `name`, lowercase). Absence means no version substitution occurs. |
+
+### npm_package semantics
+
+When `npm_package` is set, `run_agents` calls `npm view <package> version` once before the parallel entry loop. The resolved version is forwarded to both the generator and reviewer as `--sdk-version`. If the lookup fails (registry unreachable, package not found, npm unavailable), the run aborts with an error — it does **not** silently continue with stale source versions, because doing so would advance the baseline tag and suppress retries on the next scheduled run.
+
+**Known gap**: change detection is based on git commit SHA. A new npm publish without a corresponding git commit does not trigger regeneration. See the open issue for tracking options.
 
 ### Removed in v2
 
@@ -261,6 +284,7 @@ Validation runs in two places:
 4. All `contract_path` values end with `/`
 5. All `intent_dir` values end with `/` and the directory exists
 6. No v1 fields (`updates[]`, `sparse_paths`) are present
+7. `npm_package`, when present, is a valid npm package name (`@scope/name` or `name`, lowercase, no whitespace)
 
 A validation failure aborts the workflow before any sparse checkout begins.
 
@@ -334,6 +358,7 @@ Each source repo has a `fastedge-plugin-source/CONVENTIONS.md` documenting the n
 - `intent_dir` must end with `/` and directory must exist (Rule 5)
 - `generator_agent` must differ from `reviewer_agent` (Rule 3)
 - No v1 fields (`updates[]`, `sparse_paths`) allowed (Rule 6)
+- `npm_package`, when present, must be a valid npm package name (Rule 7)
 
 **To add webhook support** in the source repo's release workflow:
 

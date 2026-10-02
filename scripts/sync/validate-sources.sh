@@ -88,6 +88,19 @@ while IFS= read -r REPO_ID; do
   fi
 done < <(jq -r '.repos[].id' "$SOURCES_FILE")
 
+# Rule 7: npm_package, when present, must be a valid npm package name
+# Valid forms: @scope/name (scoped) or name (unscoped) — lowercase, no whitespace
+while IFS=$'\t' read -r REPO_ID NPM_TYPE NPM_PKG; do
+  [[ "$NPM_TYPE" == "null" ]] && continue
+  if [[ "$NPM_TYPE" != "string" ]]; then
+    fail "Rule 7: npm_package must be a string in repo '$REPO_ID'"
+    continue
+  fi
+  if ! [[ "$NPM_PKG" =~ ^(@[a-z0-9_.-]+/)?[a-z0-9][a-z0-9_.-]*$ ]]; then
+    fail "Rule 7: npm_package is not a valid npm package name in repo '$REPO_ID': '$NPM_PKG' (must be @scope/name or name, lowercase)"
+  fi
+done < <(jq -r '.repos[] | [.id, (.npm_package | type), (.npm_package | if . == null then "" else tostring end)] | @tsv' "$SOURCES_FILE")
+
 # Summary
 if [[ "$ERRORS" -gt 0 ]]; then
   echo "sources.json validation FAILED with $ERRORS error(s)." >&2
