@@ -415,20 +415,23 @@ cat > "${_ra8_work}/sources.json" <<EOF
 }
 EOF
 
-# Stub invoke-agent.sh: records role name to SDK_ARGS_LOG when --sdk-package present
+# Stub invoke-agent.sh: records role name to SDK_ARGS_LOG only when both
+# --sdk-package and --sdk-version match the expected values exactly.
 cat > "${_ra8_mocks}/invoke-agent.sh" <<'STUB'
 #!/usr/bin/env bash
-role="" output_file="" has_sdk=0
+role="" output_file="" sdk_pkg="" sdk_ver=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --role)        role="$2";        shift 2 ;;
     --output-file) output_file="$2"; shift 2 ;;
-    --sdk-package) has_sdk=1;        shift 2 ;;
-    --sdk-version) shift 2 ;;
+    --sdk-package) sdk_pkg="$2";     shift 2 ;;
+    --sdk-version) sdk_ver="$2";     shift 2 ;;
     *)             shift ;;
   esac
 done
-[[ "$has_sdk" -eq 1 ]] && echo "$role" >> "${SDK_ARGS_LOG}"
+if [[ "$sdk_pkg" == "@gcoredev/fastedge-sdk-js" && "$sdk_ver" == "3.1.4" ]]; then
+  echo "$role" >> "${SDK_ARGS_LOG}"
+fi
 [[ "$role" == "generator" ]] && echo "# Generated"                        > "$output_file"
 [[ "$role" == "reviewer"  ]] && printf 'VERDICT=ACCEPT\n\nLooks good.\n'  > "$output_file"
 exit 0

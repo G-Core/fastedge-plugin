@@ -67,6 +67,12 @@ run "Rule 5: nonexistent intent_dir fails" \
 run "Rule 6: v1 fields (updates[], sparse_paths) rejected" \
   "$FIXTURES/rule6-v1-fields.json" 1 "Rule 6"
 
+# Rule 7: npm_package format
+run "Rule 7: valid scoped npm_package passes" \
+  "$FIXTURES/rule7-valid-npm-package.json" 0 "validation passed"
+run "Rule 7: invalid npm_package name fails" \
+  "$FIXTURES/rule7-bad-npm-package.json" 1 "Rule 7"
+
 # Missing argument
 label="no argument: exits with usage error"
 no_arg_output=$(bash "$VALIDATE" 2>&1) && no_arg_exit=0 || no_arg_exit=$?
