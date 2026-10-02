@@ -2,9 +2,9 @@
   auto-updated: true
   sources:
     - id: fastedge-sdk-js
-      ref: main
+      ref: v2.5.2
       commit: 9c8c7886f0d1ec5ac2296b4080805966a96ca817
-      updated: 2026-09-22
+      updated: 2026-10-02
 -->
 
 ---
@@ -176,12 +176,14 @@ addEventListener('fetch', (event) => {
 ```json
 {
   "name": "fastedge-example-template-invoice-ab-testing",
+  "version": "1.0.0",
+  "description": "FastEdge JS example: Handlebars invoice with A/B test header variants",
   "type": "module",
   "scripts": {
     "build": "fastedge-build src/index.js dist/template-invoice-ab-testing.wasm"
   },
   "dependencies": {
-    "@gcoredev/fastedge-sdk-js": "^2.3.0",
+    "@gcoredev/fastedge-sdk-js": "^2.5.2",
     "handlebars": "^4.7.9"
   }
 }
@@ -202,3 +204,91 @@ addEventListener('fetch', (event) => {
 - http-base skeleton (base event handler structure and build setup)
 - fastedge-build CLI reference (WASM compilation)
 - Handlebars documentation (template syntax and compilation API)
+
+## Source Material
+
+### FILE: examples/template-invoice-ab-testing/src/index.js
+
+```js
+import Handlebars from 'handlebars';
+
+import { getStyles } from './css-styles.js';
+import { htmlTemplate } from './html-template.js';
+import { getLogoBrand } from './logo.js';
+
+const invoiceData = {
+  createdDate: 'March 4, 2024',
+  dueDate: 'April 19, 2024',
+  invoiceNumber: '1729',
+  recipientAddress: {
+    name: 'Homer Simpson',
+    address1: '742 Evergreen Terrace',
+    address2: 'Springfield, United States.',
+  },
+  paymentMethod: 'PayPal',
+  paymentId: '8915648',
+  items: [
+    {
+      description: '1x Keg of Duff Beer',
+      price: 250,
+    },
+    {
+      description: '3x Crate of Duff Beer',
+      price: 85,
+    },
+    {
+      description: '2x Duff Football Finger',
+      price: 20,
+    },
+  ],
+};
+
+const getTotalPrice = (items) => items.reduce((total, item) => total + item.price, 0).toFixed(2);
+
+async function eventHandler({ request }) {
+  const isAbTestLogo = request.headers.get('ab-test-logo') === 'bottle';
+  const logo = getLogoBrand(isAbTestLogo);
+
+  const abTestFont = request.headers.get('ab-test-font');
+  const cssStyles = getStyles(abTestFont);
+
+  const rawHtmlTemplate = htmlTemplate(abTestFont);
+  const template = Handlebars.compile(rawHtmlTemplate);
+
+  const html = template({
+    cssStyles,
+    logo,
+    ...invoiceData,
+    totalPrice: getTotalPrice(invoiceData.items),
+  });
+
+  return new Response(html, {
+    status: 200,
+    headers: {
+      'content-type': 'text/html',
+    },
+  });
+}
+
+addEventListener('fetch', (event) => {
+  event.respondWith(eventHandler(event));
+});
+```
+
+### FILE: examples/template-invoice-ab-testing/package.json
+
+```json
+{
+  "name": "fastedge-example-template-invoice-ab-testing",
+  "version": "1.0.0",
+  "description": "FastEdge JS example: Handlebars invoice with A/B test header variants",
+  "type": "module",
+  "scripts": {
+    "build": "fastedge-build src/index.js dist/template-invoice-ab-testing.wasm"
+  },
+  "dependencies": {
+    "@gcoredev/fastedge-sdk-js": "^2.5.2",
+    "handlebars": "^4.7.9"
+  }
+}
+```

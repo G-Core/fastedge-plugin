@@ -2,9 +2,9 @@
   auto-updated: true
   sources:
     - id: fastedge-sdk-js
-      ref: main
+      ref: v2.5.2
       commit: 9c8c7886f0d1ec5ac2296b4080805966a96ca817
-      updated: 2026-09-22
+      updated: 2026-10-02
 -->
 
 ---
@@ -211,7 +211,7 @@ export default server;
 
 ### `src/types.ts`
 
-Include verbatim — these response type definitions are required by the tool handlers in `server.ts`. Generate this file with the correct interface shapes matching the NWS API (or replace with types for the target API):
+Include verbatim — these response type definitions are required by the tool handlers in `server.ts`:
 
 ```typescript
 export interface AlertProperties {
@@ -288,7 +288,7 @@ Include verbatim:
 ### Runtime dependencies
 
 ```json
-"@gcoredev/fastedge-sdk-js": "^2.3.0",
+"@gcoredev/fastedge-sdk-js": "^2.5.2",
 "@hono/mcp": "^0.2.5",
 "@modelcontextprotocol/sdk": "^1.29.0",
 "hono": "^4.13.5",
