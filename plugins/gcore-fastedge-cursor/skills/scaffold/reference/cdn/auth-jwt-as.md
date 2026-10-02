@@ -2,9 +2,9 @@
   auto-updated: true
   sources:
     - id: proxy-wasm-sdk-as
-      ref: master
-      commit: ddb8d2e76e8f4fab30de6bce8dd0150231cd7d31
-      updated: 2026-09-22
+      ref: v1.2.4
+      commit: 073f583217448aaf25cb98f5d336a0fda26273ba
+      updated: 2026-09-29
 -->
 
 ---
@@ -260,6 +260,12 @@ Build commands:
 pnpm install
 pnpm run asbuild
 ```
+
+## Deploy
+
+Upload `build/jwt.wasm` to the FastEdge portal and attach it to your CDN application. Configure the `SECRET` secret variable in the application settings.
+
+For more on secrets and secret rotation slots, see the FastEdge secrets documentation.
 
 ## See Also
 
