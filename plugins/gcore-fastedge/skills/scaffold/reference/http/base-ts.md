@@ -2,9 +2,9 @@
   auto-updated: true
   sources:
     - id: fastedge-sdk-js
-      ref: main
+      ref: v2.5.2
       commit: 9c8c7886f0d1ec5ac2296b4080805966a96ca817
-      updated: 2026-09-22
+      updated: 2026-10-02
 -->
 
 ---
@@ -14,7 +14,7 @@ languages: [typescript, javascript]
 template_origin: http-base
 source_repo: https://github.com/G-Core/FastEdge-sdk-js
 source_ref: 9c8c7886f0d1ec5ac2296b4080805966a96ca817
-updated: 2026-09-22
+updated: 2026-10-02
 ---
 
 # Base Skeleton: HTTP TypeScript/JavaScript
@@ -186,7 +186,7 @@ addEventListener("fetch", (event) => {
     "build": "fastedge-build src/index.js dist/hello-world.wasm"
   },
   "dependencies": {
-    "@gcoredev/fastedge-sdk-js": "^2.3.0"
+    "@gcoredev/fastedge-sdk-js": "^2.5.2"
   }
 }
 ```
