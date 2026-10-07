@@ -70,6 +70,7 @@ The MCP server holds the credential: `GCORE_API_KEY` from the config, or a porta
 - The command prints a portal URL and then waits for approval. Show the user the URL as soon as it appears; don't wait for the command to finish.
 - After a successful login, retry the request. No restart is needed for the same account.
 - `account_changed` means another account replaced the session. Codex can't restart one MCP server: the user exits and runs `codex resume --last`. Don't retry.
+- More (the "Keep me signed in" choice, enforcing "don't keep" with `FASTEDGE_SESSION=ephemeral`, every `auth_required` reason): the `platform-sign-in` docs topic.
 
 ## When MCP is not configured
 

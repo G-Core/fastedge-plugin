@@ -18,9 +18,11 @@
         "GCORE_API_KEY",
         "-e",
         "GCORE_API_BASE",
+        "-e",
+        "FASTEDGE_SESSION",
         "ghcr.io/g-core/fastedge-mcp-server:latest"
       ],
-      "env_vars": ["GCORE_API_KEY", "GCORE_API_BASE"]
+      "env_vars": ["GCORE_API_KEY", "GCORE_API_BASE", "FASTEDGE_SESSION"]
     }
   }
 }

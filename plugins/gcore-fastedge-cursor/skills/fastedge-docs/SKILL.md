@@ -62,7 +62,7 @@ Auth header: `Authorization: APIKey <key>`. Through the MCP server (`gcore_api`)
 ## Reference Files
 
 The reference directory is organised in two layers:
-- **`reference/platform/`** — hand-curated platform / agent-behaviour docs (this is the only hand-edited area)
+- **`reference/platform/`** and `reference/quickstart.md` — hand-curated platform / agent-behaviour docs (the only hand-edited area)
 - **All other files in `reference/`** — pipeline-generated from source repos (`auto-updated: true` frontmatter), do not hand-edit
 
 ### Platform & agent guidance (`reference/platform/`)
@@ -72,6 +72,7 @@ The reference directory is organised in two layers:
 - `./reference/platform/cdn-filter-runtime.md` — **MANDATORY before designing, writing, or reviewing any CDN app (proxy-wasm filter).** Filter-vs-HTTP-app capability boundary, which request properties/headers are reliable, path non-normalisation (auth-bypass risk), filters-before-cache, what local tests cannot prove.
 - `./reference/platform/storage.md` — **Read before designing anything that uses KV or Cache.** KV per-node read caching, write API shape, missing operations, Cache TTL/`incr` rules, failure rate, measured performance, preprod-vs-production.
 - `./reference/platform/cdn-integration.md` — How CDN apps attach to CDN resources via `options.fastedge`, lifecycle hook configuration, ruleset-based path overrides (replace-not-merge), API merge semantics, purge after rule changes, public-route disable pattern
+- `./reference/platform/sign-in.md` — **Read for any sign-in or credential question.** API key vs portal sign-in, the "Keep me signed in" choice and what each stores, enforcing "don't keep" with `FASTEDGE_SESSION=ephemeral` (per client), switching accounts, `auth_required` reasons, login troubleshooting.
 - `./reference/platform/operations.md` — Operational knobs with time-bounded behaviour (the 30-min `debug` logging toggle)
 - `./reference/platform/best-practices.md` — Agent-quality guidance: confirmation discipline, scaffold-first, TDD loop, resource preconditions, observation vs. request, ask-don't-guess
 - `./reference/platform/as-constraints.md` — **MANDATORY before writing or reviewing any AssemblyScript CDN app code.** Hard compile-time and runtime constraints where AssemblyScript diverges from TypeScript. Violating these produces wasm that traps at runtime or silently returns wrong values — not a compiler error.

@@ -102,8 +102,9 @@ A local-toolchain fallback exists for users who explicitly choose not to run Doc
 **What the MCP server provides:**
 - `build-wasm` — Containerized WASM compilation (no local toolchain needed)
 - `upload-binary` — Binary upload to FastEdge API
-- `update-or-create-app` — App deployment and updates
-- `update-env-vars-app` — Environment variable and secrets management
+- `gcore_api` — Any allowed Gcore API call (method + path + query/body): app create/update/delete, env vars, secrets, stats
+- `batch_execute` / `workflows_list` — Multi-step API workflows (e.g. `create-app`, `update-app-binary`)
+- `fastedge-auth-status` — Which account and credential the server is using (never the token)
 - `fastedge-docs` — Reference documentation search for non-Claude editors (Cursor, Codex, etc.)
 
 ---
@@ -164,6 +165,8 @@ Make API calls through the FastEdge MCP server (`gcore_api`, `upload-binary`, `b
 - **Portal sign-in:** no key is set. The first API call returns `auth_required` with instructions: the agent offers a sign-in through the Gcore portal for a time-limited session. Follow those instructions; never ask the user to paste a token or code into the chat.
 
 So don't check `GCORE_API_KEY` in your shell before MCP calls; a missing key there doesn't mean the server has none.
+
+For sign-in questions (the "Keep me signed in" choice, enforcing "don't keep" with `FASTEDGE_SESSION=ephemeral`, switching accounts, what each `auth_required` reason means), read `skills/fastedge-docs/reference/platform/sign-in.md`.
 
 The `curl` examples below are the direct API, for users who opted out of MCP; they need `GCORE_API_KEY` in the shell:
 

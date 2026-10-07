@@ -1,0 +1,96 @@
+# Signing In: API Keys, Portal Sessions and "Keep Me Signed In"
+
+How the FastEdge MCP server gets its Gcore credential, what each option stores on the user's computer, and how to make "don't keep" the rule. Read this when a user asks how to sign in, why they're asked to sign in again, how to stop tokens being saved, or how to switch accounts.
+
+## Two Ways to Authenticate
+
+| | API key | Portal sign-in |
+|---|---|---|
+| How | `GCORE_API_KEY` set where the MCP client starts; the MCP config passes it in | No key set. The first API call returns `auth_required` and offers a sign-in through the Gcore portal |
+| Lifetime | Permanent until the user deletes it | 4 hours to 7 days, chosen on the Approve page |
+| Good for | Headless or CI use, or users who prefer a key | Everyone else; nothing to create or paste |
+
+**An API key always wins.** If `GCORE_API_KEY` is set, the session cache is never used.
+
+Never check `GCORE_API_KEY` in your own shell to decide whether the user is signed in: the MCP server may have a key from its config, or a portal session. Call the `fastedge-auth-status` tool instead. Never print a key, token or connect code, and never ask the user to paste one into the chat.
+
+## Signing In Through the Portal
+
+When an API call returns `auth_required`, follow its text. It offers three choices:
+
+1. **Browser on this computer** (recommended). With the user's OK, run the login command it gives you as a **background task, using your tool's own background option** (Claude Code: `run_in_background`; not a shell `&`). It prints a portal URL, then waits up to 5 minutes for approval. Give the user the URL as soon as it's printed, then retry the original request when the command exits 0.
+2. **Remote** (SSH, a Codespace, or a browser that can't reach this computer). The user opens the portal page themselves, chooses the manual option, approves, and pastes the connect code into the `login --code` command **in their own terminal**. Give them the exact command from `auth_required`: it carries this session's key.
+3. **Not now.** Stop, and don't retry.
+
+## "Keep Me Signed In on This Computer"
+
+The Approve page has this checkbox, checked by default:
+
+| | Checked (keep) | Unchecked (don't keep) |
+|---|---|---|
+| Stored | The token, as plaintext, in the `fastedge-session` Docker volume | Only ciphertext, encrypted to a key held in the running MCP server's memory |
+| Lifetime | 4 h, 8 h, 2 days or 7 days | 4 h or 8 h |
+| After an MCP restart | Reused automatically | Unusable: the user approves again (that includes `/mcp` reconnects) |
+| Renewing | Sign in again, no restart | Restart the MCP server first, then approve |
+
+What each protects:
+- **Keep:** inside the container only a separate token broker can read the token, so build dependencies (npm scripts, Cargo `build.rs`) can't. But anything that can run Docker or is root can read the volume, and a backup or a stolen disk holds a valid token until it expires.
+- **Don't keep:** the saved copy is useless once the server stops, from backups and stolen disks too. Anything that can run Docker or is root can still read the server's memory **while it runs**.
+- **Neither revokes the token at Gcore.** It stays valid until it expires; to revoke it now, delete it on the portal's **API tokens** page.
+
+Say "this session isn't saved in a usable form", never "no tokens on this computer": a session saved earlier with the box checked stays until the user runs `login --logout` or it expires.
+
+## Making "Don't Keep" the Rule (`FASTEDGE_SESSION=ephemeral`)
+
+The checkbox is a per-sign-in convenience. To **enforce** "don't keep", set `FASTEDGE_SESSION=ephemeral` where the MCP client starts. Then:
+- the Approve page shows no checkbox and offers 4 h / 8 h only;
+- the login container refuses to save a "keep" approval, whatever the page sends;
+- the MCP server never reads saved sessions, even if the volume has some.
+
+How to set it (the plugin's MCP config already passes it through by name):
+
+| Client | Where |
+|---|---|
+| Claude Code | `"env": { "FASTEDGE_SESSION": "ephemeral" }` in `~/.claude/settings.json` (every project) or `.claude/settings.local.json` (one project) |
+| Codex CLI | `export FASTEDGE_SESSION=ephemeral` in the shell (or shell rc) that starts `codex` |
+| Cursor | macOS GUI: `launchctl setenv FASTEDGE_SESSION ephemeral`, then quit and reopen Cursor. CLI: export it in the shell |
+| Own MCP config | Add `"-e", "FASTEDGE_SESSION=ephemeral"` to the `docker run` args |
+
+Then restart the MCP server. To turn it off, unset it and restart.
+
+- **It can't be combined with an API key.** With `GCORE_API_KEY` also set, the container refuses to start (exit 2). Choose one.
+- Any value other than `ephemeral` also stops the container.
+- Check it took effect with `fastedge-auth-status`: `"forced": true`.
+
+## Switching Accounts and Signing Out
+
+A running MCP server is locked to the first account it uses.
+
+- **To use a different account:** restart the MCP server **first**, then sign in while signed in to that account in the portal. Approving before the restart would give a "don't keep" token to the server that's about to stop.
+- **A saved account** (from a "keep" sign-in): `login --use <client_id>` (the `use_command` in `fastedge-auth-status`) points the saved session at it, then restart.
+- `login --use` and `login --logout` change **saved sessions only**. A server holding a "don't keep" session ignores them; to end that session, stop or restart the server.
+
+## What `auth_required` Reasons Mean
+
+| Reason | What to do |
+|---|---|
+| `no_session` | Offer the sign-in choices |
+| `expired` | Offer sign-in for the same account; no restart needed |
+| `rejected` | The token was refused (often deleted in the portal). Offer sign-in once; if a fresh sign-in is rejected too, stop and tell the user |
+| `account_mismatch` | The saved token belongs to a different account than it claims. Offer sign-in; if it repeats, stop and tell the user |
+| `account_changed` | Another account replaced the session this server was using. Restart the MCP server; don't sign in first |
+| `restart_required` | A "don't keep" session expired or was revoked. Restart the MCP server, then approve again. Don't run a login command now |
+| `broker_unavailable` | The server can't reach its token broker. Restart the MCP server, or use an API key. Signing in won't help |
+| `origin_mismatch` | The saved session is for another Gcore environment (prod vs preprod). Sign in for this one |
+
+## Troubleshooting
+
+| Symptom | Cause / fix |
+|---|---|
+| Login exits 3, "Another FastEdge login is in progress" | Another login is running, or one was killed. A killed login's lock is taken over after 30 seconds; wait and retry |
+| Login exits 4, "port … in use" | Another login is still listening. Finish or cancel it (`docker ps`, then `docker stop` the login container) |
+| Login exits 5 (timed out) or 6 (denied) | The user didn't approve within 5 minutes, or chose Deny. Offer again only if they want to |
+| Login exits 8 with a connect code | The code is invalid, expired, or doesn't fit this login (e.g. a "don't keep" code needs the command from `auth_required`). Approve again and copy the new code |
+| The page says "This link is not valid" | The link expired (5 minutes) or was edited. Run the login again for a fresh link |
+| The MCP server won't start; the logs mention `FASTEDGE_SESSION` | It's combined with an API key, or set to a value other than `ephemeral` |
+| Signed in, but `fastedge-auth-status` shows another account than expected | Check `pinned_client_id`, then follow "Switching Accounts" above |
