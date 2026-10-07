@@ -15,7 +15,7 @@ The plugin requires both layers. If the MCP server can't start (Docker not runni
 ### 1. Prerequisites
 
 - Docker running locally
-- `GCORE_API_KEY` available to Codex
+- `GCORE_API_KEY` available to Codex, or no key and a portal sign-in (see "No API key?" in the [top-level README](../../README.md#no-api-key-sign-in-through-the-portal))
 
 Credentials reach the server through the **host environment** — the bundled `.mcp.json` declares `env_vars = ["GCORE_API_KEY", "GCORE_API_BASE"]`, so Codex forwards those host variables to the MCP server automatically. Export them in the shell you launch `codex` from:
 

@@ -31,33 +31,33 @@ Defaults:
 
 ## Pre-Flight
 
-Always verify API key first. Halt and emit setup guidance if `GCORE_API_KEY` (or legacy `FASTEDGE_API_KEY`) is unset.
+Don't check `GCORE_API_KEY` in the shell: the MCP server holds either a key or a portal sign-in session. Make the first MCP call; if it returns `auth_required`, follow `/gcore-fastedge:fastedge-core` → Not signed in.
 
 ## MCP Coverage Matrix
 
 | Operation | Tool | Status |
 |---|---|---|
-| `list` (all apps) | `gcore_api` GET `/fastedge/v1/apps` | Partial — MCP supports name-search; direct API for full list |
+| `list` (all apps) | `gcore_api` GET `/fastedge/v1/apps` | ✓ |
 | `get <id>` | `gcore_api` GET `/fastedge/v1/apps/<id>` | ✓ |
 | `update <id>` | `gcore_api` PATCH/PUT `/fastedge/v1/apps/<id>` | ✓ |
-| `delete <id>` | `gcore_api` DELETE `/fastedge/v1/apps/<id>` | Gap — direct API |
-| `secrets list` | `gcore_api` GET `/fastedge/v1/secrets` | Gap — direct API |
-| `secrets get <name>` | `gcore_api` GET `/fastedge/v1/secrets/<id>` | ✓ (name → id resolution via list) |
-| `sync-env` (adds/changes) | `update-env-vars-app` | ✓ |
-| `sync-env` (removals) | `gcore_api` PUT `/fastedge/v1/apps/<id>` | Forced direct PUT — `update-env-vars-app` merges, does not remove |
-| stats | `gcore_api` GET `/fastedge/v1/apps/<id>/stats` | Gap — direct API |
+| `delete <id>` | `gcore_api` DELETE `/fastedge/v1/apps/<id>` | ✓ |
+| `secrets list` | `gcore_api` GET `/fastedge/v1/secrets` | ✓ |
+| `secrets get <name>` | `gcore_api` GET `/fastedge/v1/secrets?secret_name=<name>` | ✓ |
+| `sync-env` (adds/changes) | `gcore_api` PATCH `/fastedge/v1/apps/<id>` | ✓ (merges) |
+| `sync-env` (removals) | `gcore_api` PUT `/fastedge/v1/apps/<id>` | ✓ — PATCH merges, so removals need PUT |
+| stats | `gcore_api` GET `/fastedge/v1/stats/calls` and `/fastedge/v1/stats/app_duration` (query `id`, `from`, `to`, `step`) | ✓ |
 
 There is **no** `update-or-create-app` MCP tool. The actual create/update path goes through `gcore_api` against the FastEdge REST API.
 
 ### Direct API fallback policy
 
-Drop to direct API for the **whole skill** only when the user explicitly opts out of MCP (e.g. "I don't want to run Docker"). The matrix Gaps above are per-operation, not a fallback-first stance.
+Drop to direct API for the **whole skill** only when the user explicitly opts out of MCP (e.g. "I don't want to run Docker"). Every operation above runs through MCP; the direct API needs `GCORE_API_KEY` in the shell.
 
 ## Command Behavior
 
 ### `list`
 
-- Fetch all apps (direct API for full list; MCP can search by name).
+- Fetch all apps: `gcore_api` GET `/fastedge/v1/apps`.
 - Render table: ID, name, status, URL.
 - If empty, suggest scaffold flow.
 
@@ -120,22 +120,21 @@ When a `FASTEDGE_VAR_SECRET_*` reference can't be resolved to a secret ID, **war
 
 A secret rename that resolves to the same ID is a **no-op**, not a change. Compare on resolved ID, not on the local name string.
 
-#### `update-env-vars-app` payload shape
+#### PATCH payload shape (adds + changes)
+
+`gcore_api` PATCH `/fastedge/v1/apps/<id>`, with only the categories that have adds/changes:
 
 ```
 {
-  "appId": <id>,
-  "envVars": "<JSON-encoded string>",
+  "env": { "API_URL": "https://api.example.com" },
   "secrets": { "NAME": { "id": <secret-id> } },
-  "rspHeaders": { "X-Header": "value" }
+  "rsp_headers": { "X-Header": "value" }
 }
 ```
 
-Note: `envVars` (and the other category fields where applicable) are **JSON-encoded strings**, not nested objects.
+#### Removals → PUT semantics
 
-#### Removals → direct PUT semantics
-
-`update-env-vars-app` merges, not replaces. Removing an env var requires a direct PUT to `/fastedge/v1/apps/<id>` with a full app representation. Minimum required fields: `name`, `binary`, `status`. Include only categories whose diff was non-empty.
+PATCH merges, not replaces. Removing an env var requires a `gcore_api` PUT to `/fastedge/v1/apps/<id>` with a full app representation. Minimum required fields: `name`, `binary`, `status`. Include only categories whose diff was non-empty.
 
 Never print secret values.
 
@@ -159,7 +158,7 @@ These anchor expected behavior and the three-tier confirmation safety rule. Mirr
 
 **Behavior**:
 
-- Run `list` first: `gcore_api` GET `/fastedge/v1/apps` (direct API for full list — MCP supports name-search but not full enumeration).
+- Run `list` first: `gcore_api` GET `/fastedge/v1/apps`.
 - Render table.
 - For the named app, resolve id from the list, then run `get <id>`: `gcore_api` GET `/fastedge/v1/apps/<id>`.
 
@@ -208,26 +207,12 @@ This run includes a removal. Default is to skip removals.
   [c] cancel
 ```
 
-If user picks `[a]`: apply adds + changes via `update-env-vars-app` MCP tool. Skip the removal. Verification command at end.
+If user picks `[a]`: apply adds + changes via `gcore_api` PATCH. Skip the removal. Verification command at end.
 
-If user picks `[b]`: removal forces a direct PUT — `update-env-vars-app` merges, doesn't remove. PUT body must be full app representation with minimum fields `name`, `binary`, `status` + only the categories with non-empty diff.
+If user picks `[b]`: removal forces a `gcore_api` PUT — PATCH merges, doesn't remove. PUT body must be full app representation with minimum fields `name`, `binary`, `status` + only the categories with non-empty diff.
 
-### Example 3 — Degraded mode: missing API key
+### Example 3 — Not signed in
 
 **User prompt**: "list"
 
-**Behavior**: Pre-flight check fails — neither `GCORE_API_KEY` nor `FASTEDGE_API_KEY` is set. Halt before any operation.
-
-**Completion output**:
-
-```
-✗ Cannot run manage operations — no API key set.
-
-Set the environment variable, then re-run:
-
-  export GCORE_API_KEY="<your-key>"
-
-Get a key from https://portal.gcore.com → API Keys.
-
-Note: legacy FASTEDGE_API_KEY is also accepted.
-```
+**Behavior**: `gcore_api` GET `/fastedge/v1/apps` returns `auth_required (no_session)`: no API key is set and there's no portal session. Follow `/gcore-fastedge:fastedge-core` → Not signed in: offer the sign-in choices from the result, show the portal URL as soon as the login command prints it, then retry `list`. Alternatively the user can set `GCORE_API_KEY` (get one at https://portal.gcore.com → API Keys) and restart Codex.

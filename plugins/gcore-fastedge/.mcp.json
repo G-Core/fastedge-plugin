@@ -10,6 +10,8 @@
         "--pull=always",
         "-v",
         "${PWD}:/workspace",
+        "-v",
+        "fastedge-session:/run/fastedge:ro",
         "-e",
         "WORKSPACE_ROOT=/workspace",
         "-e",

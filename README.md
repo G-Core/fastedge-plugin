@@ -97,7 +97,7 @@ The plugins run build, deploy, and management operations through the [FastEdge M
 You need:
 
 - **Docker** running locally — required to start the MCP server.
-- **Gcore API key** — set as `GCORE_API_KEY` (see below).
+- **Gcore API key** — set as `GCORE_API_KEY` (see below), or sign in through the portal instead (see [No API key?](#no-api-key-sign-in-through-the-portal)).
 
 > Local-only mode (no Docker, no MCP) is available as an explicit opt-out for developers who prefer their own toolchain. See [Running without the MCP server](#running-without-the-mcp-server) below.
 
@@ -172,6 +172,12 @@ launchctl setenv GCORE_API_BASE "https://api.gcore.com"
 
 The Cursor plugin forwards these variables by name to the MCP Docker container;
 the key is not stored in the plugin or marketplace manifest.
+
+### No API key? Sign in through the portal
+
+**No API key?** Leave `GCORE_API_KEY` unset. The first API call then offers to sign you in through the Gcore portal: you approve in your browser, and the agent gets a time-limited API token (8 hours by default, 7 days at most). The token is cached as plaintext in the `fastedge-session` Docker volume until it expires. Inside the container only the MCP server's token broker can read it, but anyone who can run Docker containers on this machine can read it too. A key, when set, always takes precedence.
+
+In Codex, the sign-in runs a `docker run … login` command, which may need your approval to run outside the sandbox; if it can't run there, run the command it shows in your own terminal.
 
 ### Optional: preprod testing
 

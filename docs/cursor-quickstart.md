@@ -31,6 +31,8 @@ launchctl setenv GCORE_API_BASE "https://api.gcore.com"
 The marketplace and plugin manifests contain no credentials. The plugin passes
 the two variables by name to the MCP Docker container.
 
+**No API key?** Leave `GCORE_API_KEY` unset. The first API call then offers to sign you in through the Gcore portal: you approve in your browser, and the agent gets a time-limited API token (8 hours by default, 7 days at most). The token is cached as plaintext in the `fastedge-session` Docker volume until it expires. Inside the container only the MCP server's token broker can read it, but anyone who can run Docker containers on this machine can read it too. A key, when set, always takes precedence.
+
 ## Personal Installation
 
 Add the GitHub repository as a Cursor marketplace:

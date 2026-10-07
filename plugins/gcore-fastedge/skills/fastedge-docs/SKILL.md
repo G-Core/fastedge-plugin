@@ -56,7 +56,7 @@ fn main(req: Request<Vec<u8>>) -> Result<Response<Vec<u8>>, Error> { ... }
 
 `https://api.gcore.com/fastedge/v1`
 
-Auth header: `Authorization: APIKey $GCORE_API_KEY`
+Auth header: `Authorization: APIKey <key>`. Through the MCP server (`gcore_api`), the server adds it: an API key or a portal sign-in session.
 
 ## Reference Files
 

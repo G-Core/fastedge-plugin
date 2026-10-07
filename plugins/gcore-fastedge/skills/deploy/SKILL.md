@@ -16,7 +16,7 @@ This skill runs build and deploy through the **FastEdge MCP server** (the plugin
 
 1. Diagnose the error first — most "unavailable" cases are configuration, not opt-out. Common issues:
    - Docker not running — check `docker ps`
-   - API key not passed to the container — check `-e GCORE_API_KEY` in MCP config
+   - Not signed in — an MCP call returns `auth_required`. That's not a config error: follow the instructions in the result (it offers a portal sign-in, or the user can set `GCORE_API_KEY`), then retry. Never ask the user to paste a token or code into the chat
    - Workspace not mounted — check `-v` flag maps project root to `/workspace`
    - Network issues — MCP server needs internet to call the FastEdge API and pull the image
 2. If the issue is recoverable, surface the fix and re-run. Show the user the canonical config:
@@ -27,6 +27,7 @@ This skill runs build and deploy through the **FastEdge MCP server** (the plugin
          "type": "stdio",
          "command": "docker",
          "args": ["run", "-i", "--rm", "--pull=always", "-v", "${PWD}:/workspace",
+                  "-v", "fastedge-session:/run/fastedge:ro",
                   "-e", "WORKSPACE_ROOT=/workspace", "-e", "GCORE_API_KEY",
                   "-e", "GCORE_API_BASE", "ghcr.io/g-core/fastedge-mcp-server:latest"]
        }
@@ -41,7 +42,7 @@ This skill runs build and deploy through the **FastEdge MCP server** (the plugin
 
 ### Step 1: Pre-flight Checks
 
-1. **Verify API key** — Check that `GCORE_API_KEY` environment variable is set. If not set, tell the user how to get and set it (`https://portal.gcore.com → API Keys`). Do not proceed.
+1. **Credentials** — Don't check `GCORE_API_KEY` in your shell: the MCP server may hold a key from its config or a portal sign-in session. If an MCP call returns `auth_required`, follow its instructions, then retry. Only the local opt-out path needs `GCORE_API_KEY` in the shell.
 
 2. **Detect project type** — Look for these files in the current directory or the specified app directory:
    - `asconfig.json` → AssemblyScript CDN app
