@@ -71,7 +71,27 @@ A running MCP server is locked to the first account it uses.
   2. Restart the MCP server (Claude Code: `/mcp`, select the server, Reconnect; Codex: exit, then `codex resume --last`). Restart **before** approving: a "don't keep" token belongs to the server that's running when it's approved.
   3. Sign in, and check the account shown on the Approve page before approving.
 - **A saved account** (from a "keep" sign-in): `login --use <client_id>` (the `use_command` in `fastedge-auth-status`) points the saved session at it, then restart.
-- `login --use` and `login --logout` change **saved sessions only**. A server holding a "don't keep" session ignores them; to end that session, stop or restart the server.
+- `login --use` and `login --logout` change **saved sessions only** (see "Signing Out"). A server holding a "don't keep" session ignores them; to end that session, stop or restart the server.
+
+## Signing Out
+
+"Log me out of account 123" or "log me out of all my FastEdge accounts": with the user's OK, run the `logout_command` from `fastedge-auth-status`, with the client id or `all`:
+
+| Command | Removes from this computer |
+|---|---|
+| `… login --logout <client_id>` | That saved account (and the active pointer if it pointed there) |
+| `… login --logout all` | Every saved account for prod **and** preprod, plus any "don't keep" session not yet in use |
+
+- It's local only. Tell the user the **token ids** it prints, and that those tokens stay valid until they expire. They revoke them by deleting those ids on the portal's **API tokens** page.
+- A running MCP server stops using a removed session on its next call. One holding a "don't keep" session keeps it until it's stopped or restarted.
+- It prints no secrets and needs no browser, so you may run it yourself once the user agrees.
+
+## One Session Store for Every Agent
+
+All MCP clients on this computer (Claude Code, Codex, Cursor) share the `fastedge-session` Docker volume:
+- **"Keep" sessions are shared.** Signing in with "keep" in one client signs every client in, and changing the active account (`login --use`, a new sign-in) changes the starting account for all of them. A running server on another account answers `account_changed` and asks for a restart.
+- **"Don't keep" sessions are not shared.** Each is sealed to the one MCP server that asked for it.
+- **Logout is shared too:** `login --logout all` signs every client out of every saved account.
 
 ## What `auth_required` Reasons Mean
 
