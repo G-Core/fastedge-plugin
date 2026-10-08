@@ -31,7 +31,7 @@ launchctl setenv GCORE_API_BASE "https://api.gcore.com"
 The marketplace and plugin manifests contain no credentials. The plugin passes
 these variables (and `FASTEDGE_SESSION`, if set) by name to the MCP Docker container.
 
-**No API key?** Leave `GCORE_API_KEY` unset. The first API call then offers to sign you in through the Gcore portal: you approve in your browser, and the agent gets a time-limited API token (8 hours by default, 7 days at most). The token is cached as plaintext in the `fastedge-session` Docker volume until it expires. Inside the container only the MCP server's token broker can read it, but anyone who can run Docker containers on this machine can read it too. To keep nothing usable on disk instead, choose **Only for this MCP server session** on the page: the token is then encrypted to the running MCP server and you approve again the next time it starts. A key, when set, always takes precedence.
+**No API key?** Leave `GCORE_API_KEY` unset. The first API call then offers to sign you in through the Gcore portal: you approve in your browser, and the MCP server gets a time-limited API token, held by its token broker (the agent never sees it) (8 hours by default, 7 days at most). The token is cached as plaintext in the `fastedge-session` Docker volume until it expires. Inside the container only the MCP server's token broker can read it, but anyone who can run Docker containers on this machine can read it too. To keep nothing usable on disk instead, choose **Only for this MCP server session** on the page: the token is then encrypted to the running MCP server and you approve again the next time it starts. A key, when set, always takes precedence.
 
 ## Personal Installation
 
