@@ -67,9 +67,11 @@ Then restart the MCP server. To turn it off, unset it and restart.
 A running MCP server is locked to the first account it uses.
 
 - **To use a different account**, in this order:
-  1. The user switches the portal (in the browser they'll approve in) to that account. Approval connects whichever account the portal is signed in to; approving on the old account just reconnects the old one.
+  1. **Tell the user which account you're signing in to**, and that they must switch the portal (in the browser they'll approve in) to it first. Approval connects whichever account the portal is signed in to; the user can't tell which one you mean unless you say.
   2. Restart the MCP server (Claude Code: `/mcp`, select the server, Reconnect; Codex: exit, then `codex resume --last`). Restart **before** approving: a "don't keep" token belongs to the server that's running when it's approved.
-  3. Sign in, and check the account shown on the Approve page before approving.
+  3. Run `login_for_account` from `fastedge-auth-status` with that client id (`… login --account <client_id>`). Login and the Approve page then accept **only** that account: the page warns and disables Approve if the portal is on another one.
+
+  When the user doesn't name an account ("sign me in with whatever I'm logged in as"), use the plain `login_command`.
 - **A saved account** (from a "keep" sign-in): `login --use <client_id>` (the `use_command` in `fastedge-auth-status`) points the saved session at it, then restart.
 - `login --use` and `login --logout` change **saved sessions only** (see "Signing Out"). A server holding a "don't keep" session ignores them; to end that session, stop or restart the server.
 
@@ -98,8 +100,8 @@ All MCP clients on this computer (Claude Code, Codex, Cursor) share the `fastedg
 | Reason | What to do |
 |---|---|
 | `no_session` | Offer the sign-in choices |
-| `expired` | Offer sign-in for the same account; no restart needed |
-| `rejected` | The token was refused (often deleted in the portal). Offer sign-in once; if a fresh sign-in is rejected too, stop and tell the user |
+| `expired` | Offer sign-in for the same account; no restart needed. The text names the account and its commands carry `--account`: tell the user which account the portal must be on |
+| `rejected` | The token was refused (often deleted in the portal). Offer sign-in once (as for `expired`, pinned to the account); if a fresh sign-in is rejected too, stop and tell the user |
 | `account_mismatch` | The saved token belongs to a different account than it claims. Offer sign-in; if it repeats, stop and tell the user |
 | `account_changed` | Another account replaced the session this server was using. Restart the MCP server; don't sign in first |
 | `restart_required` | A "don't keep" session expired or was revoked. Restart the MCP server, then approve again. Don't run a login command now |
