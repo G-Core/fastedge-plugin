@@ -18,7 +18,7 @@ Never check `GCORE_API_KEY` in your own shell to decide whether the user is sign
 
 When an API call returns `auth_required`, follow its text. It offers three choices:
 
-1. **Browser on this computer** (recommended). With the user's OK, run the login command it gives you as a **background task, using your tool's own background option** (Claude Code: `run_in_background`; not a shell `&`). It prints a portal URL, then waits up to 5 minutes for approval. Give the user the URL as soon as it's printed, then retry the original request when the command exits 0.
+1. **Browser on this computer** (recommended). With the user's OK, run the login command it gives you as a **background task, using your tool's own background option** (Claude Code: `run_in_background`; not a shell `&`). It prints a portal URL, then waits up to 5 minutes for approval. Give the user the URL as soon as it's printed, then retry the original request when the command exits 0. The page connects **whichever Gcore account the portal is signed in to**, and shows it before Approve: tell the user to check it, and to switch accounts in the portal first if it's the wrong one.
 2. **Remote** (SSH, a Codespace, or a browser that can't reach this computer). The user opens the portal page themselves, chooses the manual option, approves, and pastes the connect code into the `login --code` command **in their own terminal**. Give them the exact command from `auth_required`: it carries this session's key.
 3. **Not now.** Stop, and don't retry.
 
@@ -66,7 +66,10 @@ Then restart the MCP server. To turn it off, unset it and restart.
 
 A running MCP server is locked to the first account it uses.
 
-- **To use a different account:** restart the MCP server **first**, then sign in while signed in to that account in the portal. Approving before the restart would give a "don't keep" token to the server that's about to stop.
+- **To use a different account**, in this order:
+  1. The user switches the portal (in the browser they'll approve in) to that account. Approval connects whichever account the portal is signed in to; approving on the old account just reconnects the old one.
+  2. Restart the MCP server (Claude Code: `/mcp`, select the server, Reconnect; Codex: exit, then `codex resume --last`). Restart **before** approving: a "don't keep" token belongs to the server that's running when it's approved.
+  3. Sign in, and check the account shown on the Approve page before approving.
 - **A saved account** (from a "keep" sign-in): `login --use <client_id>` (the `use_command` in `fastedge-auth-status`) points the saved session at it, then restart.
 - `login --use` and `login --logout` change **saved sessions only**. A server holding a "don't keep" session ignores them; to end that session, stop or restart the server.
 
