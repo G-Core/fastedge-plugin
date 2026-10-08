@@ -112,9 +112,12 @@ All MCP clients on this computer (Claude Code, Codex, Cursor) share the `fastedg
 
 | Symptom | Cause / fix |
 |---|---|
+| Login exits 1 | An unexpected failure. Run it again; if it repeats, tell the user |
+| Login exits 2 | A setup problem: wrong arguments, an unusable `fastedge-session` volume, `FASTEDGE_SESSION` misused, an environment with no portal sign-in (use an API key), or `--code` without a terminal (the user runs it in their own). Read the message; don't retry blindly |
 | Login exits 3, "Another FastEdge login is in progress" | Another login is running, or one was killed. A killed login's lock is taken over after 30 seconds; wait and retry |
 | Login exits 4, "port … in use" | Another login is still listening. Finish or cancel it (`docker ps`, then `docker stop` the login container) |
 | Login exits 5 (timed out) or 6 (denied) | The user didn't approve within 5 minutes, or chose Deny. Offer again only if they want to |
+| `login --use` exits 7 | No usable saved session for that account (never saved, expired or signed out). Sign in to it with `login_for_account` instead |
 | Login exits 8 with a connect code | The code is invalid, expired, or doesn't fit this login (e.g. a "don't keep" code needs the command from `auth_required`). Approve again and copy the new code |
 | The page says "This link is not valid" | The link expired (5 minutes) or was edited. Run the login again for a fresh link |
 | The MCP server won't start; the logs mention `FASTEDGE_SESSION` | It's combined with an API key, or set to a value other than `ephemeral` |
