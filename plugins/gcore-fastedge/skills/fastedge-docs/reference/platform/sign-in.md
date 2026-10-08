@@ -24,9 +24,9 @@ When an API call returns `auth_required`, follow its text. It offers three choic
 
 ## "Keep Me Signed In on This Computer"
 
-The Approve page has this checkbox, checked by default:
+The Approve page offers two options, the first selected by default:
 
-| | Checked (keep) | Unchecked (don't keep) |
+| | Keep me signed in on this computer | Only for this MCP server session (don't keep) |
 |---|---|---|
 | Stored | The token, as plaintext, in the `fastedge-session` Docker volume | Only ciphertext, encrypted to a key held in the running MCP server's memory |
 | Lifetime | 4 h, 8 h, 2 days or 7 days | 4 h or 8 h |
@@ -38,12 +38,12 @@ What each protects:
 - **Don't keep:** the saved copy is useless once the server stops, from backups and stolen disks too. Anything that can run Docker or is root can still read the server's memory **while it runs**.
 - **Neither revokes the token at Gcore.** It stays valid until it expires; to revoke it now, delete it on the portal's **API tokens** page.
 
-Say "this session isn't saved in a usable form", never "no tokens on this computer": a session saved earlier with the box checked stays until the user runs `login --logout` or it expires.
+Say "this session isn't saved in a usable form", never "no tokens on this computer": a session saved earlier with "Keep me signed in" stays until the user runs `login --logout` or it expires.
 
 ## Making "Don't Keep" the Rule (`FASTEDGE_SESSION=ephemeral`)
 
-The checkbox is a per-sign-in convenience. To **enforce** "don't keep", set `FASTEDGE_SESSION=ephemeral` where the MCP client starts. Then:
-- the Approve page shows no checkbox and offers 4 h / 8 h only;
+The page's choice is a per-sign-in convenience. To **enforce** "don't keep", set `FASTEDGE_SESSION=ephemeral` where the MCP client starts. Then:
+- the Approve page offers only "Only for this MCP server session", with 4 h / 8 h;
 - the login container refuses to save a "keep" approval, whatever the page sends;
 - the MCP server never reads saved sessions, even if the volume has some.
 
@@ -69,7 +69,7 @@ A running MCP server is locked to the first account it uses.
 - **To use a different account**, in this order:
   1. **Tell the user which account you're signing in to**, and that they must switch the portal (in the browser they'll approve in) to it first. Approval connects whichever account the portal is signed in to; the user can't tell which one you mean unless you say.
   2. Restart the MCP server (Claude Code: `/mcp`, select the server, Reconnect; Codex: exit, then `codex resume --last`). Restart **before** approving: a "don't keep" token belongs to the server that's running when it's approved.
-  3. Run `login_for_account` from `fastedge-auth-status` with that client id (`… login --account <client_id>`). Login and the Approve page then accept **only** that account: the page warns and disables Approve if the portal is on another one.
+  3. Run `login_for_account` from `fastedge-auth-status` (ask again after the restart) with that client id (`… login --account <client_id>`). Login and the Approve page then accept **only** that account: the page warns and disables Approve if the portal is on another one.
 
   When the user doesn't name an account ("sign me in with whatever I'm logged in as"), use the plain `login_command`.
 - **A saved account** (from a "keep" sign-in): `login --use <client_id>` (the `use_command` in `fastedge-auth-status`) points the saved session at it, then restart.

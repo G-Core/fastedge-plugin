@@ -147,7 +147,7 @@ The same pattern works in `~/.claude/settings.json` if you want a personal defau
 
 Codex does **not** auto-load `.env` files, and — unlike Claude Code — you **cannot** pin credentials in `.codex/config.toml` for a plugin-provided MCP server. The bundled `.mcp.json` owns how the server launches (its transport), and Codex's config schema only lets user/project config set _policy_ for a plugin server (e.g. `enabled`, `startup_timeout_sec`, tool toggles), not transport keys like `env`. Adding an `env` block under `[plugins."…".mcp_servers.fastedge-assistant]` is rejected with `Additional properties are not allowed ('env' was unexpected)` and silently ignored.
 
-Instead, credentials reach the server through the **host environment**. The bundled `.mcp.json` declares `env_vars = ["GCORE_API_KEY", "GCORE_API_BASE"]`, which tells Codex to forward those host variables into the server container. So set them in the shell you launch `codex` from:
+Instead, credentials reach the server through the **host environment**. The bundled `.mcp.json` declares `env_vars = ["GCORE_API_KEY", "GCORE_API_BASE", "FASTEDGE_SESSION"]`, which tells Codex to forward those host variables into the server container. So set them in the shell you launch `codex` from:
 
 ```bash
 export GCORE_API_KEY="your-api-key"
@@ -175,7 +175,7 @@ the key is not stored in the plugin or marketplace manifest.
 
 ### No API key? Sign in through the portal
 
-**No API key?** Leave `GCORE_API_KEY` unset. The first API call then offers to sign you in through the Gcore portal: you approve in your browser, and the agent gets a time-limited API token (8 hours by default, 7 days at most). The token is cached as plaintext in the `fastedge-session` Docker volume until it expires. Inside the container only the MCP server's token broker can read it, but anyone who can run Docker containers on this machine can read it too. To keep nothing usable on disk instead, untick **Keep me signed in on this computer** on the page: the token is then encrypted to the running MCP server and you approve again the next time it starts. A key, when set, always takes precedence.
+**No API key?** Leave `GCORE_API_KEY` unset. The first API call then offers to sign you in through the Gcore portal: you approve in your browser, and the agent gets a time-limited API token (8 hours by default, 7 days at most). The token is cached as plaintext in the `fastedge-session` Docker volume until it expires. Inside the container only the MCP server's token broker can read it, but anyone who can run Docker containers on this machine can read it too. To keep nothing usable on disk instead, choose **Only for this MCP server session** on the page: the token is then encrypted to the running MCP server and you approve again the next time it starts. A key, when set, always takes precedence.
 
 In Codex, the sign-in runs a `docker run … login` command, which may need your approval to run outside the sandbox; if it can't run there, run the command it shows in your own terminal.
 
