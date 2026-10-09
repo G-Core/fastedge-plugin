@@ -21,7 +21,7 @@ When an API call returns `auth_required`, follow its text. It offers four choice
 1. **Browser on this computer** (recommended). With the user's OK, run the login command it gives you as a **background task, using your tool's own background option** (Claude Code: `run_in_background`; not a shell `&`). It prints a portal URL, then waits up to 5 minutes for approval. Give the user the URL as soon as it's printed, then retry the original request when the command exits 0. If you can't read the command's output, tell the user the URL is in the terminal where it runs. The page connects **whichever Gcore account the portal is signed in to**, and shows it before Approve: tell the user to check it, and to switch accounts in the portal first if it's the wrong one.
 2. **Remote** (SSH, a Codespace, or a browser that can't reach this computer). The user opens the portal page themselves, chooses the manual option, approves, and pastes the connect code into the `login --code` command **in their own terminal**. Give them the exact command from `auth_required`: it carries this session's key.
 3. **Not now.** Stop, and don't retry.
-4. **Use an existing API key instead.** Walk the user through "Using an API Key" below for their agent. They add the key themselves: never ask them to paste it into the chat.
+4. **Use an existing API key instead.** Follow `api_key_setup` in `fastedge-auth-status` (the same steps as "Using an API Key" below). The MCP config passes `"-e", "GCORE_API_KEY"` by name only; the value goes in the agent's environment. The user adds the key themselves: never ask them to paste it into the chat, and never write it into an MCP config.
 
 ## Using an API Key
 
