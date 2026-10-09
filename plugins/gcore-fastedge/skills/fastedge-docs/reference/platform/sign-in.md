@@ -80,6 +80,16 @@ Then restart the MCP server. To turn it off, unset it and restart.
 - Any value other than `ephemeral` also stops the container.
 - Check it took effect with `fastedge-auth-status`: `"forced": true`.
 
+## Switching Environments (prod, preprod)
+
+`fastedge-auth-status` lists the valid `environments` (API origin and portal) and says how to switch (`switch_environment`). Use only those origins; never guess a host (preprod is `https://api.preprod.world`, not `api.preprod.gcore.com`).
+
+- **Don't edit the MCP config.** With the user's OK, run the target environment's `sign_in_and_make_default` command (from `environments`) as a background task, like any login. The user approves in that environment's portal. It saves the session and makes that environment the default for every MCP server started without `GCORE_API_BASE`, in all projects and agents on this computer. Then restart the MCP server.
+- **One project only:** set `GCORE_API_BASE` where the agent starts (Claude Code: the `env` block in `.claude/settings.local.json`), then restart.
+- **If `GCORE_API_BASE` is already set** (`api_origin_source: "env"`), it decides and a saved default doesn't apply: change or remove it there.
+- **With an API key:** a key belongs to one environment. Switching needs `GCORE_API_BASE` plus a key from that environment's portal.
+- **`FASTEDGE_SESSION=ephemeral`** can't save a default; use `GCORE_API_BASE`.
+
 ## Switching Accounts and Signing Out
 
 A running MCP server is locked to the first account it uses.
