@@ -10,17 +10,35 @@ How the FastEdge MCP server gets its Gcore credential, what each option stores o
 | Lifetime | Permanent until the user deletes it | 4 hours to 7 days, chosen on the Approve page |
 | Good for | Headless or CI use, or users who prefer a key | Everyone else; nothing to create or paste |
 
-**An API key always wins.** If `GCORE_API_KEY` is set, the session cache is never used.
+**An API key always wins.** If `GCORE_API_KEY` is set, the session cache is never used. The first API result after each server start ends with a note naming the account the key belongs to: tell the user, since the key may come from a project's or a teammate's config. `fastedge-auth-status` shows it too (`account`).
 
 Never check `GCORE_API_KEY` in your own shell to decide whether the user is signed in: the MCP server may have a key from its config, or a portal session. Call the `fastedge-auth-status` tool instead. Never print a key, token or connect code, and never ask the user to paste one into the chat. Never open a portal sign-in link yourself (no built-in or simple browser, no browser automation): only the user opens it, in their own browser. An agent that approves there could read a connect code, which contains the token.
 
 ## Signing In Through the Portal
 
-When an API call returns `auth_required`, follow its text. It offers three choices:
+When an API call returns `auth_required`, follow its text. It offers four choices:
 
 1. **Browser on this computer** (recommended). With the user's OK, run the login command it gives you as a **background task, using your tool's own background option** (Claude Code: `run_in_background`; not a shell `&`). It prints a portal URL, then waits up to 5 minutes for approval. Give the user the URL as soon as it's printed, then retry the original request when the command exits 0. If you can't read the command's output, tell the user the URL is in the terminal where it runs. The page connects **whichever Gcore account the portal is signed in to**, and shows it before Approve: tell the user to check it, and to switch accounts in the portal first if it's the wrong one.
 2. **Remote** (SSH, a Codespace, or a browser that can't reach this computer). The user opens the portal page themselves, chooses the manual option, approves, and pastes the connect code into the `login --code` command **in their own terminal**. Give them the exact command from `auth_required`: it carries this session's key.
 3. **Not now.** Stop, and don't retry.
+4. **Use an existing API key instead.** Walk the user through "Using an API Key" below for their agent. They add the key themselves: never ask them to paste it into the chat.
+
+## Using an API Key
+
+The user sets `GCORE_API_KEY` where their agent starts, then restarts the MCP server. They get a key at `https://portal.gcore.com` → API Keys (preprod: `https://portal.preprod.world`; for preprod or another Gcore environment, also set `GCORE_API_BASE`, e.g. `https://api.preprod.world`).
+
+**Never commit a key.** Use a file that git ignores, or the client's own secret prompt.
+
+| Agent | For one project | For every project |
+|---|---|---|
+| Claude Code | `"env": { "GCORE_API_KEY": "…" }` in `.claude/settings.local.json` (Claude Code git-ignores it when it creates the file; check with `git check-ignore .claude/settings.local.json`. Never `.claude/settings.json`, which is usually committed) | The same `env` block in `~/.claude/settings.json` |
+| Codex CLI | No per-project setting for a plugin's server. Use `direnv`: `export GCORE_API_KEY=…` in the project's `.envrc` (add `.envrc` to `.gitignore`), then start `codex` from that folder | `export GCORE_API_KEY=…` in the shell profile that starts `codex` |
+| Cursor | Cursor reads it from the environment it was started in: export it (or use `direnv`), then start Cursor from that folder with `cursor .` while no other Cursor window is open | macOS: `launchctl setenv GCORE_API_KEY …`, then quit and reopen Cursor. Linux/Windows: set it in the environment Cursor starts from |
+| VS Code / Copilot (own MCP config) | In `.vscode/mcp.json`, use an input instead of the literal key: `"inputs": [{ "type": "promptString", "id": "gcore-key", "description": "Gcore API key", "password": true }]` and `"GCORE_API_KEY": "${input:gcore-key}"` under the server's `env`, with `"-e", "GCORE_API_KEY"` in its `docker run` args. VS Code asks once and stores it securely | Put the same in the user-level MCP configuration |
+
+Then restart the MCP server (Claude Code: `/mcp`, select the server, Reconnect; Codex: exit, then `codex resume --last`; Cursor: restart it). Check with `fastedge-auth-status`: `"credential": "explicit_key"` and the key's `account`.
+
+To go back to portal sign-in, remove the key and restart the MCP server.
 
 ## "Keep Me Signed In on This Computer"
 
