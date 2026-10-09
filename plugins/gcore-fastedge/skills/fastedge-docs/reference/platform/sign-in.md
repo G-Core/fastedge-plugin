@@ -145,7 +145,7 @@ All MCP clients on this computer (Claude Code, Codex, Cursor) share the `fastedg
 |---|---|
 | Login exits 1 | An unexpected failure. Run it again; if it repeats, tell the user |
 | Login exits 2 | A setup problem: wrong arguments, an unusable `fastedge-session` volume, `FASTEDGE_SESSION` misused, an environment with no portal sign-in (use an API key), or `--code` without a terminal (the user runs it in their own). Read the message; don't retry blindly |
-| Login exits 3, "Another FastEdge login is in progress" | Another login is running, or one was killed. A killed login's lock is taken over after 30 seconds; wait and retry |
+| Login exits 3, "Another FastEdge login is in progress" | Another login is running, usually a browser login still waiting for approval (up to 5 minutes). If you started it and no longer need it, stop it (its background task, or `docker stop` its container), then retry; don't ask the user to approve an old link to clear it. A killed login's lock is taken over after 30 seconds |
 | Login exits 4, "port … in use" | Another login is still listening. Finish or cancel it (`docker ps`, then `docker stop` the login container) |
 | Login exits 5 (timed out) or 6 (denied) | The user didn't approve within 5 minutes, or chose Deny. Offer again only if they want to |
 | `login --use` exits 7 | No usable saved session for that account (never saved, expired or signed out). Sign in to it with `login_for_account` instead |
