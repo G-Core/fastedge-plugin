@@ -84,9 +84,12 @@ Then restart the MCP server. To turn it off, unset it and restart.
 
 `fastedge-auth-status` lists the valid `environments` (API origin and portal) and says how to switch (`switch_environment`). Use only those origins; never guess a host (preprod is `https://api.preprod.world`, not `api.preprod.gcore.com`).
 
-- **Don't edit the MCP config.** With the user's OK, run the target environment's `sign_in_and_make_default` command (from `environments`) as a background task, like any login. The user approves in that environment's portal. It saves the session and makes that environment the default for every MCP server started without `GCORE_API_BASE`, in all projects and agents on this computer. Then restart the MCP server.
-- **One project only:** set `GCORE_API_BASE` where the agent starts (Claude Code: the `env` block in `.claude/settings.local.json`), then restart.
-- **If `GCORE_API_BASE` is already set** (`api_origin_source: "env"`), it decides and a saved default doesn't apply: change or remove it there.
+- **Never edit MCP configuration or agent settings yourself** (`.mcp.json`, `.claude/settings*.json`, `~/.codex/config.toml`, `.vscode/mcp.json`). If a change there is needed, tell the user exactly what to change.
+- **A saved session there:** with the user's OK, run its `switch_to_saved` command (`login --use <id> --set-default-origin`). No browser, no approval.
+- **None saved:** run its `sign_in_and_make_default` command as a background task, like any login; the user approves in that environment's portal.
+- Either makes that environment the default for every MCP server started without `GCORE_API_BASE`, in all projects and agents on this computer. **The running server stays on the old environment until it restarts:** tell the user to restart it, and make no API calls until they have.
+- **One project only:** tell the user to set `GCORE_API_BASE` where the agent starts (Claude Code: the `env` block in `.claude/settings.local.json`), then restart.
+- **If `GCORE_API_BASE` is already set** (`api_origin_source: "env"`), it decides and a saved default doesn't apply: tell the user to change or remove it there.
 - **With an API key:** a key belongs to one environment. Switching needs `GCORE_API_BASE` plus a key from that environment's portal.
 - **`FASTEDGE_SESSION=ephemeral`** can't save a default; use `GCORE_API_BASE`.
 
