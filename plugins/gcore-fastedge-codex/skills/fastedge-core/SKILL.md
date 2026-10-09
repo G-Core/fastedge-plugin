@@ -67,7 +67,8 @@ The MCP server holds the credential: `GCORE_API_KEY` from the config, or a porta
 
 - It offers sign-in choices; ask the user which one. Never ask them to paste a token or connect code into the chat.
 - The login is a `docker run … login` command. It talks to the Docker daemon, so it may need approval to run outside the sandbox. If it can't run, ask the user to run it in their own terminal on the same machine.
-- The command prints a portal URL and then waits for approval. Show the user the URL as soon as it appears; don't wait for the command to finish.
+- The command prints a portal URL and then waits for approval. Show the user the URL as soon as it appears; don't wait for the command to finish. If you can't read its output, tell the user the URL is in the terminal.
+- Never open a portal sign-in link yourself (no built-in browser, no browser automation): only the user opens it, in their own browser.
 - After a successful login, retry the request. No restart is needed for the same account.
 - `account_changed` means another account replaced the session. Codex can't restart one MCP server: the user exits and runs `codex resume --last`. Don't retry.
 - More (the "Keep me signed in" choice, enforcing "don't keep" with `FASTEDGE_SESSION=ephemeral`, every `auth_required` reason): the `platform-sign-in` docs topic.

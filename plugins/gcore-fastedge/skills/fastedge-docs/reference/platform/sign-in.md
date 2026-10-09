@@ -12,13 +12,13 @@ How the FastEdge MCP server gets its Gcore credential, what each option stores o
 
 **An API key always wins.** If `GCORE_API_KEY` is set, the session cache is never used.
 
-Never check `GCORE_API_KEY` in your own shell to decide whether the user is signed in: the MCP server may have a key from its config, or a portal session. Call the `fastedge-auth-status` tool instead. Never print a key, token or connect code, and never ask the user to paste one into the chat.
+Never check `GCORE_API_KEY` in your own shell to decide whether the user is signed in: the MCP server may have a key from its config, or a portal session. Call the `fastedge-auth-status` tool instead. Never print a key, token or connect code, and never ask the user to paste one into the chat. Never open a portal sign-in link yourself (no built-in or simple browser, no browser automation): only the user opens it, in their own browser. An agent that approves there could read a connect code, which contains the token.
 
 ## Signing In Through the Portal
 
 When an API call returns `auth_required`, follow its text. It offers three choices:
 
-1. **Browser on this computer** (recommended). With the user's OK, run the login command it gives you as a **background task, using your tool's own background option** (Claude Code: `run_in_background`; not a shell `&`). It prints a portal URL, then waits up to 5 minutes for approval. Give the user the URL as soon as it's printed, then retry the original request when the command exits 0. The page connects **whichever Gcore account the portal is signed in to**, and shows it before Approve: tell the user to check it, and to switch accounts in the portal first if it's the wrong one.
+1. **Browser on this computer** (recommended). With the user's OK, run the login command it gives you as a **background task, using your tool's own background option** (Claude Code: `run_in_background`; not a shell `&`). It prints a portal URL, then waits up to 5 minutes for approval. Give the user the URL as soon as it's printed, then retry the original request when the command exits 0. If you can't read the command's output, tell the user the URL is in the terminal where it runs. The page connects **whichever Gcore account the portal is signed in to**, and shows it before Approve: tell the user to check it, and to switch accounts in the portal first if it's the wrong one.
 2. **Remote** (SSH, a Codespace, or a browser that can't reach this computer). The user opens the portal page themselves, chooses the manual option, approves, and pastes the connect code into the `login --code` command **in their own terminal**. Give them the exact command from `auth_required`: it carries this session's key.
 3. **Not now.** Stop, and don't retry.
 
