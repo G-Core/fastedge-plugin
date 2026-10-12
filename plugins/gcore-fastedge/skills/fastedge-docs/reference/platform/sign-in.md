@@ -1,6 +1,8 @@
 # Signing In: API Keys, Portal Sessions and "Keep Me Signed In"
 
-How the FastEdge MCP server gets its Gcore credential, what each option stores on the user's computer, and how to make "don't keep" the rule. Read this when a user asks how to sign in, why they're asked to sign in again, how to stop tokens being saved, or how to switch accounts.
+How the FastEdge MCP server gets its Gcore credential, what each option stores on the user's computer, and how to make
+"don't keep" the rule. Read this when a user asks how to sign in, why they're asked to sign in again, how to stop tokens
+being saved, or how to switch accounts.
 
 ## Two Ways to Authenticate
 
@@ -10,22 +12,41 @@ How the FastEdge MCP server gets its Gcore credential, what each option stores o
 | Lifetime | Permanent until the user deletes it | 4 hours to 7 days, chosen on the Approve page |
 | Good for | Headless or CI use, or users who prefer a key | Everyone else; nothing to create or paste |
 
-**An API key wins.** If `GCORE_API_KEY` is set, the session cache is never used. A key can't be combined with `FASTEDGE_SESSION=ephemeral`: the server refuses to start (exit 2), so remove one of them. The first API result after each server start ends with a note naming the account the key belongs to: tell the user, since the key may come from a project's or a teammate's config. `fastedge-auth-status` shows it too (`account`).
+**An API key wins.** If `GCORE_API_KEY` is set, the session cache is never used. A key can't be combined with
+`FASTEDGE_SESSION=ephemeral`: the server refuses to start (exit 2), so remove one of them. The first API result after
+each server start ends with a note naming the account the key belongs to: tell the user, since the key may come from a
+project's or a teammate's config. `fastedge-auth-status` shows it too (`account`).
 
-Never check `GCORE_API_KEY` in your own shell to decide whether the user is signed in: the MCP server may have a key from its config, or a portal session. Call the `fastedge-auth-status` tool instead. Never print a key, token or connect code, and never ask the user to paste one into the chat. Never open a portal sign-in link yourself (no built-in or simple browser, no browser automation): only the user opens it, in their own browser. An agent that approves there could read a connect code, which contains the token.
+Never check `GCORE_API_KEY` in your own shell to decide whether the user is signed in: the MCP server may have a key
+from its config, or a portal session. Call the `fastedge-auth-status` tool instead. Never print a key, token or connect
+code, and never ask the user to paste one into the chat. Never open a portal sign-in link yourself (no built-in or
+simple browser, no browser automation): only the user opens it, in their own browser. An agent that approves there could
+read a connect code, which contains the token.
 
 ## Signing In Through the Portal
 
 When an API call returns `auth_required`, follow its text. It offers four choices:
 
-1. **Browser on this computer** (recommended). With the user's OK, run the login command it gives you as a **background task, using your tool's own background option** (Claude Code: `run_in_background`; not a shell `&`). It prints a portal URL, then waits up to 5 minutes for approval. Give the user the URL as soon as it's printed, then retry the original request when the command exits 0. If you can't read the command's output, tell the user the URL is in the terminal where it runs. The page connects **whichever Gcore account the portal is signed in to**, and shows it before Approve: tell the user to check it, and to switch accounts in the portal first if it's the wrong one.
-2. **Remote** (SSH, a Codespace, or a browser that can't reach this computer). The user opens the portal page themselves, chooses the manual option, approves, and pastes the connect code into the `login --code` command **in their own terminal**. Give them the exact command from `auth_required`: it carries this session's key.
+1. **Browser on this computer** (recommended). With the user's OK, run the login command it gives you as a **background
+   task, using your tool's own background option** (Claude Code: `run_in_background`; not a shell `&`). It prints a
+   portal URL, then waits up to 5 minutes for approval. Give the user the URL as soon as it's printed, then retry the
+   original request when the command exits 0. If you can't read the command's output, tell the user the URL is in the
+   terminal where it runs. The page connects **whichever Gcore account the portal is signed in to**, and shows it before
+   Approve: tell the user to check it, and to switch accounts in the portal first if it's the wrong one.
+2. **Remote** (SSH, a Codespace, or a browser that can't reach this computer). The user opens the portal page
+   themselves, chooses the manual option, approves, and pastes the connect code into the `login --code` command **in
+   their own terminal**. Give them the exact command from `auth_required`: it carries this session's key.
 3. **Not now.** Stop, and don't retry.
-4. **Use an existing API key instead.** Follow `api_key_setup` in `fastedge-auth-status` (the same steps as "Using an API Key" below). The MCP config passes `"-e", "GCORE_API_KEY"` by name only; the value goes in the agent's environment. The user adds the key themselves: never ask them to paste it into the chat, and never write it into an MCP config.
+4. **Use an existing API key instead.** Follow `api_key_setup` in `fastedge-auth-status` (the same steps as "Using an
+   API Key" below). The MCP config passes `"-e", "GCORE_API_KEY"` by name only; the value goes in the agent's
+   environment. The user adds the key themselves: never ask them to paste it into the chat, and never write it into an
+   MCP config.
 
 ## Using an API Key
 
-The user sets `GCORE_API_KEY` where their agent starts, then restarts the MCP server. They get a key at `https://portal.gcore.com` → API Keys (preprod: `https://portal.preprod.world`; for preprod or another Gcore environment, also set `GCORE_API_BASE`, e.g. `https://api.preprod.world`).
+The user sets `GCORE_API_KEY` where their agent starts, then restarts the MCP server. They get a key at
+`https://portal.gcore.com` → API Keys (preprod: `https://portal.preprod.world`; for preprod or another Gcore
+environment, also set `GCORE_API_BASE`, e.g. `https://api.preprod.world`).
 
 **Never commit a key.** Use a file that git ignores, or the client's own secret prompt.
 
@@ -36,7 +57,8 @@ The user sets `GCORE_API_KEY` where their agent starts, then restarts the MCP se
 | Cursor | Cursor reads it from the environment it was started in: export it (or use `direnv`), then start Cursor from that folder with `cursor .` while no other Cursor window is open | macOS: `launchctl setenv GCORE_API_KEY …`, then quit and reopen Cursor. Linux/Windows: set it in the environment Cursor starts from |
 | VS Code / Copilot (own MCP config) | In `.vscode/mcp.json`, use an input instead of the literal key: `"inputs": [{ "type": "promptString", "id": "gcore-key", "description": "Gcore API key", "password": true }]` and `"GCORE_API_KEY": "${input:gcore-key}"` under the server's `env`, with `"-e", "GCORE_API_KEY"` in its `docker run` args. VS Code asks once and stores it securely | Put the same in the user-level MCP configuration |
 
-Then restart the MCP server (Claude Code: `/mcp`, select the server, Reconnect; Codex: exit, then `codex resume --last`; Cursor: restart it). Check with `fastedge-auth-status`: `"credential": "explicit_key"` and the key's `account`.
+Then restart the MCP server (Claude Code: `/mcp`, select the server, Reconnect; Codex: exit, then `codex resume --last`;
+Cursor: restart it). Check with `fastedge-auth-status`: `"credential": "explicit_key"` and the key's `account`.
 
 To go back to portal sign-in, remove the key and restart the MCP server.
 
@@ -52,15 +74,21 @@ The Approve page offers two options, the first selected by default:
 | Renewing | Sign in again, no restart | Restart the MCP server first, then approve |
 
 What each protects:
-- **Keep:** inside the container only a separate token broker can read the token, so build dependencies (npm scripts, Cargo `build.rs`) can't. But anything that can run Docker or is root can read the volume, and a backup or a stolen disk holds a valid token until it expires.
-- **Don't keep:** the saved copy is useless once the server stops, from backups and stolen disks too. Anything that can run Docker or is root can still read the server's memory **while it runs**.
-- **Neither revokes the token at Gcore.** It stays valid until it expires; to revoke it now, delete it on the portal's **API tokens** page.
+- **Keep:** inside the container only a separate token broker can read the token, so build dependencies (npm scripts,
+  Cargo `build.rs`) can't. But anything that can run Docker or is root can read the volume, and a backup or a stolen
+  disk holds a valid token until it expires.
+- **Don't keep:** the saved copy is useless once the server stops, from backups and stolen disks too. Anything that can
+  run Docker or is root can still read the server's memory **while it runs**.
+- **Neither revokes the token at Gcore.** It stays valid until it expires; to revoke it now, delete it on the portal's
+  **API tokens** page.
 
-Say "this session isn't saved in a usable form", never "no tokens on this computer": a session saved earlier with "Keep me signed in" stays until the user runs `login --logout` or it expires.
+Say "this session isn't saved in a usable form", never "no tokens on this computer": a session saved earlier with "Keep
+me signed in" stays until the user runs `login --logout` or it expires.
 
 ## Making "Don't Keep" the Rule (`FASTEDGE_SESSION=ephemeral`)
 
-The page's choice is a per-sign-in convenience. To **enforce** "don't keep", set `FASTEDGE_SESSION=ephemeral` where the MCP client starts. Then:
+The page's choice is a per-sign-in convenience. To **enforce** "don't keep", set `FASTEDGE_SESSION=ephemeral` where the
+MCP client starts. Then:
 - the Approve page offers only "Only for this MCP server session", with 4 h / 8 h;
 - the login container refuses to save a "keep" approval, whatever the page sends;
 - the MCP server never reads saved sessions, even if the volume has some.
@@ -76,21 +104,32 @@ How to set it (the plugin's MCP config already passes it through by name):
 
 Then restart the MCP server. To turn it off, unset it and restart.
 
-- **It can't be combined with an API key.** With `GCORE_API_KEY` also set, the container refuses to start (exit 2). Choose one.
+- **It can't be combined with an API key.** With `GCORE_API_KEY` also set, the container refuses to start (exit 2).
+  Choose one.
 - Any value other than `ephemeral` also stops the container.
 - Check it took effect with `fastedge-auth-status`: `"forced": true`.
 
 ## Switching Environments (prod, preprod)
 
-`fastedge-auth-status` lists the valid `environments` (API origin and portal) and says how to switch (`switch_environment`). Use only those origins; never guess a host (preprod is `https://api.preprod.world`, not `api.preprod.gcore.com`).
+`fastedge-auth-status` lists the valid `environments` (API origin and portal) and says how to switch
+(`switch_environment`). Use only those origins; never guess a host (preprod is `https://api.preprod.world`, not
+`api.preprod.gcore.com`).
 
-- **Never edit MCP configuration or agent settings yourself** (`.mcp.json`, `.claude/settings*.json`, `~/.codex/config.toml`, `.vscode/mcp.json`). If a change there is needed, tell the user exactly what to change.
-- **A saved session there:** with the user's OK, run its `switch_to_saved` command (`login --use <id> --set-default-origin`). No browser, no approval.
-- **None saved:** run its `sign_in_and_make_default` command as a background task, like any login; the user approves in that environment's portal.
-- Either makes that environment the default for every MCP server started without `GCORE_API_BASE`, in all projects and agents on this computer. **The running server stays on the old environment until it restarts:** tell the user to restart it, and make no API calls until they have.
-- **One project only:** tell the user to set `GCORE_API_BASE` where the agent starts (Claude Code: the `env` block in `.claude/settings.local.json`), then restart.
-- **If `GCORE_API_BASE` is already set** (`api_origin_source: "env"`), it decides and a saved default doesn't apply: tell the user to change or remove it there.
-- **With an API key:** a key belongs to one environment. Switching needs `GCORE_API_BASE` plus a key from that environment's portal.
+- **Never edit MCP configuration or agent settings yourself** (`.mcp.json`, `.claude/settings*.json`,
+  `~/.codex/config.toml`, `.vscode/mcp.json`). If a change there is needed, tell the user exactly what to change.
+- **A saved session there:** with the user's OK, run its `switch_to_saved` command
+  (`login --use <id> --set-default-origin`). No browser, no approval.
+- **None saved:** run its `sign_in_and_make_default` command as a background task, like any login; the user approves in
+  that environment's portal.
+- Either makes that environment the default for every MCP server started without `GCORE_API_BASE`, in all projects and
+  agents on this computer. **The running server stays on the old environment until it restarts:** tell the user to
+  restart it, and make no API calls until they have.
+- **One project only:** tell the user to set `GCORE_API_BASE` where the agent starts (Claude Code: the `env` block in
+  `.claude/settings.local.json`), then restart.
+- **If `GCORE_API_BASE` is already set** (`api_origin_source: "env"`), it decides and a saved default doesn't apply:
+  tell the user to change or remove it there.
+- **With an API key:** a key belongs to one environment. Switching needs `GCORE_API_BASE` plus a key from that
+  environment's portal.
 - **`FASTEDGE_SESSION=ephemeral`** can't save a default; use `GCORE_API_BASE`.
 
 ## Switching Accounts and Signing Out
@@ -98,31 +137,44 @@ Then restart the MCP server. To turn it off, unset it and restart.
 A running MCP server is locked to the first account it uses.
 
 - **To use a different account**, in this order:
-  1. **Tell the user which account you're signing in to**, and that they must switch the portal (in the browser they'll approve in) to it first. Approval connects whichever account the portal is signed in to; the user can't tell which one you mean unless you say.
-  2. Restart the MCP server (Claude Code: `/mcp`, select the server, Reconnect; Codex: exit, then `codex resume --last`). Restart **before** approving: a "don't keep" token belongs to the server that's running when it's approved.
-  3. Run `login_for_account` from `fastedge-auth-status` (ask again after the restart) with that client id (`… login --account <client_id>`). Login and the Approve page then accept **only** that account: the page warns and disables Approve if the portal is on another one.
+  1. **Tell the user which account you're signing in to**, and that they must switch the portal (in the browser they'll
+     approve in) to it first. Approval connects whichever account the portal is signed in to; the user can't tell which
+     one you mean unless you say.
+  2. Restart the MCP server (Claude Code: `/mcp`, select the server, Reconnect; Codex: exit, then
+     `codex resume --last`). Restart **before** approving: a "don't keep" token belongs to the server that's running
+     when it's approved.
+  3. Run `login_for_account` from `fastedge-auth-status` (ask again after the restart) with that client id
+     (`… login --account <client_id>`). Login and the Approve page then accept **only** that account: the page warns and
+     disables Approve if the portal is on another one.
 
   When the user doesn't name an account ("sign me in with whatever I'm logged in as"), use the plain `login_command`.
-- **A saved account** (from a "keep" sign-in): `login --use <client_id>` (the `use_command` in `fastedge-auth-status`) points the saved session at it, then restart.
-- `login --use` and `login --logout` change **saved sessions only** (see "Signing Out"). A server holding a "don't keep" session ignores them; to end that session, stop or restart the server.
+- **A saved account** (from a "keep" sign-in): `login --use <client_id>` (the `use_command` in `fastedge-auth-status`)
+  points the saved session at it, then restart.
+- `login --use` and `login --logout` change **saved sessions only** (see "Signing Out"). A server holding a "don't keep"
+  session ignores them; to end that session, stop or restart the server.
 
 ## Signing Out
 
-"Log me out of account 123" or "log me out of all my FastEdge accounts": with the user's OK, run the `logout_command` from `fastedge-auth-status`, with the client id or `all`:
+"Log me out of account 123" or "log me out of all my FastEdge accounts": with the user's OK, run the `logout_command`
+from `fastedge-auth-status`, with the client id or `all`:
 
 | Command | Removes from this computer |
 |---|---|
 | `… login --logout <client_id>` | That saved account (and the active pointer if it pointed there) |
 | `… login --logout all` | Every saved account for prod **and** preprod, plus any "don't keep" session not yet in use |
 
-- It's local only. Tell the user the **token ids** it prints, and that those tokens stay valid until they expire. They revoke them by deleting those ids on the portal's **API tokens** page.
-- A running MCP server stops using a removed session on its next call. One holding a "don't keep" session keeps it until it's stopped or restarted.
+- It's local only. Tell the user the **token ids** it prints, and that those tokens stay valid until they expire. They
+  revoke them by deleting those ids on the portal's **API tokens** page.
+- A running MCP server stops using a removed session on its next call. One holding a "don't keep" session keeps it until
+  it's stopped or restarted.
 - It prints no secrets and needs no browser, so you may run it yourself once the user agrees.
 
 ## One Session Store for Every Agent
 
 All MCP clients on this computer (Claude Code, Codex, Cursor) share the `fastedge-session` Docker volume:
-- **"Keep" sessions are shared.** Signing in with "keep" in one client signs every client in, and changing the active account (`login --use`, a new sign-in) changes the starting account for all of them. A running server on another account answers `account_changed` and asks for a restart.
+- **"Keep" sessions are shared.** Signing in with "keep" in one client signs every client in, and changing the active
+  account (`login --use`, a new sign-in) changes the starting account for all of them. A running server on another
+  account answers `account_changed` and asks for a restart.
 - **"Don't keep" sessions are not shared.** Each is sealed to the one MCP server that asked for it.
 - **Logout is shared too:** `login --logout all` signs every client out of every saved account.
 
