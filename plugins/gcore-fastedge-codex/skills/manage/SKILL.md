@@ -124,7 +124,7 @@ A secret rename that resolves to the same ID is a **no-op**, not a change. Compa
 
 `gcore_api` PATCH `/fastedge/v1/apps/<id>`, with only the categories that have adds/changes:
 
-```
+```text
 {
   "env": { "API_URL": "https://api.example.com" },
   "secrets": { "NAME": { "id": <secret-id> } },
