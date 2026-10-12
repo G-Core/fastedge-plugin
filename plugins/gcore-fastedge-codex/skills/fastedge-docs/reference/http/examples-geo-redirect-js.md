@@ -2,9 +2,9 @@
   auto-updated: true
   sources:
     - id: fastedge-sdk-js
-      ref: main
-      commit: 81145a9a43ec499240c687bd49376ab20c72b11c
-      updated: 2026-07-23
+      ref: v2.5.2
+      commit: 9c8c7886f0d1ec5ac2296b4080805966a96ca817
+      updated: 2026-10-02
 -->
 
 ## Example: Geo-Redirect
@@ -23,7 +23,7 @@ Redirects incoming requests to different origins based on the visitor's country,
 
 | Package | Version |
 |---|---|
-| `@gcoredev/fastedge-sdk-js` | `^2.3.0` |
+| `@gcoredev/fastedge-sdk-js` | `^2.5.2` |
 
 ---
 

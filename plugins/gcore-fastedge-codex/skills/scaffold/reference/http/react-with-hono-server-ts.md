@@ -2,9 +2,9 @@
   auto-updated: true
   sources:
     - id: fastedge-sdk-js
-      ref: main
+      ref: v2.5.2
       commit: 9c8c7886f0d1ec5ac2296b4080805966a96ca817
-      updated: 2026-09-22
+      updated: 2026-10-02
 -->
 
 ---
@@ -34,7 +34,7 @@ Over `http-base`, add the following to `package.json`.
 
 **Runtime dependencies:**
 ```json
-"@gcoredev/fastedge-sdk-js": "^2.3.0",
+"@gcoredev/fastedge-sdk-js": "^2.5.2",
 "hono": "^4.13.5",
 "react": "^19.1.1",
 "react-dom": "^19.1.1"
@@ -124,7 +124,7 @@ Script semantics:
     "preview": "vite preview"
   },
   "dependencies": {
-    "@gcoredev/fastedge-sdk-js": "^2.3.0",
+    "@gcoredev/fastedge-sdk-js": "^2.5.2",
     "hono": "^4.13.5",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
