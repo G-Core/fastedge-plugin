@@ -30,9 +30,9 @@ This skill uses MCP workflows (executor layer) chained by skill orchestration:
 | `enable-app-http` | PATCH app `debug:true`, return URL + `debug_until` (HTTP apps) |
 | `attach-app-to-cdn-rule-create` | PATCH app `debug:true` + POST a new CDN rule wiring app at `/livetest-<name>/` (CDN apps, first run) |
 | `attach-app-to-cdn-rule-update` | PATCH app `debug:true` + PATCH existing CDN rule (CDN apps, iterative re-runs) |
-| `update-env-vars-app` (via `/gcore-fastedge:manage sync-env`) | Sync `.env*` from `<source-dir>` to the deployed app's env / secrets / rsp_headers (Step 4.5) |
+| `gcore_api` PATCH/PUT (via `/gcore-fastedge:manage sync-env`) | Sync `.env*` from `<source-dir>` to the deployed app's env / secrets / rsp_headers (Step 4.5) |
 
-If MCP tools fail, diagnose first (Docker running? API key forwarded? Network?) — see `/gcore-fastedge:deploy` for the canonical MCP config and recovery steps. Do not silently fall back to direct API calls without warning the user.
+If MCP tools fail, diagnose first (Docker running? Network? An `auth_required` result means sign-in: follow its instructions) — see `/gcore-fastedge:deploy` for the canonical MCP config and recovery steps. Do not silently fall back to direct API calls without warning the user.
 
 ---
 

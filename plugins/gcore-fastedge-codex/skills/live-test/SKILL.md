@@ -38,7 +38,7 @@ Live-test is mostly orchestration of existing skills + a few live-test-specific 
 | `attach-app-to-cdn-rule-create` | PATCH app `debug:true` + POST new CDN rule wiring app at `/livetest-<name>/` (CDN, first run) |
 | `attach-app-to-cdn-rule-update` | PATCH app `debug:true` + PATCH existing CDN rule (CDN, re-runs) |
 | `gcore_api` | Per-scenario log query: `GET /fastedge/v1/apps/{id}/logs?request_id=<traceparent>` |
-| `update-env-vars-app` | Delegated via `/gcore-fastedge:manage sync-env` (Step 4.5) |
+| `gcore_api` PATCH/PUT | Delegated via `/gcore-fastedge:manage sync-env` (Step 4.5) |
 
 If MCP isn't configured, halt and follow the setup path documented in `/gcore-fastedge:deploy`. Do not silently fall back to direct API calls.
 

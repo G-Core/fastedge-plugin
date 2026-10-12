@@ -10,12 +10,16 @@
         "--pull=always",
         "-v",
         "${PWD}:/workspace",
+        "-v",
+        "fastedge-session:/run/fastedge:ro",
         "-e",
         "WORKSPACE_ROOT=/workspace",
         "-e",
         "GCORE_API_KEY",
         "-e",
         "GCORE_API_BASE",
+        "-e",
+        "FASTEDGE_SESSION",
         "ghcr.io/g-core/fastedge-mcp-server:latest"
       ]
     }

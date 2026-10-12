@@ -33,7 +33,7 @@ If MCP tools don't respond, halt before any execution step and diagnose the caus
 
 ## Pre-Flight Checks
 
-1. Verify API key exists (`GCORE_API_KEY`, legacy `FASTEDGE_API_KEY` accepted).
+1. Credentials: don't check `GCORE_API_KEY` in the shell. The MCP server holds either a key or a portal sign-in session; if a call returns `auth_required`, follow `/gcore-fastedge:fastedge-core` → Not signed in.
 2. Detect project type:
 
 - `asconfig.json` → AssemblyScript CDN
@@ -154,11 +154,11 @@ Otherwise: write/refresh deployment magic comments via `deployment-comments` so 
 Diagnose the 4 common issues before suggesting fallback:
 
 1. Docker daemon not running.
-2. `GCORE_API_KEY` not passed through to the container.
+2. Session volume not mounted (`-v fastedge-session:/run/fastedge:ro`), for portal sign-in without a key.
 3. Workspace not mounted (`./:/workspace`).
 4. Network egress blocked.
 
-Then halt and report the diagnosis. The MCP server is bundled with the plugin — do **not** emit a `codex mcp add` command. Point the user at the fix: start Docker, make `GCORE_API_KEY` visible to Codex, or reinstall/upgrade the plugin if its cached snapshot is stale. They can confirm Codex resolves the server with:
+Then halt and report the diagnosis. The MCP server is bundled with the plugin — do **not** emit a `codex mcp add` command. Point the user at the fix: start Docker, or reinstall/upgrade the plugin if its cached snapshot is stale. They can confirm Codex resolves the server with:
 
 ```bash
 codex mcp get fastedge-assistant
@@ -227,7 +227,7 @@ Next: /gcore-fastedge:manage get 4732724
 
 **User prompt**: "deploy product-cache"
 
-**Behavior**: `build-wasm` tool call returns no response (MCP server not registered with Codex). Diagnose 4 common causes: Docker daemon, API key passthrough, workspace mount, network. Halt before any execution. Do NOT silently fall back.
+**Behavior**: `build-wasm` tool call returns no response (MCP server not registered with Codex). Diagnose 4 common causes: Docker daemon, session volume, workspace mount, network. Halt before any execution. Do NOT silently fall back.
 
 **Completion output**:
 
@@ -236,7 +236,7 @@ Next: /gcore-fastedge:manage get 4732724
 
 Likely causes (check in order):
   1. Docker daemon not running         → `docker info`
-  2. GCORE_API_KEY not in environment  → `echo $GCORE_API_KEY`
+  2. Session volume missing           → check `-v fastedge-session:/run/fastedge:ro`
   3. Workspace mount missing           → check `-v ./:/workspace`
   4. Network egress blocked            → `docker pull ghcr.io/g-core/fastedge-mcp-server:latest`
 

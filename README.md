@@ -97,7 +97,7 @@ The plugins run build, deploy, and management operations through the [FastEdge M
 You need:
 
 - **Docker** running locally — required to start the MCP server.
-- **Gcore API key** — set as `GCORE_API_KEY` (see below).
+- **Gcore API key** — set as `GCORE_API_KEY` (see below), or sign in through the portal instead (see [No API key?](#no-api-key-sign-in-through-the-portal)).
 
 > Local-only mode (no Docker, no MCP) is available as an explicit opt-out for developers who prefer their own toolchain. See [Running without the MCP server](#running-without-the-mcp-server) below.
 
@@ -106,52 +106,45 @@ You need:
 1. Go to the [Gcore Portal](https://portal.gcore.com/)
 2. Navigate to **Profile** → **API Keys** (or visit `portal.gcore.com/api-keys` directly)
 3. Click **Create API Key**, give it a name, and copy the generated key
-4. Set the environment variable:
+4. Give the key to the agent from **outside your project folder**: the MCP server mounts the project
+   folder into its container, where your project's own build scripts (npm, cargo) can read every file
+   in it. Either export it in the shell that starts the agent:
 
 ```bash
 export GCORE_API_KEY="your-api-key"
 ```
 
-Or create a `.env` file in your project directory:
-
-```
-GCORE_API_KEY=your-api-key
-```
-
-Claude Code automatically loads `.env` files from the working directory.
-
-### Per-project credentials via `.claude/settings.local.json`
-
-If you'd rather not rely on shell exports or `.env` files, you can pin credentials to a specific project by adding an `env` block to `.claude/settings.local.json` in the project root. Claude Code injects these into its own process environment, which the bundled `.mcp.json` forwards to the MCP server container via Docker's `-e` passthrough.
-
-`.claude/settings.local.json` is local-only and not committed, which makes it a safe place for keys.
+or, for Claude Code, add it to your user settings, `~/.claude/settings.json`:
 
 ```json
 {
   "env": {
-    "GCORE_API_BASE": "https://api.gcore.com",
     "GCORE_API_KEY": "your-api-key"
   }
 }
 ```
 
+Add `"GCORE_API_BASE"` only for a key from a non-prod environment.
+
+Don't put a key in `.claude/settings.local.json`, a `.env` or a `.envrc` in the project: those files are
+inside the mounted folder. Managing a key's security is up to you; portal sign-in (see
+[No API key?](#no-api-key-sign-in-through-the-portal)) needs no key at all.
+
 > **String literals only — no variable interpolation.**
 >
-> Values in this `env` block are passed through verbatim. Writing `"GCORE_API_KEY": "${MY_SECRET}"` will send the literal seven-character string `${MY_SECRET}` to the MCP server, not the value of `MY_SECRET`. The same applies to forms like `$MY_SECRET` or `~`.
+> Values in an `env` block are passed through verbatim. Writing `"GCORE_API_KEY": "${MY_SECRET}"` will send the literal seven-character string `${MY_SECRET}` to the MCP server, not the value of `MY_SECRET`. The same applies to forms like `$MY_SECRET` or `~`.
 >
 > If you want the value to come from a shell variable rather than be written into the file, the shell variable must already be named `GCORE_API_KEY` or `GCORE_API_BASE` — and in that case, omit the `env` block entirely. The plugin's `.mcp.json` already passes `GCORE_API_KEY` and `GCORE_API_BASE` from the parent shell environment into the container, so an `export` is sufficient on its own.
-
-The same pattern works in `~/.claude/settings.json` if you want a personal default that applies to every project.
 
 ### Credentials for Codex (host environment, not config)
 
 Codex does **not** auto-load `.env` files, and — unlike Claude Code — you **cannot** pin credentials in `.codex/config.toml` for a plugin-provided MCP server. The bundled `.mcp.json` owns how the server launches (its transport), and Codex's config schema only lets user/project config set _policy_ for a plugin server (e.g. `enabled`, `startup_timeout_sec`, tool toggles), not transport keys like `env`. Adding an `env` block under `[plugins."…".mcp_servers.fastedge-assistant]` is rejected with `Additional properties are not allowed ('env' was unexpected)` and silently ignored.
 
-Instead, credentials reach the server through the **host environment**. The bundled `.mcp.json` declares `env_vars = ["GCORE_API_KEY", "GCORE_API_BASE"]`, which tells Codex to forward those host variables into the server container. So set them in the shell you launch `codex` from:
+Instead, credentials reach the server through the **host environment**. The bundled `.mcp.json` declares `env_vars = ["GCORE_API_KEY", "GCORE_API_BASE", "FASTEDGE_SESSION"]`, which tells Codex to forward those host variables into the server container. So set them in the shell you launch `codex` from:
 
 ```bash
 export GCORE_API_KEY="your-api-key"
-export GCORE_API_BASE="https://api.gcore.com"   # optional; defaults to https://api.gcore.com
+# export GCORE_API_BASE="https://api.preprod.world"   # only for a non-prod environment
 codex
 ```
 
@@ -167,15 +160,33 @@ in the GUI session and restart Cursor:
 
 ```bash
 launchctl setenv GCORE_API_KEY "your-api-key"
-launchctl setenv GCORE_API_BASE "https://api.gcore.com"
 ```
+
+Set `GCORE_API_BASE` only for a non-prod environment, with a key from that environment. Leave it unset
+otherwise: the server then uses prod, or the environment you saved when signing in through the portal.
 
 The Cursor plugin forwards these variables by name to the MCP Docker container;
 the key is not stored in the plugin or marketplace manifest.
 
+### No API key? Sign in through the portal
+
+**No API key?** Leave `GCORE_API_KEY` unset. The first API call then offers to sign you in through
+the Gcore portal: you approve in your browser, and the MCP server gets a time-limited API token
+(8 hours by default, 7 days at most). The server's token broker holds it; the agent never sees it.
+The token is cached as plaintext in the `fastedge-session` Docker volume until it expires. Inside
+the container only the token broker can read it, but anyone who can run Docker containers on this
+machine can read it too. To keep this sign-in's token unusable on disk instead, choose **Only for
+this MCP server session** on the page: the token is then encrypted to the running MCP server and you
+approve again the next time it starts. A session saved earlier with "Keep me signed in" stays usable
+until it expires or you sign out (`login --logout`). A key, when set, takes precedence. It can't be
+combined with `FASTEDGE_SESSION=ephemeral`: the server then refuses to start.
+
+In Codex, the sign-in runs a `docker run … login` command, which may need your approval to run outside the sandbox; if it can't run there, run the command it shows in your own terminal.
+
 ### Optional: preprod testing
 
-Set `GCORE_API_BASE` (via any of the methods above) to override the API host (default: `https://api.gcore.com`; preprod: `https://api.preprod.world`). The MCP server appends `/fastedge/v1` itself.
+Set `GCORE_API_BASE` (via any of the methods above) to override the API host (default: `https://api.gcore.com`; preprod: `https://api.preprod.world`). The MCP server appends `/fastedge/v1` itself. When set, it
+also overrides the environment saved by portal sign-in (`login --set-default-origin`).
 
 ### Running without the MCP server
 

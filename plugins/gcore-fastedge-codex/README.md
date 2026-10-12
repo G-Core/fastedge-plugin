@@ -8,23 +8,23 @@ Codex plugin for Gcore FastEdge. Commands use the `$gcore-fastedge:` prefix
 - **Intelligence layer** — local docs from `docs-index.json` and markdown files under `skills/*/reference/` (mirrored from the Claude plugin at each release).
 - **Executor layer** — the FastEdge MCP server (Docker image `ghcr.io/g-core/fastedge-mcp-server:latest`). All build/deploy/manage execution runs through it.
 
-The plugin requires both layers. If the MCP server can't start (Docker not running, or no credentials), only docs Q&A is usable — build/deploy/manage skills must stop and explain the cause rather than fabricating success.
+The plugin requires both layers. If the MCP server can't start (Docker not running), only docs Q&A is usable — build/deploy/manage skills must stop and explain the cause rather than fabricating success.
 
 ## Getting started
 
 ### 1. Prerequisites
 
 - Docker running locally
-- `GCORE_API_KEY` available to Codex
+- `GCORE_API_KEY` available to Codex, or no key and a portal sign-in (see "No API key?" in the [top-level README](../../README.md#no-api-key-sign-in-through-the-portal))
 
-Credentials reach the server through the **host environment** — the bundled `.mcp.json` declares `env_vars = ["GCORE_API_KEY", "GCORE_API_BASE"]`, so Codex forwards those host variables to the MCP server automatically. Export them in the shell you launch `codex` from:
+Credentials reach the server through the **host environment** — the bundled `.mcp.json` declares `env_vars = ["GCORE_API_KEY", "GCORE_API_BASE", "FASTEDGE_SESSION"]`, so Codex forwards those host variables to the MCP server automatically. Export them in the shell you launch `codex` from:
 
 ```bash
 export GCORE_API_KEY="your_key_here"
-export GCORE_API_BASE="https://api.preprod.world"   # optional; defaults to https://api.gcore.com
+# export GCORE_API_BASE="https://api.preprod.world"   # only for a non-prod environment
 ```
 
-> You **cannot** pin credentials in `.codex/config.toml` for this server. Codex only allows *policy* settings (e.g. `enabled`, `startup_timeout_sec`) under `[plugins."…".mcp_servers.fastedge-assistant]`; an `env` block is rejected with `Additional properties are not allowed ('env' was unexpected)` and ignored. The plugin's `.mcp.json` owns the server's transport. For **per-project** keys, make the shell environment project-specific instead — e.g. [`direnv`](https://direnv.net/) with a git-ignored `.envrc`.
+> You **cannot** pin credentials in `.codex/config.toml` for this server. Codex only allows *policy* settings (e.g. `enabled`, `startup_timeout_sec`) under `[plugins."…".mcp_servers.fastedge-assistant]`; an `env` block is rejected with `Additional properties are not allowed ('env' was unexpected)` and ignored. The plugin's `.mcp.json` owns the server's transport. For a key used in one project only, export it in the shell before starting `codex` there. Don't keep it in a file inside the project (such as a `direnv` `.envrc`): the MCP server mounts the project folder, where its build scripts can read every file.
 
 ### 2. Install the plugin
 
@@ -46,7 +46,7 @@ The MCP server mounts the **directory you launched `codex` from** as `/workspace
 
 | Symptom | Likely cause | Fix |
 |---------|-------------|-----|
-| `GCORE_API_KEY is required` on startup | Key not visible to Codex | Export `GCORE_API_KEY` in the shell you launch `codex` from (see Prerequisites) — config.toml can't supply it |
+| `GCORE_API_KEY is required` on startup | An MCP server image from before portal sign-in, and no key visible to Codex | Pull the current image (`docker pull ghcr.io/g-core/fastedge-mcp-server:latest`), or export `GCORE_API_KEY` in the shell you launch `codex` from — config.toml can't supply it |
 | Wrong/stale key reaching the server | A different `GCORE_API_KEY` is exported in your shell rc | The shell value is what's forwarded; fix or unset the stale export, then relaunch `codex` |
 | MCP handshake fails / `connection closed` | Docker not running | Start the Docker daemon |
 | Tools missing in `/mcp` | Stale cached plugin snapshot | Reinstall/upgrade the plugin so Codex picks up the current `.mcp.json` |

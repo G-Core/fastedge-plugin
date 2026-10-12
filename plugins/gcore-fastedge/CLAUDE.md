@@ -102,8 +102,9 @@ A local-toolchain fallback exists for users who explicitly choose not to run Doc
 **What the MCP server provides:**
 - `build-wasm` — Containerized WASM compilation (no local toolchain needed)
 - `upload-binary` — Binary upload to FastEdge API
-- `update-or-create-app` — App deployment and updates
-- `update-env-vars-app` — Environment variable and secrets management
+- `gcore_api` — Any allowed Gcore API call (method + path + query/body): app create/update/delete, env vars, secrets, stats
+- `batch_execute` / `workflows_list` — Multi-step API workflows (e.g. `create-app`, `update-app-binary`)
+- `fastedge-auth-status` — Which account and credential the server is using (never the token)
 - `fastedge-docs` — Reference documentation search for non-Claude editors (Cursor, Codex, etc.)
 
 ---
@@ -158,19 +159,19 @@ Run **inside the CDN proxy layer** using the Proxy-WASM ABI. These are HTTP filt
 
 ## Authentication
 
-All API calls require `GCORE_API_KEY` environment variable.
+Make API calls through the FastEdge MCP server (`gcore_api`, `upload-binary`, `batch_execute`). The server holds the credential, in one of two ways:
+
+- **API key:** `GCORE_API_KEY` is set where the MCP client starts, and the MCP config passes it with `-e GCORE_API_KEY`. Get one at `https://portal.gcore.com` → API Keys.
+- **Portal sign-in:** no key is set. The first API call returns `auth_required` with instructions: the agent offers a sign-in through the Gcore portal for a time-limited session. Follow those instructions; never ask the user to paste a token or code into the chat.
+
+So don't check `GCORE_API_KEY` in your shell before MCP calls; a missing key there doesn't mean the server has none.
+
+For sign-in questions (the "Keep me signed in" choice, enforcing "don't keep" with `FASTEDGE_SESSION=ephemeral`, switching accounts, what each `auth_required` reason means), read `skills/fastedge-docs/reference/platform/sign-in.md`.
+
+The `curl` examples below are the direct API, for users who opted out of MCP; they need `GCORE_API_KEY` in the shell:
 
 ```
 Authorization: APIKey <GCORE_API_KEY>
-```
-
-Verify auth is set before any API operation:
-```bash
-if [ -z "$GCORE_API_KEY" ]; then
-  echo "Error: GCORE_API_KEY environment variable is not set"
-  echo "Get your API key from https://portal.gcore.com → API Keys"
-  exit 1
-fi
 ```
 
 ## API Endpoints
@@ -185,7 +186,7 @@ Base URL: `https://api.gcore.com/fastedge/v1`
 | GET | `/apps/{id}` | Get app details |
 | PUT | `/apps/{id}` | Update app |
 | DELETE | `/apps/{id}` | Delete app |
-| GET | `/apps/{id}/stats` | Get app statistics |
+| GET | `/stats/calls`, `/stats/app_duration` | App statistics (query: `id`, `from`, `to`, `step`) |
 | GET | `/secrets` | List all secrets |
 | GET | `/secrets/{id}` | Get secret details |
 

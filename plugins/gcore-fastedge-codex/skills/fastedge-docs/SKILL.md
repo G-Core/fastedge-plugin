@@ -27,6 +27,9 @@ Answer FastEdge questions with high precision and low token usage using local in
 - Before designing, writing, or reviewing a CDN app (proxy-wasm filter), read the
   `platform-cdn-filter-runtime` topic. Before designing anything that uses KV or Cache, read
   `platform-storage`. Both record host behaviour that local tests cannot reveal.
+- For any sign-in or credential question (API key vs portal sign-in, "Keep me signed in",
+  enforcing "don't keep" with `FASTEDGE_SESSION=ephemeral`, switching accounts, `auth_required`
+  reasons), read the `platform-sign-in` topic.
 
 ## Output rules
 

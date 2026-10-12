@@ -5,7 +5,19 @@
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed
 - **Docker** running locally — the plugin runs build/deploy/manage through the FastEdge MCP server (a Docker image). The plugin's bundled `.mcp.json` starts it on demand.
 - Gcore account with FastEdge access
-- Gcore API token (from [Gcore portal](https://accounts.gcore.com/profile/api-tokens)) exported as `GCORE_API_KEY`
+- A Gcore API token (from [Gcore portal](https://accounts.gcore.com/profile/api-tokens)) exported as `GCORE_API_KEY`,
+  or none: sign in through the portal on first use (see below)
+
+**No API key?** Leave `GCORE_API_KEY` unset. The first API call then offers to sign you in through
+the Gcore portal: you approve in your browser, and the MCP server gets a time-limited API token
+(8 hours by default, 7 days at most). The server's token broker holds it; the agent never sees it.
+The token is cached as plaintext in the `fastedge-session` Docker volume until it expires. Inside
+the container only the token broker can read it, but anyone who can run Docker containers on this
+machine can read it too. To keep this sign-in's token unusable on disk instead, choose **Only for
+this MCP server session** on the page: the token is then encrypted to the running MCP server and you
+approve again the next time it starts. A session saved earlier with "Keep me signed in" stays usable
+until it expires or you sign out (`login --logout`). A key, when set, takes precedence. It can't be
+combined with `FASTEDGE_SESSION=ephemeral`: the server then refuses to start.
 
 > Developers who decline to run Docker can use the local-toolchain opt-out path described in the top-level [README](../README.md#running-without-the-mcp-server). The default install assumes Docker.
 
