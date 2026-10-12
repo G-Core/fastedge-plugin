@@ -8,7 +8,7 @@ Codex plugin for Gcore FastEdge. Commands use the `$gcore-fastedge:` prefix
 - **Intelligence layer** — local docs from `docs-index.json` and markdown files under `skills/*/reference/` (mirrored from the Claude plugin at each release).
 - **Executor layer** — the FastEdge MCP server (Docker image `ghcr.io/g-core/fastedge-mcp-server:latest`). All build/deploy/manage execution runs through it.
 
-The plugin requires both layers. If the MCP server can't start (Docker not running, or no credentials), only docs Q&A is usable — build/deploy/manage skills must stop and explain the cause rather than fabricating success.
+The plugin requires both layers. If the MCP server can't start (Docker not running), only docs Q&A is usable — build/deploy/manage skills must stop and explain the cause rather than fabricating success.
 
 ## Getting started
 
