@@ -2,9 +2,9 @@
   auto-updated: true
   sources:
     - id: fastedge-sdk-js
-      ref: main
+      ref: v2.5.2
       commit: 9c8c7886f0d1ec5ac2296b4080805966a96ca817
-      updated: 2026-09-22
+      updated: 2026-10-02
 -->
 
 ---
@@ -28,7 +28,7 @@ Use this blueprint when the app must authenticate requests by verifying HS256-si
 
 ```json
 {
-  "@gcoredev/fastedge-sdk-js": "^2.2.2"
+  "@gcoredev/fastedge-sdk-js": "^2.5.2"
 }
 ```
 
@@ -353,7 +353,7 @@ addEventListener('fetch', (event) => {
     "build": "fastedge-build src/index.js dist/crypto-hmac-jwt.wasm"
   },
   "dependencies": {
-    "@gcoredev/fastedge-sdk-js": "^2.2.2"
+    "@gcoredev/fastedge-sdk-js": "^2.5.2"
   }
 }
 ```

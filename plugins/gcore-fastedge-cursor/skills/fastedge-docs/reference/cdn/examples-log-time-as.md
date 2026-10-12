@@ -2,9 +2,9 @@
   auto-updated: true
   sources:
     - id: proxy-wasm-sdk-as
-      ref: master
-      commit: 60f25c7bd35564e5bafb421be7f37aa4acf1bf81
-      updated: 2026-05-20
+      ref: v1.2.4
+      commit: 073f583217448aaf25cb98f5d336a0fda26273ba
+      updated: 2026-09-29
 -->
 
 ---
