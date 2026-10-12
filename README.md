@@ -106,25 +106,15 @@ You need:
 1. Go to the [Gcore Portal](https://portal.gcore.com/)
 2. Navigate to **Profile** → **API Keys** (or visit `portal.gcore.com/api-keys` directly)
 3. Click **Create API Key**, give it a name, and copy the generated key
-4. Set the environment variable:
+4. Give the key to the agent from **outside your project folder**: the MCP server mounts the project
+   folder into its container, where your project's own build scripts (npm, cargo) can read every file
+   in it. Either export it in the shell that starts the agent:
 
 ```bash
 export GCORE_API_KEY="your-api-key"
 ```
 
-Or create a `.env` file in your project directory:
-
-```
-GCORE_API_KEY=your-api-key
-```
-
-Claude Code automatically loads `.env` files from the working directory.
-
-### Per-project credentials via `.claude/settings.local.json`
-
-If you'd rather not rely on shell exports or `.env` files, you can pin credentials to a specific project by adding an `env` block to `.claude/settings.local.json` in the project root. Claude Code injects these into its own process environment, which the bundled `.mcp.json` forwards to the MCP server container via Docker's `-e` passthrough.
-
-`.claude/settings.local.json` is local-only and not committed, which makes it a safe place for keys.
+or, for Claude Code, add it to your user settings, `~/.claude/settings.json`:
 
 ```json
 {
@@ -134,15 +124,17 @@ If you'd rather not rely on shell exports or `.env` files, you can pin credentia
 }
 ```
 
-Add `"GCORE_API_BASE"` to this block only for a key from a non-prod environment.
+Add `"GCORE_API_BASE"` only for a key from a non-prod environment.
+
+Don't put a key in `.claude/settings.local.json`, a `.env` or a `.envrc` in the project: those files are
+inside the mounted folder. Managing a key's security is up to you; portal sign-in (see
+[No API key?](#no-api-key-sign-in-through-the-portal)) needs no key at all.
 
 > **String literals only — no variable interpolation.**
 >
-> Values in this `env` block are passed through verbatim. Writing `"GCORE_API_KEY": "${MY_SECRET}"` will send the literal seven-character string `${MY_SECRET}` to the MCP server, not the value of `MY_SECRET`. The same applies to forms like `$MY_SECRET` or `~`.
+> Values in an `env` block are passed through verbatim. Writing `"GCORE_API_KEY": "${MY_SECRET}"` will send the literal seven-character string `${MY_SECRET}` to the MCP server, not the value of `MY_SECRET`. The same applies to forms like `$MY_SECRET` or `~`.
 >
 > If you want the value to come from a shell variable rather than be written into the file, the shell variable must already be named `GCORE_API_KEY` or `GCORE_API_BASE` — and in that case, omit the `env` block entirely. The plugin's `.mcp.json` already passes `GCORE_API_KEY` and `GCORE_API_BASE` from the parent shell environment into the container, so an `export` is sufficient on its own.
-
-The same pattern works in `~/.claude/settings.json` if you want a personal default that applies to every project.
 
 ### Credentials for Codex (host environment, not config)
 

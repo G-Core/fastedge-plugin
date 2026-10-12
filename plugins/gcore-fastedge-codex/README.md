@@ -24,7 +24,7 @@ export GCORE_API_KEY="your_key_here"
 # export GCORE_API_BASE="https://api.preprod.world"   # only for a non-prod environment
 ```
 
-> You **cannot** pin credentials in `.codex/config.toml` for this server. Codex only allows *policy* settings (e.g. `enabled`, `startup_timeout_sec`) under `[plugins."…".mcp_servers.fastedge-assistant]`; an `env` block is rejected with `Additional properties are not allowed ('env' was unexpected)` and ignored. The plugin's `.mcp.json` owns the server's transport. For **per-project** keys, make the shell environment project-specific instead — e.g. [`direnv`](https://direnv.net/) with a git-ignored `.envrc`.
+> You **cannot** pin credentials in `.codex/config.toml` for this server. Codex only allows *policy* settings (e.g. `enabled`, `startup_timeout_sec`) under `[plugins."…".mcp_servers.fastedge-assistant]`; an `env` block is rejected with `Additional properties are not allowed ('env' was unexpected)` and ignored. The plugin's `.mcp.json` owns the server's transport. For a key used in one project only, export it in the shell before starting `codex` there. Don't keep it in a file inside the project (such as a `direnv` `.envrc`): the MCP server mounts the project folder, where its build scripts can read every file.
 
 ### 2. Install the plugin
 

@@ -48,14 +48,16 @@ The user sets `GCORE_API_KEY` where their agent starts, then restarts the MCP se
 `https://portal.gcore.com` → API Keys (preprod: `https://portal.preprod.world`; for preprod or another Gcore
 environment, also set `GCORE_API_BASE`, e.g. `https://api.preprod.world`).
 
-**Never commit a key.** Use a file that git ignores, or the client's own secret prompt.
+**Keep the key outside the project folder.** The MCP server mounts the project folder, where the project's own build
+scripts (npm, cargo) can read every file: so not `.claude/settings.local.json`, a project `.env` or `.envrc`. Never
+commit a key. Managing a key's security is the user's responsibility; portal sign-in needs no key.
 
-| Agent | For one project | For every project |
-|---|---|---|
-| Claude Code | `"env": { "GCORE_API_KEY": "…" }` in `.claude/settings.local.json` (Claude Code git-ignores it when it creates the file; check with `git check-ignore .claude/settings.local.json`. Never `.claude/settings.json`, which is usually committed) | The same `env` block in `~/.claude/settings.json` |
-| Codex CLI | No per-project setting for a plugin's server. Use `direnv`: `export GCORE_API_KEY=…` in the project's `.envrc` (add `.envrc` to `.gitignore`), then start `codex` from that folder | `export GCORE_API_KEY=…` in the shell profile that starts `codex` |
-| Cursor | Cursor reads it from the environment it was started in: export it (or use `direnv`), then start Cursor from that folder with `cursor .` while no other Cursor window is open | macOS: `launchctl setenv GCORE_API_KEY …`, then quit and reopen Cursor. Linux/Windows: set it in the environment Cursor starts from |
-| VS Code / Copilot (own MCP config) | In `.vscode/mcp.json`, use an input instead of the literal key: `"inputs": [{ "type": "promptString", "id": "gcore-key", "description": "Gcore API key", "password": true }]` and `"GCORE_API_KEY": "${input:gcore-key}"` under the server's `env`, with `"-e", "GCORE_API_KEY"` in its `docker run` args. VS Code asks once and stores it securely | Put the same in the user-level MCP configuration |
+| Agent | Where to set it |
+|---|---|
+| Claude Code | `"env": { "GCORE_API_KEY": "…" }` in `~/.claude/settings.json`, or export it in the shell that starts `claude` |
+| Codex CLI | `export GCORE_API_KEY=…` in the shell (or shell profile) that starts `codex` |
+| Cursor | macOS: `launchctl setenv GCORE_API_KEY …`, then quit and reopen Cursor. Linux/Windows: set it in the environment Cursor starts from |
+| VS Code / Copilot (own MCP config) | In `.vscode/mcp.json`, use an input instead of the literal key: `"inputs": [{ "type": "promptString", "id": "gcore-key", "description": "Gcore API key", "password": true }]` and `"GCORE_API_KEY": "${input:gcore-key}"` under the server's `env`, with `"-e", "GCORE_API_KEY"` in its `docker run` args. VS Code asks once and stores it securely |
 
 Then restart the MCP server (Claude Code: `/mcp`, select the server, Reconnect; Codex: exit, then `codex resume --last`;
 Cursor: restart it). Check with `fastedge-auth-status`: `"credential": "explicit_key"` and the key's `account`.

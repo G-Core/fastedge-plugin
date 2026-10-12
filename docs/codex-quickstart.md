@@ -40,7 +40,7 @@ Installing the plugin auto-loads its bundled `.mcp.json`, which launches the Fas
 You only need:
 
 - Docker running locally
-- With an API key: `GCORE_API_KEY` available to Codex — **exported in your shell** before launching `codex` (the bundled `.mcp.json` forwards it via `env_vars`). Codex can't pin credentials per-project in `.codex/config.toml` for a plugin server, so per-project keys come from the shell environment (e.g. via `direnv`). See the README section "Credentials for Codex".
+- With an API key: `GCORE_API_KEY` available to Codex — **exported in your shell** before launching `codex` (the bundled `.mcp.json` forwards it via `env_vars`). Codex can't pin credentials per-project in `.codex/config.toml` for a plugin server, so a key comes from the shell environment. Keep it out of files inside the project (such as a `direnv` `.envrc`): the project folder is mounted into the MCP container, where build scripts can read it. See the README section "Credentials for Codex".
 
 Verify Codex sees the bundled server:
 
