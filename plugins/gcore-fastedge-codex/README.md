@@ -46,7 +46,7 @@ The MCP server mounts the **directory you launched `codex` from** as `/workspace
 
 | Symptom | Likely cause | Fix |
 |---------|-------------|-----|
-| `GCORE_API_KEY is required` on startup | Key not visible to Codex | Export `GCORE_API_KEY` in the shell you launch `codex` from (see Prerequisites) — config.toml can't supply it |
+| `GCORE_API_KEY is required` on startup | An MCP server image from before portal sign-in, and no key visible to Codex | Pull the current image (`docker pull ghcr.io/g-core/fastedge-mcp-server:latest`), or export `GCORE_API_KEY` in the shell you launch `codex` from — config.toml can't supply it |
 | Wrong/stale key reaching the server | A different `GCORE_API_KEY` is exported in your shell rc | The shell value is what's forwarded; fix or unset the stale export, then relaunch `codex` |
 | MCP handshake fails / `connection closed` | Docker not running | Start the Docker daemon |
 | Tools missing in `/mcp` | Stale cached plugin snapshot | Reinstall/upgrade the plugin so Codex picks up the current `.mcp.json` |

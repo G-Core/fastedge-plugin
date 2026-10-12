@@ -5,7 +5,8 @@
 - [Cursor CLI](https://cursor.com/docs/cli/installation) installed
 - Docker running locally
 - A Gcore account with FastEdge activated
-- A Gcore API key from the [Gcore portal](https://portal.gcore.com/api-keys)
+- A Gcore API key from the [Gcore portal](https://portal.gcore.com/api-keys), or none: sign in
+  through the portal on first use (see "No API key?" below)
 
 The plugin starts `ghcr.io/g-core/fastedge-mcp-server:latest` on demand. The
 container provides the FastEdge build toolchains and API client.
@@ -16,8 +17,10 @@ Cursor CLI inherits environment variables from its shell:
 
 ```bash
 export GCORE_API_KEY="your-api-key"
-export GCORE_API_BASE="https://api.gcore.com"
 ```
+
+Set `GCORE_API_BASE` only for a non-prod environment, with a key from that environment. Leave it unset
+otherwise: the server then uses prod, or the environment you saved when signing in through the portal.
 
 On macOS, Cursor launched from Finder or the Dock does not normally inherit
 variables exported from `.zshrc`. Set them in the GUI session, then fully quit
@@ -25,13 +28,20 @@ and reopen Cursor:
 
 ```bash
 launchctl setenv GCORE_API_KEY "your-api-key"
-launchctl setenv GCORE_API_BASE "https://api.gcore.com"
 ```
 
 The marketplace and plugin manifests contain no credentials. The plugin passes
 these variables (and `FASTEDGE_SESSION`, if set) by name to the MCP Docker container.
 
-**No API key?** Leave `GCORE_API_KEY` unset. The first API call then offers to sign you in through the Gcore portal: you approve in your browser, and the MCP server gets a time-limited API token, held by its token broker (the agent never sees it) (8 hours by default, 7 days at most). The token is cached as plaintext in the `fastedge-session` Docker volume until it expires. Inside the container only the MCP server's token broker can read it, but anyone who can run Docker containers on this machine can read it too. To keep nothing usable on disk instead, choose **Only for this MCP server session** on the page: the token is then encrypted to the running MCP server and you approve again the next time it starts. A key, when set, always takes precedence.
+**No API key?** Leave `GCORE_API_KEY` unset. The first API call then offers to sign you in through
+the Gcore portal: you approve in your browser, and the MCP server gets a time-limited API token
+(8 hours by default, 7 days at most). The server's token broker holds it; the agent never sees it.
+The token is cached as plaintext in the `fastedge-session` Docker volume until it expires. Inside
+the container only the token broker can read it, but anyone who can run Docker containers on this
+machine can read it too. To keep nothing usable on disk instead, choose **Only for this MCP server
+session** on the page: the token is then encrypted to the running MCP server and you approve again
+the next time it starts. A key, when set, takes precedence. It can't be combined with
+`FASTEDGE_SESSION=ephemeral`: the server then refuses to start.
 
 ## Personal Installation
 
@@ -95,8 +105,9 @@ Use `/plugin` to manage the installed plugin itself.
 
 ## Troubleshooting
 
-- **`GCORE_API_KEY is required`**: the key did not reach the Cursor process.
-  Configure it before launching Cursor and restart the application.
+- **`GCORE_API_KEY is required`**: an MCP server image from before portal sign-in, with no key reaching
+  it. Pull the current image (`docker pull ghcr.io/g-core/fastedge-mcp-server:latest`) and restart
+  Cursor, or configure the key before launching Cursor.
 - **`401 Invalid API token`**: replace the expired or invalid API key, then
   restart Cursor so the MCP container receives the new value.
 - **`403 FastEdge ... is not fully activated`**: the key is valid, but FastEdge

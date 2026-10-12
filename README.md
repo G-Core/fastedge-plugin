@@ -151,7 +151,7 @@ Instead, credentials reach the server through the **host environment**. The bund
 
 ```bash
 export GCORE_API_KEY="your-api-key"
-export GCORE_API_BASE="https://api.gcore.com"   # optional; defaults to https://api.gcore.com
+# export GCORE_API_BASE="https://api.preprod.world"   # only for a non-prod environment
 codex
 ```
 
@@ -167,21 +167,32 @@ in the GUI session and restart Cursor:
 
 ```bash
 launchctl setenv GCORE_API_KEY "your-api-key"
-launchctl setenv GCORE_API_BASE "https://api.gcore.com"
 ```
+
+Set `GCORE_API_BASE` only for a non-prod environment, with a key from that environment. Leave it unset
+otherwise: the server then uses prod, or the environment you saved when signing in through the portal.
 
 The Cursor plugin forwards these variables by name to the MCP Docker container;
 the key is not stored in the plugin or marketplace manifest.
 
 ### No API key? Sign in through the portal
 
-**No API key?** Leave `GCORE_API_KEY` unset. The first API call then offers to sign you in through the Gcore portal: you approve in your browser, and the MCP server gets a time-limited API token, held by its token broker (the agent never sees it) (8 hours by default, 7 days at most). The token is cached as plaintext in the `fastedge-session` Docker volume until it expires. Inside the container only the MCP server's token broker can read it, but anyone who can run Docker containers on this machine can read it too. To keep nothing usable on disk instead, choose **Only for this MCP server session** on the page: the token is then encrypted to the running MCP server and you approve again the next time it starts. A key, when set, always takes precedence.
+**No API key?** Leave `GCORE_API_KEY` unset. The first API call then offers to sign you in through
+the Gcore portal: you approve in your browser, and the MCP server gets a time-limited API token
+(8 hours by default, 7 days at most). The server's token broker holds it; the agent never sees it.
+The token is cached as plaintext in the `fastedge-session` Docker volume until it expires. Inside
+the container only the token broker can read it, but anyone who can run Docker containers on this
+machine can read it too. To keep nothing usable on disk instead, choose **Only for this MCP server
+session** on the page: the token is then encrypted to the running MCP server and you approve again
+the next time it starts. A key, when set, takes precedence. It can't be combined with
+`FASTEDGE_SESSION=ephemeral`: the server then refuses to start.
 
 In Codex, the sign-in runs a `docker run … login` command, which may need your approval to run outside the sandbox; if it can't run there, run the command it shows in your own terminal.
 
 ### Optional: preprod testing
 
-Set `GCORE_API_BASE` (via any of the methods above) to override the API host (default: `https://api.gcore.com`; preprod: `https://api.preprod.world`). The MCP server appends `/fastedge/v1` itself.
+Set `GCORE_API_BASE` (via any of the methods above) to override the API host (default: `https://api.gcore.com`; preprod: `https://api.preprod.world`). The MCP server appends `/fastedge/v1` itself. When set, it
+also overrides the environment saved by portal sign-in (`login --set-default-origin`).
 
 ### Running without the MCP server
 

@@ -10,7 +10,7 @@ How the FastEdge MCP server gets its Gcore credential, what each option stores o
 | Lifetime | Permanent until the user deletes it | 4 hours to 7 days, chosen on the Approve page |
 | Good for | Headless or CI use, or users who prefer a key | Everyone else; nothing to create or paste |
 
-**An API key always wins.** If `GCORE_API_KEY` is set, the session cache is never used. The first API result after each server start ends with a note naming the account the key belongs to: tell the user, since the key may come from a project's or a teammate's config. `fastedge-auth-status` shows it too (`account`).
+**An API key wins.** If `GCORE_API_KEY` is set, the session cache is never used. A key can't be combined with `FASTEDGE_SESSION=ephemeral`: the server refuses to start (exit 2), so remove one of them. The first API result after each server start ends with a note naming the account the key belongs to: tell the user, since the key may come from a project's or a teammate's config. `fastedge-auth-status` shows it too (`account`).
 
 Never check `GCORE_API_KEY` in your own shell to decide whether the user is signed in: the MCP server may have a key from its config, or a portal session. Call the `fastedge-auth-status` tool instead. Never print a key, token or connect code, and never ask the user to paste one into the chat. Never open a portal sign-in link yourself (no built-in or simple browser, no browser automation): only the user opens it, in their own browser. An agent that approves there could read a connect code, which contains the token.
 
