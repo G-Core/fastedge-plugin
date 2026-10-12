@@ -72,7 +72,7 @@ which declares its pieces explicitly; it is a per-CLI convention, not an omissio
 
 **Credential model — host env is forwarded (like Claude, unlike Codex).** Cursor
 passes the host process environment through to the spawned MCP server, so
-`mcp.json` forwards `GCORE_API_KEY` / `GCORE_API_BASE` **by name** with docker
+`mcp.json` forwards `GCORE_API_KEY` / `GCORE_API_BASE` / `FASTEDGE_SESSION` **by name** with docker
 `-e NAME` (no values committed) and needs **no** explicit declaration. This matches
 the Claude plugin's `.mcp.json`. Codex is the exception — it sanitizes the child
 environment, so its `.mcp.json` needs an `env_vars: [...]` list; Cursor has no such
@@ -124,8 +124,8 @@ should appear in `docker ps` once a FastEdge tool is used.
    loads docs, then logs `GCORE_API_KEY is required` and closes with
    `MCP error -32000: Connection closed`. The current image starts without a key and offers
    portal sign-in instead.
-   Note: only `GCORE_API_KEY` / `GCORE_API_BASE` are forwarded — `FASTEDGE_API_KEY`
-   is **not**.
+   Note: only `GCORE_API_KEY`, `GCORE_API_BASE` and `FASTEDGE_SESSION` are forwarded —
+   `FASTEDGE_API_KEY` is **not**.
 
 2. **MCP server-name collision.** This plugin names its server `fastedge-assistant`.
    If you also have a `fastedge-assistant` in a personal `~/.cursor/mcp.json`, one

@@ -21,7 +21,7 @@ Credentials reach the server through the **host environment** — the bundled `.
 
 ```bash
 export GCORE_API_KEY="your_key_here"
-export GCORE_API_BASE="https://api.preprod.world"   # optional; defaults to https://api.gcore.com
+# export GCORE_API_BASE="https://api.preprod.world"   # only for a non-prod environment
 ```
 
 > You **cannot** pin credentials in `.codex/config.toml` for this server. Codex only allows *policy* settings (e.g. `enabled`, `startup_timeout_sec`) under `[plugins."…".mcp_servers.fastedge-assistant]`; an `env` block is rejected with `Additional properties are not allowed ('env' was unexpected)` and ignored. The plugin's `.mcp.json` owns the server's transport. For **per-project** keys, make the shell environment project-specific instead — e.g. [`direnv`](https://direnv.net/) with a git-ignored `.envrc`.

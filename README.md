@@ -129,11 +129,12 @@ If you'd rather not rely on shell exports or `.env` files, you can pin credentia
 ```json
 {
   "env": {
-    "GCORE_API_BASE": "https://api.gcore.com",
     "GCORE_API_KEY": "your-api-key"
   }
 }
 ```
+
+Add `"GCORE_API_BASE"` to this block only for a key from a non-prod environment.
 
 > **String literals only — no variable interpolation.**
 >
