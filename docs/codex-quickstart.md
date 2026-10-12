@@ -95,5 +95,7 @@ It should resolve topics via `docs-index.json` first, then read only target sect
 The MCP server is the executor — without it, build/deploy/manage skills cannot run. If a user attempts these skills before configuring MCP, the plugin should:
 
 - Continue answering docs Q&A from local indexed docs
-- Stop before any build/deploy/manage action and explain the likely cause — Docker not running, or `GCORE_API_KEY` not available to Codex (see README "Credentials for Codex") — rather than claiming success
+- Stop before any build/deploy/manage action and explain the likely cause — Docker not running, or a stale
+  plugin config (`codex mcp get fastedge-assistant`) — rather than claiming success. A missing `GCORE_API_KEY` is
+  not a cause: without one, API tools offer portal sign-in.
 - Not claim deployment/build success
