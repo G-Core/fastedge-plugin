@@ -27,7 +27,7 @@ This skill runs build and deploy through the **FastEdge MCP server** (the plugin
        "fastedge-assistant": {
          "type": "stdio",
          "command": "docker",
-         "args": ["run", "-i", "--rm", "--pull=always", "-v", "${PWD}:/workspace",
+         "args": ["run", "-i", "--rm", "--pull=always", "-v", "${PWD:-.}:/workspace",
                   "-v", "fastedge-session:/run/fastedge:ro",
                   "-e", "WORKSPACE_ROOT=/workspace", "-e", "GCORE_API_KEY",
                   "-e", "GCORE_API_BASE", "-e", "FASTEDGE_SESSION",
