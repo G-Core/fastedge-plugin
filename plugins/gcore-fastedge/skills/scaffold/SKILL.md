@@ -150,7 +150,7 @@ For each matched feature blueprint, in order:
 
 ### 4d. Finalize
 
-- If the project has a `package.json`, do NOT run `npm install` automatically — let the user decide when to install dependencies
+- If the project has a `package.json`, do NOT run `npm install` automatically — let the user decide when to install dependencies. The deploy flow does not need it: `build-wasm` installs dependencies inside its container
 - Ensure all file paths are correct relative to the project root
 - Verify no placeholder content remains — all files should have real, working code
 

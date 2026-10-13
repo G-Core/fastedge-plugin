@@ -100,7 +100,7 @@ Procedure:
 
 ## Step 2 — Build
 
-Tool: `build-wasm`. Capture output wasm path. Pass language-specific build options when the tool requires them.
+Tool: `build-wasm`. Capture output wasm path. Pass language-specific build options when the tool requires them. For JS/TS and AssemblyScript it installs dependencies in the container (npm or pnpm by lockfile, yarn/bun unsupported, install scripts off); do not run `npm install` on the host first. On macOS that installs native bindings the Linux container cannot load.
 
 ## Step 3 — Upload
 

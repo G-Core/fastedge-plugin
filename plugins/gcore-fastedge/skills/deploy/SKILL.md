@@ -168,6 +168,8 @@ Proceed silently to Step 2. No success message — the absence of a block is the
 
 The tool detects the language from the file extension and runs the appropriate compiler. On success it returns the path to the built WASM binary. Save this for Step 3.
 
+For JS/TS and AssemblyScript, `build-wasm` installs the project's dependencies inside the container first, with npm or pnpm chosen by the project's lockfile (yarn and bun are not supported) and install scripts disabled. Do not run `npm install` on the host before building: it is not needed, and on macOS it installs native bindings the Linux build container cannot load.
+
 **Local opt-out (only if user declined MCP):**
 
 - JavaScript/TypeScript: `fastedge-build ./src/index.js ./<project-name>.wasm`
