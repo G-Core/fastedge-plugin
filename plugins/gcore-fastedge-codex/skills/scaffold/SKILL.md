@@ -130,6 +130,8 @@ npm run build
 # then run local tests and deploy flows
 ```
 
+`npm install` is for local tests and local builds. `build-wasm` does not need it: it installs dependencies inside its container.
+
 For Rust:
 
 ```bash
