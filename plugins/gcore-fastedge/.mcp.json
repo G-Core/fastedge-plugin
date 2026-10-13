@@ -9,7 +9,7 @@
         "--rm",
         "--pull=always",
         "-v",
-        "${PWD}:/workspace",
+        "${PWD:-.}:/workspace",
         "-v",
         "fastedge-session:/run/fastedge:ro",
         "-e",
