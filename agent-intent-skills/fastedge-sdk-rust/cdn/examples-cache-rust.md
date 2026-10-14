@@ -6,7 +6,7 @@
 `plugins/gcore-fastedge/skills/fastedge-docs/reference/cdn/examples-cache-rust.md`
 
 ## Example-specific extraction hints
-- API focus: `fastedge::proxywasm::cache`. It has free functions only, with no named stores and no handle.
+- API focus: `fastedge::proxywasm::cache`. It has free functions only, with no named stores and no handle. Values are local to the PoP, so writes in one PoP are not visible in another.
   - `cache::get(key: &str)` → `Result<Option<Vec<u8>>, Error>`. Returns `None` for missing keys; this is not an error.
   - `cache::set(key: &str, value: &[u8], ttl_ms: Option<u64>)` → `Result<(), Error>`. `None` gets the host's default TTL. It does not mean "no expiry", even though the source comments say so. Overwrites an existing value.
   - `cache::delete(key: &str)` → `Result<(), Error>`. A missing key is a no-op.
@@ -18,9 +18,9 @@
 - Show `Vec<u8>` to string conversion with `String::from_utf8_lossy(&value)` for `get` results.
 - Show `serde_json::json!` for JSON response formatting. `Option<u64>` serialises as `null` when no TTL is given.
 - Common patterns:
-  - Parse `request.query` with `querystring::querify` and dispatch on `action`.
-  - Use `incr` for counters and rate limiting. Every `incr` key needs an `expire`, and when to call it depends on the key shape (see the `incr` gotcha below). Do not tell readers to call `expire` after every `incr` on a fixed key: that keeps pushing the deadline out, so the window never resets under steady traffic.
-  - `set(..., Some(ttl))` already sets the expiry. Use `expire` separately only to extend an existing key's expiry on access (sliding expiry).
+  - Parse `request.query` with `querystring::querify` and dispatch on `action`. This is a demo only: it lets any client call mutating actions, including app-wide `purge`. Say that real apps must gate those behind authorization or a trusted route.
+  - Use `incr` for counters and rate limiting. The counts are per PoP, so a limit applies per PoP, not globally. Every `incr` key needs an `expire`, and when to call it depends on the key shape (see the `incr` gotcha below). Do not tell readers to call `expire` after every `incr` on a fixed key: that keeps pushing the deadline out, so the window never resets under steady traffic.
+  - `set(..., Some(ttl))` with `ttl > 0` already sets the expiry. `Some(0)` behaves like `None` and gets the host default. Use `expire` separately only to extend an existing key's expiry on access (sliding expiry).
   - Use `purge_prefix` to invalidate a group of keys.
 - Error path: `response.status` is set in `on_http_response_body`, after the headers have gone out, so it is advisory only. The JSON error body is the real error signal.
 - Show response body replacement: set `content-type` in `on_http_response_headers`, then replace the body in `on_http_response_body` with `self.set_http_response_body(0, body_size, bytes)` after `end_of_stream`.
