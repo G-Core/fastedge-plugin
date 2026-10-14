@@ -36,7 +36,9 @@ source_example: FastEdge-sdk-rust/examples/cdn/cache
 - Show response body replacement:
   - In `on_http_response_headers`, remove `content-length` and set `content-type: application/json`.
   - In `on_http_response_body`, return `Action::Pause` until `end_of_stream`, then call `self.set_http_response_body(0, body_size, bytes)`.
-- Show error handling: `send_error` sets `response.status` to `500` with `self.set_property` and writes a `{"error": ...}` body.
+- Show error handling: `send_error` sets `response.status` with `self.set_property` and writes a `{"error": ...}` body.
+  - Note that the status is advisory only. It is set in `on_http_response_body`, after the response headers have gone out, so the origin status reaches the client. The JSON error body is the real error signal.
+  - Do not invent a different status encoding. Show the call as it appears in the source.
 - Dependencies to add: `fastedge` with `features = ["proxywasm"]`, `querystring`, and `serde_json`. The base skeleton already provides `proxy-wasm`.
 - CDN pattern: the response hooks (`on_http_response_headers` + `on_http_response_body`) replace the upstream response body with the result of the cache operation.
 - "When to Use" hint: the user wants app-scoped, TTL-based key/value storage at the CDN layer, such as counters, rate limiting, or short-lived memoisation.

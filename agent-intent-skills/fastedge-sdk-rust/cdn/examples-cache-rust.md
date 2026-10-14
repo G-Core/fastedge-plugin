@@ -19,9 +19,10 @@
 - Show `serde_json::json!` for JSON response formatting. `Option<u64>` serialises as `null` when no TTL is given.
 - Common patterns:
   - Parse `request.query` with `querystring::querify` and dispatch on `action`.
-  - Use `incr` for counters and rate limiting, always followed by `expire`.
-  - Use `set` with a TTL, then `expire`, for sliding expiry.
+  - Use `incr` for counters and rate limiting. Every `incr` key needs an `expire`, and when to call it depends on the key shape (see the `incr` gotcha below). Do not tell readers to call `expire` after every `incr` on a fixed key: that keeps pushing the deadline out, so the window never resets under steady traffic.
+  - `set(..., Some(ttl))` already sets the expiry. Use `expire` separately only to extend an existing key's expiry on access (sliding expiry).
   - Use `purge_prefix` to invalidate a group of keys.
+- Error path: `response.status` is set in `on_http_response_body`, after the headers have gone out, so it is advisory only. The JSON error body is the real error signal.
 - Show response body replacement: set `content-type` in `on_http_response_headers`, then replace the body in `on_http_response_body` with `self.set_http_response_body(0, body_size, bytes)` after `end_of_stream`.
 - Gotchas:
   - The TTL and `incr` behaviour below was measured on HTTP apps. Say that it is not yet verified for CDN (proxy-wasm) apps, and do not present it as confirmed CDN behaviour.
