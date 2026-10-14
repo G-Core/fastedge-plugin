@@ -2,9 +2,9 @@
   auto-updated: true
   sources:
     - id: fastedge-sdk-js
-      ref: v2.5.2
-      commit: 9c8c7886f0d1ec5ac2296b4080805966a96ca817
-      updated: 2026-10-02
+      ref: v2.6.0
+      commit: 332d5d125cf92e2108ab898fcda29068bcddc40d
+      updated: 2026-10-14
 -->
 
 ---
@@ -121,7 +121,7 @@ getEnv(name: string): string | null
 
 - Build command: `fastedge-build src/index.js dist/headers.wasm`
 - Defined in `package.json` scripts as `"build": "fastedge-build src/index.js dist/headers.wasm"`.
-- `@gcoredev/fastedge-sdk-js` version constraint: `^2.5.2`.
+- `@gcoredev/fastedge-sdk-js` version constraint: `^2.6.0`.
 - Package type must be `"module"` (ESM) in `package.json`.
 
 ## Source Material Reference
@@ -166,7 +166,7 @@ addEventListener('fetch', (event) => {
     "build": "fastedge-build src/index.js dist/headers.wasm"
   },
   "dependencies": {
-    "@gcoredev/fastedge-sdk-js": "^2.5.2"
+    "@gcoredev/fastedge-sdk-js": "^2.6.0"
   }
 }
 ```
