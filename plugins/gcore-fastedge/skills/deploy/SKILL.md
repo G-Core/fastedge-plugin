@@ -168,6 +168,8 @@ Proceed silently to Step 2. No success message — the absence of a block is the
 
 The tool detects the language from the file extension and runs the appropriate compiler. On success it returns the path to the built WASM binary. Save this for Step 3.
 
+For JS/TS and AssemblyScript, `build-wasm` builds with the project's existing `node_modules` as-is, whatever OS installed it, and does not modify it. If dependencies aren't installed yet, it installs them inside the container, with npm or pnpm chosen by the project's lockfile and install scripts disabled (yarn and bun projects build fine once dependencies are installed on the host into `node_modules`, but the container can't install them; Yarn Plug'n'Play needs `nodeLinker: node-modules`), so the build does not need a host `npm install`. JS/TS projects need `@gcoredev/fastedge-sdk-js` 2.6.0 or later: if `build-wasm` reports an older version, install the latest SDK on the host with the project's package manager, then build again: `npm install @gcoredev/fastedge-sdk-js@latest` (pnpm, yarn or bun: `<pm> add @gcoredev/fastedge-sdk-js@latest`). This also raises the range in `package.json`; `npm update` alone cannot get past an exact or `~2.5.x` pin.
+
 **Local opt-out (only if user declined MCP):**
 
 - JavaScript/TypeScript: `fastedge-build ./src/index.js ./<project-name>.wasm`
