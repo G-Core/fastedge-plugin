@@ -100,7 +100,7 @@ Procedure:
 
 ## Step 2 — Build
 
-Tool: `build-wasm`. Capture output wasm path. Pass language-specific build options when the tool requires them. For JS/TS and AssemblyScript it installs dependencies in the container (npm or pnpm by lockfile, yarn/bun unsupported, install scripts off), so the build needs no host `npm install`. A host install for the Step 1.7 test gate is fine; the container installs its own Linux bindings. For npm projects that leaves Linux bindings in `node_modules`, so on macOS run `npm install` again before a local `npm run build`.
+Tool: `build-wasm`. Capture output wasm path. Pass language-specific build options when the tool requires them. For JS/TS and AssemblyScript it uses the project's existing `node_modules` as-is (any host OS, never modified) and installs in the container only when dependencies are missing (npm or pnpm by lockfile, yarn/bun unsupported, install scripts off), so the build needs no host `npm install`. JS/TS needs `@gcoredev/fastedge-sdk-js` 2.6.0+; if `build-wasm` reports an older version, run `npm update @gcoredev/fastedge-sdk-js` on the host and rebuild.
 
 ## Step 3 — Upload
 
