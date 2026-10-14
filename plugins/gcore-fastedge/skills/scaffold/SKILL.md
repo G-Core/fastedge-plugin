@@ -150,7 +150,7 @@ For each matched feature blueprint, in order:
 
 ### 4d. Finalize
 
-- If the project has a `package.json`, do NOT run `npm install` automatically — let the user decide when to install dependencies. `build-wasm` does not need it (if dependencies aren't installed, it installs them inside its container; npm and pnpm projects only, yarn and bun are not supported); local tests and local builds do
+- If the project has a `package.json`, do NOT run `npm install` automatically — let the user decide when to install dependencies. `build-wasm` does not need it (if dependencies aren't installed, it installs them inside its container for npm and pnpm projects; yarn and bun projects need a host install into `node_modules` first, and Yarn Plug'n'Play needs `nodeLinker: node-modules`); local tests and local builds do
 - Ensure all file paths are correct relative to the project root
 - Verify no placeholder content remains — all files should have real, working code
 
