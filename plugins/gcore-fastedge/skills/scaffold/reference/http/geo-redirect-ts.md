@@ -2,9 +2,9 @@
   auto-updated: true
   sources:
     - id: fastedge-sdk-js
-      ref: v2.5.2
-      commit: 9c8c7886f0d1ec5ac2296b4080805966a96ca817
-      updated: 2026-10-02
+      ref: v2.6.0
+      commit: 332d5d125cf92e2108ab898fcda29068bcddc40d
+      updated: 2026-10-14
 -->
 ---
 type: feature
@@ -113,7 +113,7 @@ addEventListener('fetch', (event) => {
 - Environment variables are set in the Gcore dashboard or via the API when creating or updating the FastEdge app.
 - Country-specific origins are configured as environment variables using ISO 3166-1 alpha-2 codes. If no matching variable exists, `BASE_ORIGIN` is used as the fallback.
 - If `BASE_ORIGIN` is not set, the handler returns HTTP 500 with a descriptive error message.
-- SDK dependency: `@gcoredev/fastedge-sdk-js` `^2.5.2` (as of source commit `9c8c7886f0d1ec5ac2296b4080805966a96ca817`).
+- SDK dependency: `@gcoredev/fastedge-sdk-js` `^2.6.0` (as of source commit `332d5d125cf92e2108ab898fcda29068bcddc40d`).
 
 ## Source Material
 
@@ -157,7 +157,7 @@ addEventListener('fetch', (event) => {
     "build": "fastedge-build src/index.js dist/geo-redirect.wasm"
   },
   "dependencies": {
-    "@gcoredev/fastedge-sdk-js": "^2.5.2"
+    "@gcoredev/fastedge-sdk-js": "^2.6.0"
   }
 }
 ```
