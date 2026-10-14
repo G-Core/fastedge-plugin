@@ -130,7 +130,7 @@ npm run build
 # then run local tests and deploy flows
 ```
 
-`npm install` is for local tests and local builds. `build-wasm` does not need it: if dependencies aren't installed, it installs them inside its container.
+`npm install` is for local tests and local builds. `build-wasm` does not need it: if dependencies aren't installed, it installs them inside its container (npm and pnpm projects only; yarn and bun are not supported).
 
 For Rust:
 
