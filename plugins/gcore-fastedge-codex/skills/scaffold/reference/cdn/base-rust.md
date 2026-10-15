@@ -2,9 +2,9 @@
   auto-updated: true
   sources:
     - id: fastedge-sdk-rust
-      ref: main
-      commit: 6eedcca9d5c0ddd4ff79ca475965393891da2d75
-      updated: 2026-09-22
+      ref: v0.4.5
+      commit: e7f446a4b40b791b932ab36b2c7a0c85fd24104d
+      updated: 2026-10-14
 -->
 
 ---
@@ -13,8 +13,8 @@ app_type: cdn
 languages: [rust]
 template_origin: cdn-base
 source_repo: https://github.com/G-Core/FastEdge-sdk-rust
-source_ref: 6eedcca9d5c0ddd4ff79ca475965393891da2d75
-updated: 2026-09-22
+source_ref: e7f446a4b40b791b932ab36b2c7a0c85fd24104d
+updated: 2026-10-14
 ---
 
 # Base Skeleton: CDN Rust
@@ -207,4 +207,78 @@ fn on_http_request_headers(&mut self, _: usize, _: bool) -> Action {
     // eprintln!("incoming request");    // DO NOT use — dropped
     Action::Continue
 }
+```
+
+## Source Material
+
+### FILE: examples/cdn/hello_world/src/lib.rs
+
+```rust
+use log::info;
+use proxy_wasm::traits::*;
+use proxy_wasm::types::*;
+
+proxy_wasm::main! {{
+    proxy_wasm::set_log_level(LogLevel::Trace);
+    proxy_wasm::set_root_context(|_| -> Box<dyn RootContext> { Box::new(HelloWorldRoot) });
+}}
+
+struct HelloWorldRoot;
+
+impl Context for HelloWorldRoot {}
+
+impl RootContext for HelloWorldRoot {
+    fn get_type(&self) -> Option<ContextType> {
+        Some(ContextType::HttpContext)
+    }
+
+    fn create_http_context(&self, _: u32) -> Option<Box<dyn HttpContext>> {
+        Some(Box::new(HelloWorld))
+    }
+}
+
+struct HelloWorld;
+
+impl Context for HelloWorld {}
+
+impl HttpContext for HelloWorld {
+    fn on_http_request_headers(&mut self, _: usize, _: bool) -> Action {
+        info!("Hello from on_http_request_headers");
+        Action::Continue
+    }
+
+    fn on_http_request_body(&mut self, _: usize, _: bool) -> Action {
+        info!("Hello from on_http_request_body");
+        Action::Continue
+    }
+
+    fn on_http_response_headers(&mut self, _: usize, _: bool) -> Action {
+        self.add_http_response_header("x-powered-by", "FastEdge");
+        info!("Hello from on_http_response_headers");
+        Action::Continue
+    }
+
+    fn on_http_response_body(&mut self, _: usize, _: bool) -> Action {
+        info!("Hello from on_http_response_body");
+        Action::Continue
+    }
+}
+```
+
+### FILE: examples/cdn/hello_world/Cargo.toml
+
+```toml
+[workspace]
+
+[package]
+name = "hello_world"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+log = "0.4"
+proxy-wasm = "0.2"
 ```

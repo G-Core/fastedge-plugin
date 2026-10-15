@@ -2,9 +2,9 @@
   auto-updated: true
   sources:
     - id: fastedge-sdk-rust
-      ref: main
-      commit: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-      updated: 2026-08-20
+      ref: v0.4.5
+      commit: e7f446a4b40b791b932ab36b2c7a0c85fd24104d
+      updated: 2026-10-14
 -->
 
 ---
@@ -13,8 +13,8 @@ app_type: http
 languages: [rust]
 template_origin: http-base
 source_repo: fastedge-sdk-rust
-source_ref: 6347a7c2fda0d03e66f1214db5eec041c16801b7
-updated: 2026-08-20
+source_ref: e7f446a4b40b791b932ab36b2c7a0c85fd24104d
+updated: 2026-10-14
 
 ---
 
@@ -137,7 +137,7 @@ lerna-debug.log*
 
 ## Logging Convention
 
-FastEdge captures **stdout only**. Use `println!` / `print!` for any log line that needs to appear in the platform log API, the visual debugger, or `/gcore-fastedge:live-test` assertions.
+FastEdge captures **stdout only**. Use `println!` / `print!` for any log line that needs to appear in the platform log API, the visual debugger, or live-test assertions.
 
 **Do not use:**
 - `eprintln!` / `eprint!` — write to stderr, silently dropped by the runtime
@@ -174,42 +174,3 @@ cargo build --release --target wasm32-wasip2
 - **Handler signature**: `async fn main(request: Request<Body>) -> anyhow::Result<Response<Body>>`
 - **Crate type**: `cdylib` (required for WASM output)
 - **Workspace**: Single-project workspace pattern (`[workspace]` declared in Cargo.toml)
-
-## Source Material
-
-### FILE: examples/http/wasi/hello_world/src/lib.rs
-
-```rust
-use wstd::http::body::Body;
-use wstd::http::{Request, Response};
-
-#[wstd::http_server]
-async fn main(request: Request<Body>) -> anyhow::Result<Response<Body>> {
-    let url = request.uri().to_string();
-
-    Ok(Response::builder()
-        .status(200)
-        .header("content-type", "text/plain;charset=UTF-8")
-        .body(Body::from(format!(
-            "Hello, you made a wasi request to {url}"
-        )))?)
-}
-```
-
-### FILE: examples/http/wasi/hello_world/Cargo.toml
-
-```toml
-[workspace]
-
-[package]
-name = "hello_world"
-version = "0.1.0"
-edition = "2021"
-
-[lib]
-crate-type = ["cdylib"]
-
-[dependencies]
-wstd = "0.6"
-anyhow = "1"
-```

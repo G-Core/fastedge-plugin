@@ -2,9 +2,9 @@
   auto-updated: true
   sources:
     - id: fastedge-sdk-rust
-      ref: main
-      commit: 6eedcca9d5c0ddd4ff79ca475965393891da2d75
-      updated: 2026-09-22
+      ref: v0.4.5
+      commit: e7f446a4b40b791b932ab36b2c7a0c85fd24104d
+      updated: 2026-10-14
 -->
 
 ---
@@ -181,3 +181,88 @@ All files in `assets/` must exist at compile time; the build will fail if `inclu
 - sdk-reference-rust (wstd HTTP types: Request, Response, Body, StatusCode)
 - platform-overview (WASM runtime constraints, no filesystem)
 - best-practices (binary size considerations, asset embedding guidelines)
+
+## Source Material
+
+### FILE: examples/http/wasi/static_assets/src/lib.rs
+
+```rust
+/*
+ * Copyright 2025 G-Core Innovations SARL
+ */
+/*
+Static assets example.
+
+Embeds three files (`index.html`, `style.css`, `logo.svg`) into the wasm binary
+at compile time via `include_str!` and serves them by path at request time. The
+wasm runtime has no file system, so all assets must be embedded this way.
+
+For binary assets, use `include_bytes!` and wrap the result in
+`bytes::Bytes::from_static` when constructing the response body.
+
+Mirror of the FastEdge-sdk-js `static-assets` example.
+*/
+
+use wstd::http::body::Body;
+use wstd::http::{Request, Response, StatusCode};
+
+struct Asset {
+    content_type: &'static str,
+    body: &'static str,
+}
+
+static INDEX_HTML: Asset = Asset {
+    content_type: "text/html; charset=utf-8",
+    body: include_str!("../assets/index.html"),
+};
+static STYLE_CSS: Asset = Asset {
+    content_type: "text/css; charset=utf-8",
+    body: include_str!("../assets/style.css"),
+};
+static LOGO_SVG: Asset = Asset {
+    content_type: "image/svg+xml",
+    body: include_str!("../assets/logo.svg"),
+};
+
+fn lookup(path: &str) -> Option<&'static Asset> {
+    match path {
+        "/" | "/index.html" => Some(&INDEX_HTML),
+        "/style.css" => Some(&STYLE_CSS),
+        "/logo.svg" => Some(&LOGO_SVG),
+        _ => None,
+    }
+}
+
+#[wstd::http_server]
+async fn main(req: Request<Body>) -> anyhow::Result<Response<Body>> {
+    let path = req.uri().path();
+    match lookup(path) {
+        Some(asset) => Ok(Response::builder()
+            .status(StatusCode::OK)
+            .header("content-type", asset.content_type)
+            .body(Body::from(asset.body))?),
+        None => Ok(Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .header("content-type", "text/plain; charset=utf-8")
+            .body(Body::from(format!("Not found: {path}\n")))?),
+    }
+}
+```
+
+### FILE: examples/http/wasi/static_assets/Cargo.toml
+
+```toml
+[workspace]
+
+[package]
+name = "static_assets_wasi"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wstd = "0.6"
+anyhow = "1"
+```

@@ -2,9 +2,9 @@
   auto-updated: true
   sources:
     - id: fastedge-sdk-js
-      ref: v2.5.2
-      commit: 9c8c7886f0d1ec5ac2296b4080805966a96ca817
-      updated: 2026-10-02
+      ref: v2.6.0
+      commit: 332d5d125cf92e2108ab898fcda29068bcddc40d
+      updated: 2026-10-14
 -->
 ---
 type: feature
@@ -82,7 +82,7 @@ addEventListener('fetch', (event) => {
 - The response from the downstream service is returned directly to the client (status, headers, and body are all proxied through).
 - This is the simplest possible pattern for outbound HTTP. For more complex scenarios, inspect `event.request` to build dynamic downstream URLs, add headers, or transform the response before returning it.
 - The downstream URL can be hardcoded or read from environment variables using `getEnv` (see the headers or geo-redirect examples for that pattern).
-- SDK version is `^2.5.2` in `package.json`.
+- SDK version is `^2.6.0` in `package.json`.
 
 ## Source Material
 
@@ -96,23 +96,6 @@ async function app(event) {
 addEventListener('fetch', (event) => {
   event.respondWith(app(event));
 });
-```
-
-### FILE: examples/downstream-fetch/package.json
-
-```json
-{
-  "name": "fastedge-example-downstream-fetch",
-  "version": "1.0.0",
-  "description": "FastEdge JS example: downstream HTTP fetch",
-  "type": "module",
-  "scripts": {
-    "build": "fastedge-build src/index.js dist/downstream-fetch.wasm"
-  },
-  "dependencies": {
-    "@gcoredev/fastedge-sdk-js": "^2.2.2"
-  }
-}
 ```
 
 ### FILE: examples/outbound-fetch/src/index.js
@@ -139,7 +122,7 @@ addEventListener('fetch', (event) => {
     "build": "fastedge-build src/index.js dist/outbound-fetch.wasm"
   },
   "dependencies": {
-    "@gcoredev/fastedge-sdk-js": "^2.5.2"
+    "@gcoredev/fastedge-sdk-js": "^2.6.0"
   }
 }
 ```
