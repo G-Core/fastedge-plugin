@@ -4,7 +4,7 @@
     - id: fastedge-sdk-js
       ref: v2.6.0
       commit: 332d5d125cf92e2108ab898fcda29068bcddc40d
-      updated: 2026-10-14
+      updated: 2026-10-19
 -->
 
 ---
@@ -204,3 +204,87 @@ Output binary: `dist/template-invoice.wasm`
 - static-assets blueprint (contrast: uses asset pipeline, this blueprint does not)
 - fastedge-build CLI reference
 - FastEdge SDK JS reference
+
+## Source Material
+
+### FILE: examples/template-invoice/src/index.js
+
+```js
+import Handlebars from 'handlebars';
+
+import { cssStyles } from './css-styles.js';
+import { htmlTemplate } from './html-template.js';
+import { logoBrand } from './logo.js';
+
+const invoiceData = {
+  createdDate: 'March 4, 2024',
+  dueDate: 'April 19, 2024',
+  invoiceNumber: '1729',
+  recipientAddress: {
+    name: 'Homer Simpson',
+    address1: '742 Evergreen Terrace',
+    address2: 'Springfield, United States.',
+  },
+  paymentMethod: 'PayPal',
+  paymentId: '8915648',
+  items: [
+    {
+      description: '1x Keg of Duff Beer',
+      price: 250,
+    },
+    {
+      description: '3x Crate of Duff Beer',
+      price: 85,
+    },
+    {
+      description: '2x Duff Football Finger',
+      price: 20,
+    },
+  ],
+};
+
+const getTotalPrice = (items) => items.reduce((total, item) => total + item.price, 0).toFixed(2);
+
+async function eventHandler() {
+  const rawHtmlTemplate = htmlTemplate();
+
+  const template = Handlebars.compile(rawHtmlTemplate);
+
+  const html = template({
+    cssStyles,
+    logoBrand,
+    ...invoiceData,
+    totalPrice: getTotalPrice(invoiceData.items),
+  });
+
+  return new Response(html, {
+    status: 200,
+    headers: {
+      'content-type': 'text/html',
+    },
+  });
+}
+
+addEventListener('fetch', (event) => {
+  event.respondWith(eventHandler());
+});
+```
+
+
+### FILE: examples/template-invoice/package.json
+
+```json
+{
+  "name": "fastedge-example-template-invoice",
+  "version": "1.0.0",
+  "description": "FastEdge JS example: HTML invoice rendered via Handlebars templates",
+  "type": "module",
+  "scripts": {
+    "build": "fastedge-build src/index.js dist/template-invoice.wasm"
+  },
+  "dependencies": {
+    "@gcoredev/fastedge-sdk-js": "^2.6.0",
+    "handlebars": "^4.7.9"
+  }
+}
+```
