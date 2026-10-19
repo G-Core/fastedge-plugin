@@ -2,9 +2,9 @@
   auto-updated: true
   sources:
     - id: fastedge-sdk-js
-      ref: v2.5.2
-      commit: 9c8c7886f0d1ec5ac2296b4080805966a96ca817
-      updated: 2026-10-02
+      ref: v2.6.0
+      commit: 332d5d125cf92e2108ab898fcda29068bcddc40d
+      updated: 2026-10-19
 -->
 
 ---
@@ -100,7 +100,7 @@ addEventListener('fetch', (event) => {
 }
 ```
 
-Entry point: `src/index.js`. Output: `dist/streaming.wasm`. Requires `@gcoredev/fastedge-sdk-js` ^2.5.2.
+Entry point: `src/index.js`. Output: `dist/streaming.wasm`. Requires `@gcoredev/fastedge-sdk-js` ^2.6.0.
 
 ## Constraints
 
@@ -115,50 +115,3 @@ Entry point: `src/index.js`. Output: `dist/streaming.wasm`. Requires `@gcoredev/
 - deploy skill reference
 - fastedge-build CLI reference
 - FastEdge-sdk-js SDK reference
-
-## Source Material
-
-### FILE: examples/streaming/src/index.js
-
-```js
-function app(event) {
-  const encoder = new TextEncoder();
-
-  const stream = new ReadableStream({
-    async start(controller) {
-      for (let i = 0; i < 5; i++) {
-        // eslint-disable-next-line no-await-in-loop
-        await new Promise((resolve) => { setTimeout(resolve, 200); });
-        controller.enqueue(encoder.encode(`chunk ${i}\n`));
-      }
-      controller.close();
-    },
-  });
-
-  return new Response(stream, {
-    status: 200,
-    headers: { 'content-type': 'text/plain; charset=utf-8' },
-  });
-}
-
-addEventListener('fetch', (event) => {
-  event.respondWith(app(event));
-});
-```
-
-### FILE: examples/streaming/package.json
-
-```json
-{
-  "name": "fastedge-example-streaming",
-  "version": "1.0.0",
-  "description": "FastEdge JS example: streaming response with ReadableStream",
-  "type": "module",
-  "scripts": {
-    "build": "fastedge-build src/index.js dist/streaming.wasm"
-  },
-  "dependencies": {
-    "@gcoredev/fastedge-sdk-js": "^2.5.2"
-  }
-}
-```

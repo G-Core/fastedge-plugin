@@ -4,7 +4,7 @@
     - id: fastedge-sdk-js
       ref: v2.6.0
       commit: 332d5d125cf92e2108ab898fcda29068bcddc40d
-      updated: 2026-10-14
+      updated: 2026-10-19
 -->
 ---
 type: feature
@@ -77,7 +77,7 @@ addEventListener('fetch', (event) => {
 
 ## Build Notes
 
-- Build with `fastedge-build src/index.js dist/downstream-fetch.wasm`.
+- Build with `fastedge-build src/index.js dist/outbound-fetch.wasm`.
 - The `fetch` function is available globally in the FastEdge runtime — no import needed.
 - The response from the downstream service is returned directly to the client (status, headers, and body are all proxied through).
 - This is the simplest possible pattern for outbound HTTP. For more complex scenarios, inspect `event.request` to build dynamic downstream URLs, add headers, or transform the response before returning it.

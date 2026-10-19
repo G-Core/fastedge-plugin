@@ -4,7 +4,7 @@
     - id: fastedge-sdk-js
       ref: v2.6.0
       commit: 332d5d125cf92e2108ab898fcda29068bcddc40d
-      updated: 2026-10-14
+      updated: 2026-10-19
 -->
 
 ## How It Works
@@ -37,6 +37,8 @@ npx fastedge-init
 | Path to your public directory | `./build` | Must be an existing, non-empty directory |
 | Is your site a single page application? | No | Answer yes to be prompted for an SPA entrypoint |
 | Path to your SPA entrypoint (only when answering yes) | `./index.html` | Must exist in the public directory, otherwise a warning is shown |
+
+The SPA entrypoint must be a file inside the public directory. If it is not, a warning is shown and no SPA entrypoint is set.
 
 It writes `.fastedge/static-index.js` (the entry point), `.fastedge/build-config.js` (build and server config), and a `package.json` and `jsconfig.json` in `.fastedge/`.
 
@@ -128,6 +130,8 @@ const config = {
 export { config };
 ```
 
+`fastedge-init` writes `ignorePaths: ["./node_modules"]` by default.
+
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `publicDir` | `string` | No | Directory to scan for static files to embed; defaults to the current directory |
@@ -140,6 +144,8 @@ export { config };
 `fastedge-build` does not check `publicDir` beforehand. A missing directory fails the build, and an empty directory produces an empty manifest.
 
 If `assetManifestPath` does not end in `.js`, `.ts`, `.cjs`, or `.mjs`, a `.js` extension is appended. If the resulting path exists and is not a file, a warning is shown and the default path is used.
+
+Symlinks in `publicDir` are followed only when they resolve to a regular file inside `publicDir`. Links to directories, links pointing outside `publicDir`, and broken links are skipped with a warning.
 
 All other `BuildConfig` fields are documented in the BUILD_CLI reference.
 
@@ -171,7 +177,7 @@ interface ServerConfig extends Record<string, unknown> {
 | `autoIndex` | `string[]` | `[]` | Index file names tried for the path treated as a directory (e.g. `['index.html']`) |
 | `spaEntrypoint` | `string \| null` | `null` | Asset key served for unmatched routes (SPA fallback); HTML-accepting requests only |
 
-The defaults shown above are the values passed by users. Internally, an unset `notFoundPage` or `spaEntrypoint` (or one set to `null`) is normalized to `'/'`, which matches no asset, so the feature is effectively off.
+The defaults shown in the table above are the values passed by users. Internally, an unset `notFoundPage` or `spaEntrypoint` (or one set to `null`) is normalized to `'/'`, which matches no asset, so the feature is effectively off.
 
 `fastedge-init` sets `notFoundPage` to `'/404.html'` and `autoIndex` to `['index.html', 'index.htm']`. It sets `spaEntrypoint` to the asset key of the SPA entrypoint entered during prompting (for example `'/index.html'`), or `null`.
 
