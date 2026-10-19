@@ -4,7 +4,7 @@
     - id: fastedge-sdk-rust
       ref: v0.4.5
       commit: e7f446a4b40b791b932ab36b2c7a0c85fd24104d
-      updated: 2026-10-14
+      updated: 2026-10-19
 -->
 
 ---
@@ -88,7 +88,9 @@ async fn main(_request: Request<Body>) -> anyhow::Result<Response<Body>> {
         .await
         .map_err(|e| anyhow!("outbound request failed: {e}"))?;
 
-    // Pass through without calling .contents() — body streams to client as upstream produces it.
+    // Return the upstream response verbatim. The body is passed through
+    // without calling `.contents()`, so it streams to the client as upstream
+    // produces it.
     let (parts, body) = upstream_resp.into_parts();
     let mut response = Response::new(body);
     *response.status_mut() = parts.status;
