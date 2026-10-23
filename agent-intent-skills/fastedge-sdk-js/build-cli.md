@@ -30,9 +30,11 @@ A complete CLI flag reference and config format guide. Agents use this to genera
    - `assetManifestPath` defaults to `.fastedge/build/static-asset-manifest.js` when omitted — it is NOT required
    - For `type: 'static'` builds, manifest generation is **automatic** (called by the build pipeline before compilation) — the `fastedge-assets` CLI is only needed for standalone/manual manifest generation outside the build pipeline
 
-6. **Build pipeline overview** — Brief (3-5 bullet) description of what happens: esbuild → Wizer → JCO. Not a deep dive — just enough for agents to explain what the output `.wasm` file contains.
+6. **Build pipeline overview** — Brief (3-5 bullet) description of what happens: esbuild → Wizer → JCO. Not a deep dive — just enough for agents to explain what the output `.wasm` file contains. When components are configured, add one bullet: the components are linked into the output and the build checks every import left in it.
 
-7. **Output** — What the build produces (component WASM binary), default output path, how to customize.
+6a. **Component imports** — the repeatable `--component <interface>=<path>` flag and the `components` config field (`Record<string, string>`, WIT interface name → component file), one example of each, and the generated `fastedge-components.d.ts` (written next to the entry file; deleted again by a build without components if the build generated it). Requires `@gcoredev/fastedge-sdk-js` 2.7.0 or later. Defer types, errors and limits to "the component imports reference" — do not repeat them here.
+
+7. **Output** — What the build produces (component WASM binary), default output path, how to customize. Include `--output` with a single `--config`: the config is built as usual but written to the given path instead of `wasmOutput` (2.7.0 or later), with the source's example and its error for more than one `--config`.
 
 ## What to exclude
 - How to install the SDK (that's quickstart territory)
@@ -41,4 +43,4 @@ A complete CLI flag reference and config format guide. Agents use this to genera
 - Internal pipeline implementation details beyond the brief overview
 
 ## Quality bar
-The flag table is the most critical section. Every flag must appear, with the correct alias, type, and default. Cross-reference against `build.ts` `arg()` call.
+The flag table is the most critical section. Every flag must appear, with the correct alias, type, and default — including `--component`. Cross-reference against `build.ts` `arg()` call.
