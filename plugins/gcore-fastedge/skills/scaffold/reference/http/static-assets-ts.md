@@ -2,9 +2,9 @@
   auto-updated: true
   sources:
     - id: fastedge-sdk-js
-      ref: v2.6.0
-      commit: 332d5d125cf92e2108ab898fcda29068bcddc40d
-      updated: 2026-10-19
+      ref: v2.7.0
+      commit: 65909abd5e0da8720eee5166dca4fc559e098eac
+      updated: 2026-10-26
 -->
 
 ---
@@ -311,7 +311,7 @@ footer a {
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@gcoredev/fastedge-sdk-js": "^2.6.0",
+    "@gcoredev/fastedge-sdk-js": "^2.7.0",
     "hono": "^4.13.5"
   },
   "devDependencies": {
@@ -347,7 +347,7 @@ Additions over `http-base`:
 
 | Package | Type | Version |
 |---|---|---|
-| `@gcoredev/fastedge-sdk-js` | runtime | `^2.6.0` |
+| `@gcoredev/fastedge-sdk-js` | runtime | `^2.7.0` |
 | `hono` | runtime | `^4.13.5` |
 | `npm-run-all2` | devDependency | `^9.0.2` |
 

@@ -30,6 +30,8 @@ Answer FastEdge questions with high precision and low token usage using local in
 - For any sign-in or credential question (API key vs portal sign-in, "Keep me signed in",
   enforcing "don't keep" with `FASTEDGE_SESSION=ephemeral`, switching accounts, `auth_required`
   reasons), read the `platform-sign-in` topic.
+- Before calling Wasm components from a JS/TS app (`components` build config, `--component`),
+  read the `component-imports-js` topic; for a worked example, `http-examples-component-imports-js`.
 
 ## Output rules
 
