@@ -2,9 +2,9 @@
   auto-updated: true
   sources:
     - id: fastedge-sdk-js
-      ref: v2.6.0
-      commit: 332d5d125cf92e2108ab898fcda29068bcddc40d
-      updated: 2026-10-19
+      ref: v2.7.0
+      commit: 65909abd5e0da8720eee5166dca4fc559e098eac
+      updated: 2026-10-26
 -->
 
 ## How It Works
@@ -38,7 +38,7 @@ npx fastedge-init
 | Is your site a single page application? | No | Answer yes to be prompted for an SPA entrypoint |
 | Path to your SPA entrypoint (only when answering yes) | `./index.html` | Must exist in the public directory, otherwise a warning is shown |
 
-The SPA entrypoint must be a file inside the public directory. If it is not, a warning is shown and no SPA entrypoint is set.
+The SPA entrypoint must be a file inside the public directory, both as typed and after symlinks are resolved. If it is not, a warning is shown and no SPA entrypoint is set.
 
 It writes `.fastedge/static-index.js` (the entry point), `.fastedge/build-config.js` (build and server config), and a `package.json` and `jsconfig.json` in `.fastedge/`.
 
@@ -355,6 +355,16 @@ const html = await server.readFileString('/template.html');
 
 `createStaticServer()` **must** be called at the module top level, not inside a function, event handler, or `async` context. Wizer pre-initializes the binary by running all top-level module code before snapshotting memory. `createStaticServer` reads asset files with `readFileSync` from `fastedge::fs`, which only works during Wizer pre-initialization. Calling `createStaticServer` inside a handler throws at request time — assets are not embedded, and the binary fails at runtime.
 
+The `fastedge::fs` module declares:
+
+```typescript
+declare module 'fastedge::fs' {
+  export function readFileSync(path: string): Uint8Array;
+}
+```
+
+`readFileSync` reads a file synchronously and can only be invoked during build-time initialization.
+
 **Correct:**
 
 ```ts
@@ -392,7 +402,7 @@ The asset manifest is a TypeScript/JavaScript module mapping URL paths to file m
 
 **Automatic generation** — when using `fastedge-build` with `type: 'static'` in `build-config.js`, the manifest is generated automatically as part of the build pipeline. No manual step is required. `assetManifestPath` in the config is optional and defaults to `.fastedge/build/static-asset-manifest.js`.
 
-**Manual generation** — when building an HTTP app or needing separate manifests per asset group outside the standard build pipeline, use the `fastedge-assets` CLI directly as a pre-build step:
+**Manual generation** — when building an HTTP app that uses `createStaticServer` outside the standard static build pipeline, or when needing separate manifests per asset group, use the `fastedge-assets` CLI directly as a pre-build step:
 
 ```sh
 npx fastedge-assets ./public ./src/asset-manifest.ts

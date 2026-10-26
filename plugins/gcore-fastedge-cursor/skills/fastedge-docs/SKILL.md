@@ -85,11 +85,12 @@ The reference directory is organised in two layers:
 - `./reference/host-services-rust.md` — Rust host services (KV, secrets, dictionary)
 - `./reference/cdn-apps-rust.md` — Rust CDN apps (proxy-wasm lifecycle, host services, request/response manipulation)
 - `./reference/js-runtime.md` — StarlingMonkey runtime constraints, Node.js incompatibility, SAML implementation guide
+- `./reference/component-imports-js.md` — Calling Wasm components (Rust, Go, C/C++, Python, …) from JS/TS apps: `components` build config, WIT-to-JS types, errors, what components may import, time and memory limits
 - `./reference/quickstart.md` — Getting started
 
 ### Language- and app-type-scoped examples (pipeline-generated)
 
-- `./reference/http/` — HTTP-app patterns extracted from `FastEdge-sdk-js/examples/` (fetch, headers, kv-store, cache, geo-redirect, ab-testing, plus Hono routing/middleware, auth-bearer/JWT, proxy-with-transform)
+- `./reference/http/` — HTTP-app patterns extracted from `FastEdge-sdk-js/examples/` (fetch, headers, kv-store, cache, geo-redirect, ab-testing, component-imports, plus Hono routing/middleware, auth-bearer/JWT, proxy-with-transform)
 - `./reference/cdn/` — CDN-app patterns from `FastEdge-sdk-rust/examples/cdn/` and `proxy-wasm-sdk-as/examples/` (jwt, geoblock, headers, body, env-secrets, kv-store, properties, ab-testing, etc.)
 
 ### Bolt-on templates (pipeline-generated, from `FastEdge-templates`)

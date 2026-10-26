@@ -2,9 +2,9 @@
   auto-updated: true
   sources:
     - id: fastedge-sdk-js
-      ref: v2.6.0
-      commit: 332d5d125cf92e2108ab898fcda29068bcddc40d
-      updated: 2026-10-19
+      ref: v2.7.0
+      commit: 65909abd5e0da8720eee5166dca4fc559e098eac
+      updated: 2026-10-26
 -->
 
 ---
@@ -160,7 +160,7 @@ Entry point: `src/index.js`. Output: `dist/bloom-filter-denylist.wasm`. Build to
 **Dependencies:**
 
 ```json
-"@gcoredev/fastedge-sdk-js": "^2.6.0"
+"@gcoredev/fastedge-sdk-js": "^2.7.0"
 ```
 
 ## False-Positive Trade-off
@@ -176,3 +176,67 @@ Bloom filters guarantee no false negatives (an IP absent from the set is never b
 - fastedge::env reference
 - fastedge-build CLI reference
 - KV store setup and bloom-filter payload upload guide
+
+## Source Material
+
+### FILE: examples/bloom-filter-denylist/src/index.js
+
+```js
+import { getEnv } from 'fastedge::env';
+import { KvStore } from 'fastedge::kv';
+
+const BLOOM_KEY = 'blocked-ips';
+
+function app(event) {
+  const storeName = getEnv('DENYLIST_STORE');
+  if (!storeName) {
+    return Response.json(
+      { error: 'DENYLIST_STORE environment variable is not configured' },
+      { status: 500 },
+    );
+  }
+
+  const ip = event.client.address;
+  if (!ip) {
+    return Response.json({ error: 'client address unavailable' }, { status: 500 });
+  }
+
+  let blocked;
+  try {
+    const store = KvStore.open(storeName);
+    blocked = store.bfExists(BLOOM_KEY, ip);
+  } catch (error) {
+    return Response.json({ error: `KV lookup failed: ${error.message}` }, { status: 500 });
+  }
+
+  if (blocked) {
+    // Bloom filter says "maybe in set" — a small fraction of hits will be false positives.
+    // Acceptable for a denylist (you over-block some legitimate users); not acceptable for
+    // allowlists or anything requiring exact membership — use KvStore.get() for that.
+    return Response.json({ allowed: false, ip }, { status: 403 });
+  }
+
+  return Response.json({ allowed: true, ip });
+}
+
+addEventListener('fetch', (event) => {
+  event.respondWith(app(event));
+});
+```
+
+### FILE: examples/bloom-filter-denylist/package.json
+
+```json
+{
+  "name": "fastedge-example-bloom-filter-denylist",
+  "version": "1.0.0",
+  "description": "FastEdge JS example: IP denylist using a KV Store bloom filter",
+  "type": "module",
+  "scripts": {
+    "build": "fastedge-build src/index.js dist/bloom-filter-denylist.wasm"
+  },
+  "dependencies": {
+    "@gcoredev/fastedge-sdk-js": "^2.7.0"
+  }
+}
+```
