@@ -31,9 +31,10 @@ A single, authoritative reference for the dotenv injection mechanism. This file 
 
 4. **Option B — Type-split files** — `.env.variables` and `.env.secrets` (CDN and HTTP-WASM); `.env.req_headers` and `.env.rsp_headers` (HTTP-WASM only). No prefix needed
 
-5. **Differences between app types** — the CDN runner loads the files itself; HTTP-WASM hands the directory to `fastedge-run`. They differ, so state both, never one rule:
-   - Unprefixed key in `.env`: CDN ignores it; HTTP-WASM treats it as an env var
-   - Same key in `.env` and a type-split file: CDN uses the type-split file; HTTP-WASM uses `.env`
+5. **Key rules** — the same for CDN and HTTP-WASM apps (the CDN runner matches `fastedge-run`):
+   - An unprefixed key in `.env` is an env var
+   - `FASTEDGE_VAR_` keys inside `.env.variables` / `.env.secrets` are skipped
+   - Same key in `.env` and a type-split file: `.env` wins
    - Do not invent other priority levels: there is no `RunnerConfig` env-var field and no `fastedge-config.test.json` fallback
 
 6. **Gitignore guidance** — commit `.env.example`, gitignore `.env` and `.env.*` (except `.env.example`)
