@@ -249,13 +249,12 @@ Reference: `plugins/gcore-fastedge-codex/skills/test/reference/test-config.md`.
 
 Always include:
 
+- `appType` (`"proxy-wasm"` or `"http-wasm"`)
 - `wasm.path` (build output)
-- `request` (baseline method/url/headers/body)
-- `logLevel`
-- `envVars` / `secrets` placeholders (see Step 5.5)
-- `properties` (CDN apps only — request.country, request.city, etc.)
+- `request` (baseline method/headers/body, plus `url` for CDN or `path` for HTTP-WASM)
+- `properties` (CDN: request.country, request.city, etc.; HTTP-WASM: `{}`, the schema still requires it)
 
-**Omit `properties` for HTTP-WASM apps (not applicable).**
+There is no `logLevel`, `envVars` or `secrets` field; env vars and secrets come from dotenv files (Step 5.5).
 
 `$schema` path differs by language because it points into wherever `@gcoredev/fastedge-test` is installed:
 
@@ -272,17 +271,21 @@ If source code uses `getEnv(` or `getSecret(`, identify each key and triage by s
 
 | Sensitivity | Location |
 |-------------|----------|
-| Non-sensitive (entity IDs, URLs, feature flags) | `fastedge-config.test.json` `envVars` / `secrets` with placeholders |
-| Sensitive (API keys, tokens, certs, passwords) | `.env` at project root (gitignored) + `runnerConfig: { dotenvEnabled: true }` in the test suite |
+| Non-sensitive env vars (entity IDs, URLs, feature flags) | `.env.variables` at project root (committed), no prefix |
+| Sensitive, and anything read with `getSecret()` | `.env` at project root (gitignored), `FASTEDGE_VAR_SECRET_` / `FASTEDGE_VAR_ENV_` prefixes |
+
+`fastedge-config.test.json` has no `envVars` or `secrets` fields; the schema rejects them.
+
+Either way, add `runnerConfig: { dotenv: { enabled: true, path: resolve(here, '..') } }` to the `defineTestSuite` call in `fastedge-test/app.test.mjs`. `path` is the directory holding the dotenv files (the project root).
 
 For the sensitive path:
 
-1. Add `runnerConfig: { dotenvEnabled: true }` to the `defineTestSuite` call in `fastedge-test/app.test.mjs`.
+1. Put the values in `.env` at the project root.
 2. Create `.env.example` at project root (committed) with placeholders using `FASTEDGE_VAR_SECRET_` / `FASTEDGE_VAR_ENV_` prefixes.
 3. Ensure `.env` and `.env.secrets` are in `.gitignore` — tell the user if not already present.
 4. Never commit real credentials/certs.
 
-**SAML-specific rule:** for SAML apps, the IdP certificate and any signing keys must go in `.env` via `FASTEDGE_VAR_SECRET_` prefix — never commit real certs to `fastedge-config.test.json`.
+**SAML-specific rule:** for SAML apps, the IdP certificate and any signing keys must go in `.env` via `FASTEDGE_VAR_SECRET_` prefix — never commit real certs.
 
 See `plugins/gcore-fastedge-codex/skills/test/reference/dotenv.md`.
 
@@ -393,7 +396,7 @@ These anchor expected behavior, the three-outcome pre-flight, and the hard-gate 
 - Step 2: pre-flight — nothing exists → full scaffold path.
 - Step 3: install (HARD GATE) — `mkdir fastedge-test && cd fastedge-test && npm init -y && npm install --save-dev @gcoredev/fastedge-test@latest`. Append `fastedge-test/node_modules/` to root `.gitignore`.
 - Step 4 (Generate): read `src/main.rs`, identify routes, write `fastedge-test/app.test.mjs` with `import.meta.url`-anchored `wasmPath` pointing at `../target/wasm32-wasip1/release/hello_world.wasm`.
-- Step 5: write `fastedge-config.test.json` at project root with `$schema` pointing at `./fastedge-test/node_modules/...`. Omit `properties` (HTTP-WASM).
+- Step 5: write `fastedge-config.test.json` at project root with `$schema` pointing at `./fastedge-test/node_modules/...`. HTTP-WASM: `"appType": "http-wasm"`, `request.path`, `"properties": {}`.
 - Step 5.5: no `getEnv`/`getSecret` calls in source → skip.
 - Step 6: write `fastedge-test/package.json` with the three scripts and `--project-dir ..` on debug/smoke-check.
 - Step 7: skip in generate mode.
@@ -423,7 +426,7 @@ Next: cd fastedge-test && npm test
 - Step 3: install check — `@gcoredev/fastedge-test` missing from root devDeps → `npm install --save-dev @gcoredev/fastedge-test@latest` at root.
 - Step 4 (Generate): write `fastedge-test/app.test.mjs` with `wasmPath: resolve(here, '../product-cache.wasm')`.
 - Step 5: write `fastedge-config.test.json` at root with `$schema` pointing at `./node_modules/...`.
-- Step 5.5: source uses `getEnv("REGION")` (non-sensitive) and `getSecret("STRIPE_KEY")` (sensitive). Region → `fastedge-config.test.json` envVars. Stripe key → `.env` + `runnerConfig: { dotenvEnabled: true }`. Verify `.env` is in `.gitignore`.
+- Step 5.5: source uses `getEnv("REGION")` (non-sensitive) and `getSecret("STRIPE_KEY")` (sensitive). Region → `.env.variables`. Stripe key → `.env`. Both need `runnerConfig: { dotenv: { enabled: true, path: resolve(here, '..') } }`. Verify `.env` is in `.gitignore`.
 - Step 6: add missing scripts to root `package.json`. `test` already exists with a different command → leave it, tell user.
 
 **Completion output**:
@@ -433,7 +436,8 @@ Tests generated for product-cache  [HTTP-WASM / TypeScript]
 
   Created:  fastedge-test/app.test.mjs           (4 cases: 1 per route)
   Updated:  package.json                         (added debug script, devDep)
-  Created:  fastedge-config.test.json            (envVars: REGION)
+  Created:  fastedge-config.test.json
+  Created:  .env.variables                       (REGION)
   Created:  .env, .env.example                   (sensitive: STRIPE_KEY)
   Updated:  .gitignore                           (.env, .env.secrets)
   Skipped:  test script (already defined — left untouched)

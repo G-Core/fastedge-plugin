@@ -15,23 +15,23 @@ A complete schema reference for `fastedge-config.test.json`. Agents use this to 
 
 1. **Purpose** — one sentence: what fastedge-config.test.json does and when it auto-loads (debugger + test framework)
 
-2. **Schema** — every top-level field as a table: field | type | required | default | description. Include:
+2. **Schema** — every field as a table: field | type | required | default | description. The source's schema table is authoritative: take fields, required and defaults from it, and do not add fields it lacks. Currently:
    - `$schema` — path to `./node_modules/@gcoredev/fastedge-test/schemas/fastedge-config.test.schema.json` for IDE validation
    - `description` — human label for this config
-   - `wasm.path` — relative path to the compiled WASM binary
-   - `wasm.description` — optional label
-   - `request.method`, `request.url`, `request.headers`, `request.body`
-   - `response.headers`, `response.body` — CDN-only; mock origin response headers and body
-   - `properties` — CDN-only; key/value pairs for CDN property simulation (derive available keys from source)
-   - `dotenvEnabled` — boolean, required, default `true`; whether to load `.env` files on server start
-   - `logLevel` — numeric values 0–4 mapped to trace/debug/info/warn/error
+   - `wasm.path`, `wasm.description`
+   - `appType` — `"proxy-wasm"` (CDN) or `"http-wasm"`
+   - `request.method`, `request.url` (CDN), `request.path` (HTTP-WASM), `request.headers`, `request.body`
+   - `properties` — key/value pairs for CDN property simulation; required by the schema in both variants
+   - `httpPort` — HTTP-WASM only
+   - `dotenv.enabled`, `dotenv.path` — `path` is a directory, not a file
+   - There is no `response`, `dotenvEnabled` or `logLevel` field
    - Do NOT include `envVars` or `secrets` — these are not fields in the config file; they come from dotenv files only
 
 3. **Runtime secrets and env vars** — one-line note that `envVars` and `secrets` are not config fields, with a reference to the dotenv configuration guide for the full dotenv setup. Do NOT inline dotenv details — prefix scheme, file options, and priority order all belong in the dotenv configuration guide.
 
 4. **CDN example** — complete `fastedge-config.test.json` for a proxy-wasm app with realistic values; use `client.ip` (not `request.ip`) for the client IP property
 
-5. **HTTP-WASM example** — complete `fastedge-config.test.json` for an HTTP-WASM app (no `properties`, `response`, or `dotenvEnabled` fields needed unless explicitly used)
+5. **HTTP-WASM example** — complete `fastedge-config.test.json` for an HTTP-WASM app (`appType: "http-wasm"` and `request.path`; `properties` is still required by the schema, use `{}`)
 
 6. **What to commit / gitignore** — commit `fastedge-config.test.json` and `.env.example`; gitignore `.env` and `.env.*` (except `.env.example`)
 
