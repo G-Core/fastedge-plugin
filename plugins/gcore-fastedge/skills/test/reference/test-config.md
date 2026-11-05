@@ -2,9 +2,9 @@
   auto-updated: true
   sources:
     - id: fastedge-test
-      ref: main
-      commit: 93d8046c3b98a65b18e189d435f760c8861d481f
-      updated: 2026-09-09
+      ref: v0.2.8
+      commit: 81ae6516cac618afe50414ca97c579c11df28e7e
+      updated: 2026-11-05
 -->
 
 # test-config Reference
@@ -36,41 +36,51 @@ The config schema is a union of two variants selected by `appType`:
 | `request.path` | string | **yes** (HTTP-WASM only) | — | Request path (e.g. `"/api/submit"`). HTTP-WASM mode only. The WASM module acts as the origin server and receives only the path portion |
 | `request.headers` | object | yes (schema) / runtime default | `{}` | Key/value map of request headers. All keys and values must be strings |
 | `request.body` | string | yes (schema) / runtime default | `""` | Request body as a plain string |
-| `properties` | object | yes (schema) / runtime default | `{}` | CDN property key-value pairs passed to the WASM execution context. Values may be any JSON type. Pass `{}` for HTTP-WASM to satisfy the schema requirement |
+| `properties` | object | yes (schema) / runtime default | `{}` | CDN property key-value pairs passed to the WASM execution context. Values may be any JSON type. Required by the schema for both variants |
 | `dotenv` | object | no | — | Dotenv file loading configuration |
-| `dotenv.enabled` | boolean | no | — | Whether to load a `.env` file before execution |
-| `dotenv.path` | string | no | — | Path to the `.env` file. If omitted, resolves `.env` relative to the config file directory |
+| `dotenv.enabled` | boolean | no | `false` | Whether to load dotenv files before execution |
+| `dotenv.path` | string | no | — | Directory containing the dotenv files (not a file path). If omitted, resolves against the process current working directory |
 | `httpPort` | integer | no | — | HTTP-WASM only. Pin the subprocess to a specific port (1024–65535) instead of dynamic allocation from the 8100–8199 pool. Throws if the port is busy. Not valid on `proxy-wasm` configs |
 
 *`wasm` is optional only if you supply the binary manually via a programmatic `wasmBuffer`. It is required for file-based test runs and debugger auto-load.
+
+`additionalProperties` is `false` at the top level and in `wasm`, `dotenv`, and `request`; unrecognised fields fail validation.
 
 ### Required vs. Default Distinction
 
 The JSON Schema `required` arrays drive editor validation. Fields like `appType`, `request.method`, `request.headers`, `request.body`, and `properties` appear in the schema's `required` array, so a strict JSON Schema validator will flag them as missing. At runtime the Zod schema fills in their defaults (`"proxy-wasm"`, `"GET"`, `{}`, `""`, and `{}` respectively), so the test runner accepts configs that omit them — with the exception of `appType: "http-wasm"`, which has no Zod default and must always be specified for HTTP-WASM configs.
 
+`request.url` (CDN) and `request.path` (HTTP-WASM) are required and have no default.
+
 Supply fields explicitly to avoid editor warnings, or add the `$schema` field and accept that your editor may warn on omission.
 
 ### HTTP Port Pinning
 
-`httpPort` is an optional integer available only in HTTP-WASM configs. It pins the `fastedge-run` subprocess to a fixed port instead of dynamically allocating one from the 8100–8199 pool. The schema rejects `httpPort` on `proxy-wasm` configs.
+`httpPort` is an optional integer (1024–65535) available only in HTTP-WASM configs (`appType: "http-wasm"`). It pins the `fastedge-run` subprocess to a fixed port instead of allocating one from the 8100–8199 pool. The schema rejects `httpPort` on `proxy-wasm` configs.
 
-Without `httpPort`, the runner allocates a port from the 8100–8199 range for each test run. The allocated port is not stable across runs.
+Without `httpPort`, the runner allocates a port from the 8100–8199 range for each run. The allocated port is not stable across runs.
 
-Use port pinning when:
-- **Codespaces / Docker port-forwarding**: Port-forward rules reference a specific port number. Without pinning, the port changes between runs and breaks the forwarding rule.
-- **Stable live-preview URLs**: Browser tabs or external tooling pointing at a fixed URL require a stable port.
-- **External tooling integration**: Monitoring, load testing, or proxy configurations that hard-code a target address.
+Use port pinning for:
+- **Codespaces / Docker port-forwarding**: forward rules reference a specific port number. Without pinning, the port changes between runs and breaks the rule.
+- **Stable live-preview URLs**: browser tabs or external tooling pointing at a fixed URL (e.g. `http://localhost:8250`).
+- **External tooling integration**: monitoring, load testing, or proxy configurations that hard-code a target address.
 
-If the pinned port is already in use, `HttpWasmRunner.load()` throws immediately with a descriptive error. There is no fallback to dynamic allocation. Pinning a port inside the 8100–8199 dynamic pool is allowed by the schema but risks collisions with other concurrent debug sessions. For shared environments, choose a port outside the pool (e.g. 8250).
+If the pinned port is already in use, `HttpWasmRunner.load()` throws immediately; there is no fallback to dynamic allocation:
+
+```
+fastedge-run port 8250 is not available — release it or choose a different httpPort in fastedge-config.test.json
+```
+
+Pinning a port inside the 8100–8199 pool is allowed by the schema but risks collisions with other debug sessions. In shared environments choose a port outside the pool (e.g. 8250).
 
 ### Built-In Responder
 
-For CDN (`proxy-wasm`) configs, setting `request.url` to `"built-in"` causes the runner to generate a local response and skip the upstream fetch entirely. This is the fastest way to exercise a CDN WASM app without depending on network reachability.
+For CDN (`proxy-wasm`) configs, setting `request.url` to `"built-in"` makes the runner generate a local response and skip the upstream fetch, so the scenario does not depend on network reachability.
 
-The default built-in response is a full JSON echo of the request. Override via control headers on the request:
+The default built-in response is a full JSON echo of the request. Override it with control headers on the request:
 - `x-debugger-status` — sets the HTTP status code
 - `x-debugger-content: status-only` — omits the body
-- `x-debugger-content: body-only` — echoes only the request body with its inferred content-type
+- `x-debugger-content: body-only` — echoes only the request body, with its inferred content-type
 
 ---
 
@@ -106,12 +116,12 @@ The default built-in response is a full JSON echo of the request. Override via c
   },
   "dotenv": {
     "enabled": true,
-    "path": "./.env.test"
+    "path": "./fixtures"
   }
 }
 ```
 
-`properties` passes CDN context values into the execution environment. `dotenv` loads runtime secrets from a local `.env` file without embedding them in the config.
+`properties` passes CDN context values into the execution environment. `dotenv` loads runtime secrets from a local dotenv directory without embedding them in the config.
 
 ---
 
@@ -138,9 +148,7 @@ The default built-in response is a full JSON echo of the request. Override via c
 }
 ```
 
-`appType` must be `"http-wasm"` — there is no runtime default for this variant. Use `request.path` (not `request.url`); the WASM module acts as the origin server and receives only the path portion of the request. HTTP-WASM apps have no mock origin response.
-
-To pin the subprocess to a fixed port (e.g. for Codespaces or Docker port-forwarding), add `"httpPort": 8250`.
+`appType` must be `"http-wasm"` — there is no runtime default for this variant. Use `request.path` (not `request.url`); the WASM module acts as the origin server and receives only the path portion of the request. `properties` is still required by the schema; use `{}` when no CDN properties are needed. To pin the subprocess to a fixed port (e.g. for Codespaces or Docker port-forwarding), add `"httpPort": 8250`.
 
 ---
 
