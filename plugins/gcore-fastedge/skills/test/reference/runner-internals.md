@@ -2,9 +2,9 @@
   auto-updated: true
   sources:
     - id: fastedge-test
-      ref: main
-      commit: 93d8046c3b98a65b18e189d435f760c8861d481f
-      updated: 2026-09-09
+      ref: v0.2.8
+      commit: 81ae6516cac618afe50414ca97c579c11df28e7e
+      updated: 2026-11-05
 -->
 
 # Runner Internals — Low-Level Runner API
@@ -55,6 +55,8 @@ import type {
 } from '@gcoredev/fastedge-test';
 ```
 
+`HeaderMap`, `HeaderRecord`, `LogEntry`, `ProxyStatus`, and `EventSource` are described under Supporting Types and IStateManager. They are not exported from the package root.
+
 ---
 
 ## WASM Instance Management
@@ -68,14 +70,16 @@ import type {
 
 ### HttpWasmRunner (http-wasm)
 
-- **On `load()`**: Writes the WASM binary to a temp file and spawns a `fastedge-run` process.
+- **On `load()`**: Writes the WASM binary to a temp file (when given a `Buffer`) or passes the path directly, then spawns a `fastedge-run` process.
 - **Between requests**: The `fastedge-run` process is kept alive. Requests are forwarded to it via localhost.
-- **On `cleanup()`**: Kills the `fastedge-run` process, releases the allocated port, and deletes the temporary WASM file from disk. Always call `cleanup()` in test teardown.
-- **On `applyDotenv()`**: Kills the current `fastedge-run` process and restarts it with the updated `--dotenv` flag.
+- **On `cleanup()`**: Kills the `fastedge-run` process, releases the allocated port, and deletes any temporary WASM file written to disk. Always call `cleanup()` in test teardown.
+- **On `applyDotenv()`**: Kills the current `fastedge-run` process and restarts it with the updated `--dotenv` flag. The returned promise resolves once the restarted process is listening.
+
+`HttpWasmRunner` also exposes `getPort(): number | null`, which returns the port the `fastedge-run` server listens on (the pinned `httpPort` when set, otherwise the dynamically allocated port). This method is not part of `IWasmRunner`.
 
 ### Auto-Detection
 
-Both factory functions inspect the WASM binary's imports and exports to determine type. Override with `RunnerConfig.runnerType` if detection is incorrect.
+Both factory functions inspect the WASM binary's imports and exports to determine type. Override with `RunnerConfig.runnerType` if detection is incorrect. Any value other than `"http-wasm"` selects `ProxyWasmRunner`.
 
 ---
 
@@ -165,8 +169,8 @@ Loads a WASM binary into the runner. Calling again replaces the current module a
 load(bufferOrPath: Buffer | string, config?: RunnerConfig): Promise<void>
 ```
 
-- **ProxyWasmRunner**: Compiles the module; loads dotenv files.
-- **HttpWasmRunner**: Writes binary to temp file; spawns `fastedge-run` process.
+- **ProxyWasmRunner**: Compiles the module; loads dotenv files. `httpPort` is ignored.
+- **HttpWasmRunner**: A `Buffer` is written to a temporary file first; a path string is passed to `fastedge-run` directly. Spawns a `fastedge-run` process.
 
 **`httpPort` pinning (HTTP-WASM only).** When `config.httpPort` is set, the spawned `fastedge-run` process is bound to that specific port instead of allocating from the dynamic pool (8100–8199). If the port is already in use, `load()` throws:
 
@@ -174,7 +178,7 @@ load(bufferOrPath: Buffer | string, config?: RunnerConfig): Promise<void>
 fastedge-run port <N> is not available — release it or choose a different httpPort in fastedge-config.test.json
 ```
 
-There is no fallback to dynamic allocation. Intended for Codespaces/Docker port-forwarding setups, live-preview URLs, or external tooling that requires a fixed target. For proxy-wasm runners, `httpPort` is ignored.
+There is no fallback to dynamic allocation — pinning is only useful if the address is stable. Intended for Codespaces/Docker port-forwarding setups, stable live-preview URLs, or external tooling that requires a fixed target.
 
 ---
 
@@ -189,6 +193,8 @@ execute(request: HttpRequest): Promise<HttpResponse>
 `request.path` is a path on the locally spawned `fastedge-run` server, not a full URL.
 
 **Constraint**: Only available on `HttpWasmRunner`. Calling on `ProxyWasmRunner` throws.
+
+Requests time out after 30 seconds. Network or timeout failures reject with `HTTP request failed: <reason>`. Calling `execute()` before `load()` rejects with `HttpWasmRunner not loaded. Call load() first.`
 
 **Redirects are not followed.** The underlying fetch uses `redirect: "manual"`, so 3xx responses reach the caller intact — status code and `Location` header — rather than being transparently followed. This matches FastEdge edge behavior, where redirects are returned to the client rather than followed server-side, and lets tests assert on redirect status and `Location`.
 
@@ -226,9 +232,24 @@ Executes a single proxy-wasm hook in isolation. Creates a fresh WASM instance wi
 callHook(hookCall: HookCall): Promise<HookResult>
 ```
 
-**Valid hook names**: `"onRequestHeaders"`, `"onRequestBody"`, `"onResponseHeaders"`, `"onResponseBody"`
+**Valid hook names**: `"onRequestHeaders"`, `"onRequestBody"`, `"onResponseHeaders"`, `"onResponseBody"`. Any other value throws.
 
 **Constraint**: Only available on `ProxyWasmRunner`. Calling on `HttpWasmRunner` throws.
+
+```typescript
+import { createRunner } from '@gcoredev/fastedge-test';
+
+const runner = await createRunner('./my-cdn-app.wasm');
+
+const result = await runner.callHook({
+  hook: 'onRequestHeaders',
+  request: { headers: { 'x-custom': 'value' }, body: '', method: 'GET' },
+  properties: {},
+});
+console.log(result.returnCode, result.output.request.headers);
+
+await runner.cleanup();
+```
 
 ---
 
@@ -251,14 +272,18 @@ callFullFlow(
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `url` | `string` | Full request URL (e.g. `https://example.com/path`), or `BUILTIN_SHORTHAND` (`"built-in"`) to use the built-in responder instead of a real origin fetch |
+| `url` | `string` | Full request URL (e.g. `https://example.com/path`), or `BUILTIN_SHORTHAND` (`"built-in"`) to use the built-in responder instead of a real origin fetch. `BUILTIN_URL` (`"http://fastedge-builtin.debug"`) is also accepted directly, including with a query string or path. |
 | `method` | `string` | HTTP method |
 | `headers` | `Record<string, string>` | Request headers |
 | `body` | `string` | Request body |
 | `properties` | `Record<string, unknown>` | Shared properties passed to all hooks |
 | `enforceProductionPropertyRules` | `boolean` | When `true`, restricts property access to match CDN production behavior |
 
-**Local response short-circuit**: If a WASM module calls `proxy_send_local_response` in any hook and returns `StopIteration` (return code `1`), the runner short-circuits immediately. For request-phase hooks (`onRequestHeaders`, `onRequestBody`), this skips the remaining request hooks, the origin fetch, and all response hooks. For response-phase hooks (`onResponseHeaders`, `onResponseBody`), this skips any remaining response hooks. In all cases, `finalResponse` is built from the locally-sent status, headers, and body — matching CDN production behavior. This is how redirect modules (e.g., geo-redirect) and early error responses work.
+**Local response short-circuit**: If a WASM module calls `proxy_send_local_response` in any hook and returns `StopIteration` (return code `1`), the runner short-circuits immediately. For request-phase hooks (`onRequestHeaders`, `onRequestBody`), this skips the remaining request hooks, the origin fetch, and all response hooks. For response-phase hooks (`onResponseHeaders`, `onResponseBody`), this skips any remaining response hooks. In all cases, `finalResponse` is built from the locally-sent status, headers, and body — matching CDN production behavior. This is how redirect modules (e.g. geo-redirect) and early error responses work.
+
+**Origin fetch failure**: If the origin fetch throws (DNS failure, connection refused, and similar), `callFullFlow` does not reject. It returns a `FullFlowResult` whose `finalResponse` has `status: 0`, `statusText: "Fetch Failed"`, and an error message in `body`.
+
+The origin fetch does not follow redirects; a 3xx origin response is passed to the response hooks as-is.
 
 **Constraint**: Only available on `ProxyWasmRunner`. Calling on `HttpWasmRunner` throws.
 
@@ -272,8 +297,8 @@ Updates dotenv settings on a loaded runner without reloading the WASM binary.
 applyDotenv(enabled: boolean, path?: string): Promise<void>
 ```
 
-- **ProxyWasmRunner**: Resets `SecretStore` and `Dictionary` to empty; re-reads dotenv files from `path` (or current path if omitted). WASM module is not recompiled.
-- **HttpWasmRunner**: Kills `fastedge-run` and restarts with updated `--dotenv` flag.
+- **ProxyWasmRunner**: Resets `SecretStore` and `Dictionary` to empty; re-reads dotenv files from `path` (or the previously set path if omitted) when `enabled` is `true`. WASM module is not recompiled.
+- **HttpWasmRunner**: Kills `fastedge-run` and restarts with updated `--dotenv` flag. The returned promise resolves once the restarted process is listening. If no process is running, the settings apply on the next `load()`.
 
 ---
 
@@ -286,7 +311,7 @@ cleanup(): Promise<void>
 ```
 
 - **ProxyWasmRunner**: No-op. State resets on next `load()`.
-- **HttpWasmRunner**: Kills `fastedge-run` process, releases the allocated port, deletes the temporary WASM file.
+- **HttpWasmRunner**: Kills `fastedge-run` process, releases the allocated port (a pinned `httpPort` is simply freed), deletes any temporary WASM file written to disk.
 
 ---
 
@@ -326,18 +351,19 @@ const result = await runner.callFullFlow(
   {},   // properties
   true, // enforceProductionPropertyRules
 );
+await runner.cleanup();
 ```
 
-**Built-in responder behavior** — controlled by request headers set before the origin phase:
+**Built-in responder behavior** — controlled by request headers present after the request hooks run:
 
 | Header | Effect |
 |--------|--------|
-| `x-debugger-status` | HTTP status code for the generated response (default: `200`) |
+| `x-debugger-status` | HTTP status code for the generated response (default: `200`). A value that is not an integer between 100 and 599 produces status `400`. |
 | `x-debugger-content` | Response body mode: `"body-only"`, `"status-only"`, or full JSON echo (default) |
 
 When `x-debugger-content` is omitted, the built-in responder returns a JSON echo of the request method, headers, body, and URL. Both control headers are stripped before response hooks execute so they do not appear in hook input state.
 
-`BUILTIN_URL` (`"http://fastedge-builtin.debug"`) is the canonical URL the runner substitutes internally when `BUILTIN_SHORTHAND` is passed. It appears in `calculatedProperties` (e.g. `request.host`) and in the JSON echo body.
+`BUILTIN_URL` (`"http://fastedge-builtin.debug"`) is the canonical URL the runner substitutes internally when `BUILTIN_SHORTHAND` is passed. It appears in `calculatedProperties` (e.g. `request.host`) and in the JSON echo body. It is also accepted directly as the `url` argument, including with a query string or path.
 
 ---
 
@@ -361,8 +387,8 @@ interface RunnerConfig {
 |-------|------|---------|-------------|
 | `dotenv.enabled` | `boolean` | `false` | Whether to load `.env` files |
 | `dotenv.path` | `string` | `undefined` | Directory to load dotenv files from. When omitted, `fastedge-run` uses the process CWD — correct for most npm package users whose `.env` files live at the project root. Only set when dotenv files are in a non-standard location (e.g. test fixture directories). |
-| `enforceProductionPropertyRules` | `boolean` | `true` | Restrict property access to match CDN production behavior |
-| `runnerType` | `WasmType` | auto-detected | Override WASM type detection |
+| `enforceProductionPropertyRules` | `boolean` | `undefined` | Declared on the type; not read by `load()`. Pass explicitly to `callFullFlow()` or `callHook()`. |
+| `runnerType` | `WasmType` | auto-detected | Override WASM type detection. Any value other than `"http-wasm"` selects `ProxyWasmRunner`. |
 | `httpPort` | `number` | `undefined` | HTTP-WASM only. Pin the spawned `fastedge-run` subprocess to a specific port instead of allocating from the dynamic pool (8100–8199). `load()` throws if the port is busy — there is no fallback to dynamic allocation. Intended for Codespaces/Docker port-forwarding or external tooling requiring a fixed address. Ignored for proxy-wasm runners. |
 
 ---
@@ -370,6 +396,8 @@ interface RunnerConfig {
 ### `HttpRequest` and `HttpResponse`
 
 ```typescript
+import type { IncomingHttpHeaders } from 'node:http';
+
 interface HttpRequest {
   path: string;
   method: string;
@@ -394,7 +422,7 @@ interface HttpResponse {
 
 Used exclusively with `execute()` on `HttpWasmRunner`.
 
-`isBase64` is `true` when the response body is binary content (images, audio, video, PDF, ZIP) encoded as base64.
+`isBase64` is `true` when the response body is binary content (images, audio, video, PDF, ZIP, gzip, `application/octet-stream`) encoded as base64.
 
 `HttpResponse.logs` contains log entries captured from the `fastedge-run` process stdout/stderr during the request.
 
@@ -445,7 +473,7 @@ type HookCall = {
 |-------|-------------|
 | `hook` | Hook name: `"onRequestHeaders"`, `"onRequestBody"`, `"onResponseHeaders"`, `"onResponseBody"` |
 | `request` | Request state passed to the hook |
-| `response` | Seed state for response hooks called via `callHook()`. Ignored by `callFullFlow()` and by request hooks — the full-flow path generates the upstream response at runtime. Optional. |
+| `response` | Seed state for response hooks called via `callHook()`. Not consumed by `callFullFlow()` or by request hooks — the full-flow path generates the upstream response at runtime. Optional. |
 | `properties` | Shared properties (e.g. `request.path`, `vm_config`, `plugin_config`) |
 | `dotenvEnabled` | Optional per-call dotenv override. Use `applyDotenv()` for persistent changes. |
 | `enforceProductionPropertyRules` | Defaults to `true`. Set to `false` to allow property reads blocked on production CDN. |
@@ -503,7 +531,7 @@ type FullFlowResult = {
 
 | Field | Description |
 |-------|-------------|
-| `hookResults` | Record keyed by hook name (`"onRequestHeaders"`, `"onRequestBody"`, `"onResponseHeaders"`, `"onResponseBody"`), each containing a `HookResult` |
+| `hookResults` | Record keyed by hook name (`"onRequestHeaders"`, `"onRequestBody"`, `"onResponseHeaders"`, `"onResponseBody"`), each containing a `HookResult`. Hooks that did not run are absent. |
 | `finalResponse` | Final response after all hooks executed, or the local response if a hook short-circuited (see `callFullFlow`). `body` is base64-encoded when `isBase64` is `true`. |
 | `calculatedProperties` | Runtime properties computed from the request URL (e.g. `request.path`, `request.host`) |
 
@@ -529,8 +557,11 @@ enum ProxyStatus {
   Ok          = 0,
   NotFound    = 1,
   BadArgument = 2,
+  Unimplemented = 12,
 }
 ```
+
+Only `WasmType` is exported from the package root. `HeaderRecord` appears in the exported `HookCall`, `HookResult`, and `FullFlowResult` types. `HeaderMap`, `LogEntry`, and `ProxyStatus` are not exported from the package root.
 
 **Log levels** (proxy-wasm convention): `0` = Trace, `1` = Debug, `2` = Info, `3` = Warn, `4` = Error.
 
@@ -622,7 +653,6 @@ import type { FullFlowResult, HookResult } from '@gcoredev/fastedge-test';
 async function testCdnApp() {
   const runner = await createRunner('./my-cdn-app.wasm', {
     dotenv: { enabled: true },
-    enforceProductionPropertyRules: true,
   });
 
   try {
@@ -668,6 +698,8 @@ async function testCdnApp() {
     await runner.cleanup();
   }
 }
+
+testCdnApp();
 ```
 
 ### Proxy-WASM with Built-in Responder
@@ -695,6 +727,8 @@ async function testCdnAppOffline() {
     await runner.cleanup();
   }
 }
+
+testCdnAppOffline();
 ```
 
 ### HTTP-WASM: Standard HTTP Application
@@ -706,6 +740,7 @@ import type { HttpResponse } from '@gcoredev/fastedge-test';
 async function testHttpApp() {
   const runner = await createRunner('./my-http-app.wasm', {
     dotenv: { enabled: true },
+    httpPort: 8150, // optional: pin the fastedge-run port
   });
 
   try {
@@ -731,6 +766,8 @@ async function testHttpApp() {
     await runner.cleanup();
   }
 }
+
+testHttpApp();
 ```
 
 ### Buffer Loading with Type Detection
@@ -745,6 +782,8 @@ async function runFromBuffer() {
   console.log('Detected type:', runner.getType()); // "proxy-wasm" or "http-wasm"
   await runner.cleanup();
 }
+
+runFromBuffer();
 ```
 
 ---
