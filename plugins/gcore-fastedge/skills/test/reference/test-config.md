@@ -54,6 +54,34 @@ The JSON Schema `required` arrays drive editor validation. Fields like `appType`
 
 Supply fields explicitly to avoid editor warnings, or add the `$schema` field and accept that your editor may warn on omission.
 
+### HTTP Port Pinning
+
+`httpPort` is an optional integer (1024–65535) available only in HTTP-WASM configs (`appType: "http-wasm"`). It pins the `fastedge-run` subprocess to a fixed port instead of allocating one from the 8100–8199 pool. The schema rejects `httpPort` on `proxy-wasm` configs.
+
+Without `httpPort`, the runner allocates a port from the 8100–8199 range for each run. The allocated port is not stable across runs.
+
+Use port pinning for:
+- **Codespaces / Docker port-forwarding**: forward rules reference a specific port number. Without pinning, the port changes between runs and breaks the rule.
+- **Stable live-preview URLs**: browser tabs or external tooling pointing at a fixed URL (e.g. `http://localhost:8250`).
+- **External tooling integration**: monitoring, load testing, or proxy configurations that hard-code a target address.
+
+If the pinned port is already in use, `HttpWasmRunner.load()` throws immediately; there is no fallback to dynamic allocation:
+
+```
+fastedge-run port 8250 is not available — release it or choose a different httpPort in fastedge-config.test.json
+```
+
+Pinning a port inside the 8100–8199 pool is allowed by the schema but risks collisions with other debug sessions. In shared environments choose a port outside the pool (e.g. 8250).
+
+### Built-In Responder
+
+For CDN (`proxy-wasm`) configs, setting `request.url` to `"built-in"` makes the runner generate a local response and skip the upstream fetch, so the scenario does not depend on network reachability.
+
+The default built-in response is a full JSON echo of the request. Override it with control headers on the request:
+- `x-debugger-status` — sets the HTTP status code
+- `x-debugger-content: status-only` — omits the body
+- `x-debugger-content: body-only` — echoes only the request body, with its inferred content-type
+
 ---
 
 ## Runtime Secrets and Env Vars
