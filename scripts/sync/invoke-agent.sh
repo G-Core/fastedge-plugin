@@ -7,7 +7,7 @@ set -euo pipefail
 #   generator  Load reference file + source files, build prompt, call Claude,
 #              validate and write output.
 #   reviewer   Load generator output + source files, embed review criteria,
-#              call OpenAI gpt-4o via REST API, parse VERDICT/FINDINGS, write output file.
+#              call OpenAI (REVIEWER_MODEL, default gpt-5.6-sol) via REST API, parse VERDICT/FINDINGS, write output file.
 #   splice     Splice generator output into a named section of a reference file
 #              and update traceability frontmatter.
 #
@@ -554,23 +554,27 @@ _run_reviewer() {
   local prompt
   prompt=$(_build_reviewer_prompt "$generated_content" "$source_content" "$previous_content" "$intent_content")
 
-  echo "INFO: Invoking OpenAI gpt-4o reviewer" >&2
+  # Reasoning models (GPT-5 and later) take reasoning_effort, not temperature.
+  # Set REVIEWER_REASONING_EFFORT=none for a model without reasoning (e.g. gpt-4o).
+  local model="${REVIEWER_MODEL:-gpt-5.6-sol}"
+  local effort="${REVIEWER_REASONING_EFFORT:-high}"
+  [[ "$effort" == "none" ]] && effort=""
+  echo "INFO: Invoking OpenAI ${model} reviewer${effort:+ (reasoning effort: ${effort})}" >&2
 
   if [[ -z "${OPENAI_API_KEY:-}" ]]; then
     echo "ERROR: OPENAI_API_KEY is not set. Required for the reviewer role." >&2
     exit 1
   fi
 
-  # Call OpenAI gpt-4o via chat completions API
+  # Call OpenAI via the chat completions API
   local request_body
-  request_body=$(jq -n --arg content "$prompt" '{
-    model: "gpt-4o",
-    messages: [{"role": "user", "content": $content}],
-    temperature: 0
-  }')
+  request_body=$(jq -n --arg content "$prompt" --arg model "$model" --arg effort "$effort" '{
+    model: $model,
+    messages: [{"role": "user", "content": $content}]
+  } + (if $effort == "" then {} else {reasoning_effort: $effort} end)')
 
   local api_response
-  api_response=$(curl -s -f -X POST \
+  api_response=$(curl -sS -X POST \
     "https://api.openai.com/v1/chat/completions" \
     -H "Authorization: Bearer ${OPENAI_API_KEY}" \
     -H "Content-Type: application/json" \
@@ -578,6 +582,14 @@ _run_reviewer() {
     echo "ERROR: OpenAI API call failed (curl exit $?)" >&2
     exit 1
   }
+
+  # Surface API errors (unknown model, no access, bad parameter) instead of an empty reply
+  local api_error
+  api_error=$(printf '%s' "$api_response" | jq -r '.error.message // empty' 2>/dev/null)
+  if [[ -n "$api_error" ]]; then
+    echo "ERROR: OpenAI API error (model ${model}): ${api_error}" >&2
+    exit 1
+  fi
 
   local response_text
   response_text=$(printf '%s' "$api_response" | jq -r '.choices[0].message.content // empty')
