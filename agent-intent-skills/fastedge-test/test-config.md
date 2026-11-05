@@ -27,6 +27,11 @@ A complete schema reference for `fastedge-config.test.json`. Agents use this to 
    - There is no `response`, `dotenvEnabled` or `logLevel` field
    - Do NOT include `envVars` or `secrets` — these are not fields in the config file; they come from dotenv files only
 
+   After the table, keep these subsections (headings `###`, in this order). Each is backed by the source's TEST_CONFIG documentation; omit one only if the source no longer documents it:
+   - **Required vs. Default Distinction** — schema `required` arrays vs runtime defaults
+   - **HTTP Port Pinning** — `httpPort` range (from the schema), the 8100–8199 dynamic pool, when to pin (Codespaces / Docker port-forwarding, stable preview URLs, external tooling), fail-fast on a busy port with the exact error text from the source, and the advice to pin outside the pool
+   - **Built-In Responder** — `request.url: "built-in"` for CDN configs (no upstream fetch), the default JSON echo, and the `x-debugger-status` / `x-debugger-content` (`status-only`, `body-only`) control headers
+
 3. **Runtime secrets and env vars** — one-line note that `envVars` and `secrets` are not config fields, with a reference to the dotenv configuration guide for the full dotenv setup. Do NOT inline dotenv details — prefix scheme, file options, and priority order all belong in the dotenv configuration guide.
 
 4. **CDN example** — complete `fastedge-config.test.json` for a proxy-wasm app with realistic values; use `client.ip` (not `request.ip`) for the client IP property
