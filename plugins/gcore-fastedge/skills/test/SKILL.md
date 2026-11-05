@@ -351,6 +351,7 @@ Use the WASM build output path from the build config. For CDN apps, include repr
 {
   "$schema": "<see above>",
   "description": "Test config for <app-name>",
+  "appType": "proxy-wasm",
   "wasm": {
     "path": "target/wasm32-wasip1/release/<crate>.wasm",
     "description": "<app description>"
@@ -365,14 +366,11 @@ Use the WASM build output path from the build config. For CDN apps, include repr
     "request.country": "US",
     "request.city": "New York",
     "request.continent": "NA"
-  },
-  "logLevel": 0,
-  "envVars": {},
-  "secrets": {}
+  }
 }
 ```
 
-Omit `properties` for HTTP-WASM apps (not applicable).
+For HTTP-WASM apps: `"appType": "http-wasm"`, `request.path` (e.g. `"/"`) instead of `request.url`, and `"properties": {}` (the schema still requires it). There is no `logLevel`, `envVars` or `secrets` field; env vars and secrets come from dotenv files (Step 5.5).
 
 ---
 
@@ -387,26 +385,31 @@ These are **app-level** concerns and live at the project root, alongside `fixtur
 **Detect whether secrets are needed:** check the source code for `getSecret(` or `getEnv(`
 calls. If found, determine which keys are required and set them up using one of two methods:
 
+Both methods use dotenv files at the project root. `fastedge-config.test.json` has no
+`envVars` or `secrets` fields; the schema rejects them.
+
+Enable dotenv in the test suite. `path` is the **directory** holding the dotenv files; set it
+explicitly because the test file is in `fastedge-test/`:
+```js
+await runAndExit(defineTestSuite({
+  wasmPath: resolve(here, '../target/wasm32-wasip1/release/<crate>.wasm'),
+  runnerConfig: { dotenv: { enabled: true, path: resolve(here, '..') } },
+  tests: [ /* ... */ ],
+}));
+```
+
 ### If the values are non-sensitive (safe to commit with placeholders):
 
-Add them to `fastedge-config.test.json`:
-```json
-{
-  "envVars": { "IDP_ENTITY_ID": "https://idp.example.com" },
-  "secrets": { "SESSION_SECRET": "local-placeholder" }
-}
+Put them in `.env.variables` (env vars) at the project root, no prefix, and commit it.
+Values read with `getSecret()` always take the sensitive route below:
+```bash
+IDP_ENTITY_ID=https://idp.example.com
 ```
 
 ### If the values are sensitive (real secrets, certificates, tokens):
 
-1. Enable dotenv in the test suite by adding `runnerConfig: { dotenvEnabled: true }`:
-```js
-await runAndExit(defineTestSuite({
-  wasmPath: resolve(here, '../target/wasm32-wasip1/release/<crate>.wasm'),
-  runnerConfig: { dotenvEnabled: true },
-  tests: [ /* ... */ ],
-}));
-```
+1. Put them in `.env` at the project root (gitignored), using the `FASTEDGE_VAR_SECRET_` /
+   `FASTEDGE_VAR_ENV_` prefixes.
 
 2. Create `.env.example` at the project root (committed) showing the required variables:
 ```bash
@@ -419,7 +422,7 @@ FASTEDGE_VAR_ENV_IDP_ENTITY_ID=https://your-idp.example.com
 3. Add `.env` and `.env.secrets` to `.gitignore` — tell the user to do this if not already present.
 
 **For SAML apps specifically:** the IdP certificate and any signing keys must go in `.env`
-via `FASTEDGE_VAR_SECRET_` prefix — never commit real certs to `fastedge-config.test.json`.
+via `FASTEDGE_VAR_SECRET_` prefix — never commit real certs.
 
 ---
 

@@ -18,7 +18,7 @@ A concise, decision-dense API cheat-sheet. Not a tutorial. Agents use this to ge
 2. **CDN vs HTTP-WASM** — a brief side-by-side comparison of the two test models (hooks lifecycle vs single execute call) so agents can select the right pattern for the app type
 
 3. **Core functions** — function signature, parameter types, return type, and one-line description for each:
-   - `defineTestSuite(config)` — config shape, mention `dotenvEnabled` option with a reference to the dotenv configuration guide (do NOT inline dotenv details)
+   - `defineTestSuite(config)` — config shape, mention the `dotenv: { enabled, path }` option with a reference to the dotenv configuration guide (do NOT inline dotenv details)
    - `runAndExit(suite)` — exits 0/1
    - `runTestSuite(suite)` — programmatic, returns `SuiteResult`
    - `runFlow(runner, options)` — CDN only; named options, returns hook results by name
@@ -39,7 +39,7 @@ A concise, decision-dense API cheat-sheet. Not a tutorial. Agents use this to ge
 - Architecture explanation of how the test runner works internally
 - Marketing language or feature highlights
 - Anything not directly needed to write a test
-- **Dotenv details** — prefix scheme, file options, priority order all belong in the dotenv configuration guide. Only mention `dotenvEnabled` as a boolean option in `defineTestSuite` with a reference to that guide.
+- **Dotenv details** — prefix scheme, file options, priority order all belong in the dotenv configuration guide. Only mention `runnerConfig.dotenv` (`{ enabled, path }`) in `defineTestSuite` with a reference to that guide.
 
 ## Quality bar
 The existing file at `plugins/gcore-fastedge/skills/test/reference/test-framework.md` sets the quality bar. Update it to reflect the current package version and API surface — do not change the structure unless the source has fundamentally changed.
