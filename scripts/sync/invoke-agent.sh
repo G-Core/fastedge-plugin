@@ -26,6 +26,8 @@ set -euo pipefail
 #     --input-file <path>             generator output to review
 #     --source-dir <dir>              fetched source files directory
 #     --output-file <path>            write VERDICT and FINDINGS here
+#     --previous-file <path>          optional: current reference file (whole-file updates)
+#     --intent-file <path>            optional: synthesis instructions given to the generator
 #
 # Usage (splice):
 #   invoke-agent.sh --role splice \
@@ -463,6 +465,7 @@ _REVIEW_CRITERIA='Evaluate the proposed reference document update against these 
 3. Agent-consumability: Is the content precise and structured for AI consumption (no vague prose, no marketing language)?
 4. Traceability: Is the frontmatter block present, correctly formatted, and does the commit SHA match the source? Note: the `ref` field is the git tag used for the sparse checkout — do NOT compare it against any version field in package.json or Cargo.toml. Those are npm/crate release versions and are unrelated to the git tag.
 5. Scope compliance: If a section was specified, does the update touch ONLY that section?
+6. Retention (only when a previous version is provided): Compare against the previous version. REJECT if the update drops a section, example or explanatory detail that the source material still documents, or misses a section the synthesis instructions require. Removing content the source no longer backs is correct and is not a finding.
 
 Note: Reference documents are part of a Claude Code plugin and may contain cross-references that are internal to the plugin itself. Plugin skill references (e.g. `/gcore-fastedge:test`) and relative paths to sibling reference files (e.g. `./test-config.md`) are valid plugin-internal links — do NOT flag these as unverifiable against the source repo material. Only flag content that is supposed to reflect the source repo but does not.
 
@@ -478,6 +481,8 @@ FINDINGS: <specific issues found, referenced by section or line>'
 _build_reviewer_prompt() {
   local generated_content="$1"
   local source_content="$2"
+  local previous_content="${3:-}"
+  local intent_content="${4:-}"
 
   cat <<PROMPT
 ## Proposed Reference Document Update
@@ -487,6 +492,14 @@ ${generated_content}
 ## Source Material Used to Generate It
 
 ${source_content}
+PROMPT
+  if [[ -n "$previous_content" ]]; then
+    printf '\n## Previous Version of the Reference Document\n\n%s\n' "$previous_content"
+  fi
+  if [[ -n "$intent_content" ]]; then
+    printf '\n## Synthesis Instructions Given to the Generator\n\n%s\n' "$intent_content"
+  fi
+  cat <<PROMPT
 
 ## Review Instructions
 
@@ -496,6 +509,7 @@ PROMPT
 
 _run_reviewer() {
   local INPUT_FILE="" SOURCE_DIR="" SOURCE_FILES="" OUTPUT_FILE="" SDK_PACKAGE="" SDK_VERSION=""
+  local PREVIOUS_FILE="" INTENT_FILE=""
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -505,6 +519,8 @@ _run_reviewer() {
       --output-file)  OUTPUT_FILE="$2";  shift 2 ;;
       --sdk-package)  SDK_PACKAGE="$2";  shift 2 ;;
       --sdk-version)  SDK_VERSION="$2";  shift 2 ;;
+      --previous-file) PREVIOUS_FILE="$2"; shift 2 ;;
+      --intent-file)  INTENT_FILE="$2";  shift 2 ;;
       *) echo "ERROR: Unknown argument: $1" >&2; exit 1 ;;
     esac
   done
@@ -531,8 +547,12 @@ _run_reviewer() {
     source_content=$(sed "s|\"${SDK_PACKAGE}\": *\"[^\"]*\"|\"${SDK_PACKAGE}\": \"^${SDK_VERSION}\"|g" <<< "$source_content")
   fi
 
+  local previous_content="" intent_content=""
+  [[ -n "$PREVIOUS_FILE" && -f "$PREVIOUS_FILE" ]] && previous_content=$(cat "$PREVIOUS_FILE")
+  [[ -n "$INTENT_FILE" && -f "$INTENT_FILE" ]] && intent_content=$(cat "$INTENT_FILE")
+
   local prompt
-  prompt=$(_build_reviewer_prompt "$generated_content" "$source_content")
+  prompt=$(_build_reviewer_prompt "$generated_content" "$source_content" "$previous_content" "$intent_content")
 
   echo "INFO: Invoking OpenAI gpt-4o reviewer" >&2
 

@@ -544,6 +544,35 @@ fi
 
 run_agents() { OVERALL_VERDICT="ACCEPT"; CHANGED_FILES="plugins/test/ref.md"; }
 
+# ── removed_headings: headings dropped by the new version, code fences ignored ─
+cat > "$TMPWORK/old.md" <<'MD'
+# Title
+## Schema
+### HTTP Port Pinning
+```bash
+# Environment variables
+```
+### Built-In Responder
+## Examples
+MD
+cat > "$TMPWORK/new.md" <<'MD'
+# Title
+## Schema
+```bash
+# Something else
+```
+## Examples
+## See Also
+MD
+removed_out=$(removed_headings "$TMPWORK/old.md" "$TMPWORK/new.md")
+expected=$'### Built-In Responder\n### HTTP Port Pinning'
+if [[ "$removed_out" == "$expected" ]]; then
+  pass "(removed_headings) reports dropped headings, ignores fenced code and additions"
+else
+  fail "(removed_headings) reports dropped headings, ignores fenced code and additions" \
+    "got: '$removed_out'"
+fi
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 
 echo ""

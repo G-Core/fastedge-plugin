@@ -167,6 +167,12 @@ Testing skill is live. Scaffold and deploy integration is planned. See `context/
 
 ## Recent Changes
 
+- **Removed-section detection** (November 2026): the v0.2.8 fastedge-test sync dropped two backed sections and the reviewer accepted it (it never saw the previous file)
+  - `process-repos.sh`: `removed_headings` compares the previous and generated reference file (headings `#`–`####`, code fences ignored); dropped headings go into the findings and set `SECTIONS_REMOVED`
+  - `manage-pr.sh`: `sections-removed` label (`fbca04`), added/removed like `missing-intent-skill` (shared `toggle_label`)
+  - `invoke-agent.sh` reviewer: optional `--previous-file` and `--intent-file`; criterion 6 (Retention)
+  - **PR labels**: `auto-ref-update`, `needs-review`, `missing-intent-skill`, `sections-removed`
+
 - **Missing intent-skill visibility** (April 2026): Pipeline now warns and labels PRs when agent-intent-skills are absent
   - `process-repos.sh`: yellow `[WARNING]` logged to stderr per mapping entry missing an intent file; `MISSING_INTENT` flag propagated to PR management
   - `manage-pr.sh`: new `missing-intent-skill` label (`e4e669`, yellow-green) added to PR when any entry lacks intent; removed on subsequent runs where all entries have intent files
