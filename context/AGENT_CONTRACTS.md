@@ -59,7 +59,7 @@ When `section` is set, the splice role in `invoke-agent.sh` is responsible for s
 
 **Purpose**: Evaluate the generator agent's output for quality, accuracy, and compliance.
 
-**Implementation**: OpenAI `gpt-4o` via `https://api.openai.com/v1/chat/completions` (curl + jq). Auth: `OPENAI_API_KEY`.
+**Implementation**: OpenAI via `https://api.openai.com/v1/chat/completions` (curl + jq). Model `REVIEWER_MODEL` (default `gpt-5.6-sol`), `reasoning_effort` `REVIEWER_REASONING_EFFORT` (default `high`). Auth: `OPENAI_API_KEY`.
 
 ### Required Inputs
 

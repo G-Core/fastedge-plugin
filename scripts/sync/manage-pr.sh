@@ -29,6 +29,7 @@ VERDICT=""
 FINDINGS=""
 BASE_BRANCH=""
 MISSING_INTENT="false"
+SECTIONS_REMOVED="false"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -39,6 +40,7 @@ while [[ $# -gt 0 ]]; do
     --verdict)       VERDICT="$2";       shift 2 ;;
     --findings)      FINDINGS="$2";      shift 2 ;;
     --missing-intent) MISSING_INTENT="$2"; shift 2 ;;
+    --sections-removed) SECTIONS_REMOVED="$2"; shift 2 ;;
     --base)          BASE_BRANCH="$2";   shift 2 ;;
     *) echo "ERROR: Unknown argument: $1" >&2; exit 1 ;;
   esac
@@ -83,6 +85,7 @@ ensure_label() {
 ensure_label "auto-ref-update"      "0075ca"
 ensure_label "needs-review"          "d93f0b"
 ensure_label "missing-intent-skill"  "e4e669"
+ensure_label "sections-removed"      "fbca04"
 
 # ── Build PR body ─────────────────────────────────────────────────────────────
 
@@ -257,22 +260,29 @@ if [[ -n "$EXISTING_PR_NUMBER" ]]; then
     fi
   fi
 
-  # missing-intent-skill label management
-  if [[ "$MISSING_INTENT" == "true" ]]; then
-    echo "INFO: Missing intent skills detected — adding missing-intent-skill label to PR #${EXISTING_PR_NUMBER}" >&2
-    gh pr edit "$EXISTING_PR_NUMBER" --add-label "missing-intent-skill" 2>/dev/null || {
-      echo "WARN: Could not add missing-intent-skill label" >&2
-    }
-  else
-    existing_labels=$(gh pr view "$EXISTING_PR_NUMBER" --json labels \
-      -q '.labels[].name' 2>/dev/null || echo "")
-    if echo "$existing_labels" | grep -qF "missing-intent-skill"; then
-      echo "INFO: All intent skills present — removing missing-intent-skill label from PR #${EXISTING_PR_NUMBER}" >&2
-      gh pr edit "$EXISTING_PR_NUMBER" --remove-label "missing-intent-skill" 2>/dev/null || {
-        echo "WARN: Could not remove missing-intent-skill label" >&2
+  # Flag labels: present while the condition holds, removed once it clears.
+  toggle_label() {
+    local label="$1" on="$2"
+    if [[ "$on" == "true" ]]; then
+      echo "INFO: Adding ${label} label to PR #${EXISTING_PR_NUMBER}" >&2
+      gh pr edit "$EXISTING_PR_NUMBER" --add-label "$label" 2>/dev/null || {
+        echo "WARN: Could not add ${label} label" >&2
       }
+    else
+      local existing_labels
+      existing_labels=$(gh pr view "$EXISTING_PR_NUMBER" --json labels \
+        -q '.labels[].name' 2>/dev/null || echo "")
+      if echo "$existing_labels" | grep -qF "$label"; then
+        echo "INFO: Removing ${label} label from PR #${EXISTING_PR_NUMBER}" >&2
+        gh pr edit "$EXISTING_PR_NUMBER" --remove-label "$label" 2>/dev/null || {
+          echo "WARN: Could not remove ${label} label" >&2
+        }
+      fi
     fi
-  fi
+  }
+
+  toggle_label "missing-intent-skill" "$MISSING_INTENT"
+  toggle_label "sections-removed"     "$SECTIONS_REMOVED"
 fi
 
 echo "INFO: PR management complete for ${REPO_ID} (${VERDICT})" >&2

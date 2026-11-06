@@ -225,7 +225,7 @@ workflow_dispatch / repository_dispatch (fastedge-ref-update)
             │
             for each target_mapping entry:
               invoke-agent.sh --role generator ← claude -p with synthesis intent
-              invoke-agent.sh --role reviewer  ← OpenAI gpt-4o, VERDICT + FINDINGS
+              invoke-agent.sh --role reviewer  ← OpenAI gpt-5.6-sol (REVIEWER_MODEL), VERDICT + FINDINGS
             │
             [dry_run gate — skips writes/PR/tag when dry_run=true]
             │
@@ -258,7 +258,7 @@ workflow_dispatch / repository_dispatch (fastedge-ref-update)
 | `scripts/sync/validate-sources.sh`   | Validates `sources.json` v2 (7 rules including version check and v1 field rejection) |
 | `scripts/sync/validate-contract.sh`  | Validates a contract directory's `manifest.json` (6 rules, advisory/strict modes)  |
 | `scripts/sync/fetch-repo.sh`         | Sparse checkout `contract_path` only; emit `CHANGED=true/false`; baseline tags     |
-| `scripts/sync/invoke-agent.sh`       | Generator (Claude), reviewer (OpenAI gpt-4o), and section-splice roles             |
+| `scripts/sync/invoke-agent.sh`       | Generator (Claude), reviewer (OpenAI, gpt-5.6-sol by default), and section-splice roles             |
 | `scripts/sync/manage-pr.sh`          | Create-or-update PR via `gh` CLI; label management (`needs-review`, `missing-intent-skill`) |
 | `scripts/sync/process-repos.sh`      | Main loop; reads manifest after fetch; per-repo isolation                          |
 

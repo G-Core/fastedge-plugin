@@ -113,6 +113,16 @@ read_manifest() {
   fi
 }
 
+# removed_headings <old-file> <new-file>
+# Prints, one per line, the Markdown headings (#..####) of old-file that new-file
+# no longer has. Lines inside fenced code blocks are ignored (shell comments
+# in examples look like headings).
+removed_headings() {
+  local old="$1" new="$2"
+  _headings() { awk '/^(```|~~~)/{f=!f; next} !f && /^#{1,4} /' "$1" | sort -u; }
+  comm -23 <(_headings "$old") <(_headings "$new")
+}
+
 # run_agents <repo-index> <staging-dir> <checkout-dir>
 # Reads target_mapping from manifest.json, then for each mapping entry:
 # resolves source files from the sources field, invokes generator then reviewer
@@ -143,6 +153,7 @@ run_agents() {
   CHANGED_FILES=""
   OVERALL_VERDICT="ACCEPT"
   MISSING_INTENT=false
+  SECTIONS_REMOVED=false
   local findings_file="${staging_dir}/combined-findings.txt"
   > "$findings_file"
 
@@ -250,10 +261,22 @@ run_agents() {
           exit 1
         }
 
+      # Whole-file updates: record headings the new version drops, and give the
+      # reviewer the previous version so it can judge what was removed.
+      local previous_args=()
+      if [[ -z "$section" && -f "$reference_file" ]]; then
+        previous_args=(--previous-file "$reference_file")
+        local removed
+        removed=$(removed_headings "$reference_file" "$gen_output" | paste -sd ';' - | sed 's/;/; /g')
+        [[ -n "$removed" ]] && echo "REMOVED_HEADINGS=${removed}" >> "$result_file"
+      fi
+
       bash "${SCRIPT_DIR}/invoke-agent.sh" \
         --role reviewer \
         --input-file     "$gen_output" \
         --source-dir     "$checkout_dir" \
+        "${previous_args[@]}" \
+        "${intent_args[@]}" \
         "${source_files_args[@]}" \
         "${sdk_args[@]}" \
         --output-file    "$rev_output" < /dev/null || {
@@ -299,6 +322,10 @@ run_agents() {
 
     grep -q "^MISSING_INTENT=true" "$result_file" && MISSING_INTENT=true
 
+    local removed_headings_line
+    removed_headings_line=$(grep "^REMOVED_HEADINGS=" "$result_file" | head -1 | sed 's/^REMOVED_HEADINGS=//')
+    [[ -n "$removed_headings_line" ]] && SECTIONS_REMOVED=true
+
     local entry_verdict
     entry_verdict=$(grep "^VERDICT=" "$result_file" | head -1 | sed 's/^VERDICT=//')
     [[ "$entry_verdict" == "REJECT" ]] && OVERALL_VERDICT="REJECT"
@@ -310,6 +337,9 @@ run_agents() {
     if [[ -f "$rev_output" ]]; then
       local entry_findings
       entry_findings=$(tail -n +3 "$rev_output")
+      if [[ -n "$removed_headings_line" ]]; then
+        entry_findings="Sections removed from the previous version: ${removed_headings_line}"$'\n'"${entry_findings}"
+      fi
       {
         echo "**${reference_file}${section:+ / ${section}}**: ${entry_verdict}"
         echo ""
@@ -395,6 +425,7 @@ open_or_update_pr() {
     --verdict       "$OVERALL_VERDICT" \
     --findings      "$combined_findings" \
     --missing-intent "$MISSING_INTENT" \
+    --sections-removed "$SECTIONS_REMOVED" \
     --base          "$DEFAULT_BRANCH") || {
     echo "WARN: manage-pr.sh failed for ${REPO_ID} — PR may need manual attention" >&2
     PR_URL="(pr error)"

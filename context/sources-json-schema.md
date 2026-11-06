@@ -141,13 +141,13 @@ These fields from v1 are **no longer valid** and will cause a validation error:
 | Value       | Status              | Agent                                                        |
 | ----------- | ------------------- | ------------------------------------------------------------ |
 | `"claude"`  | **Supported**       | Anthropic Claude via Claude Code CLI — the only supported generator today |
-| `"openai"`  | **Supported**       | OpenAI gpt-4o via REST API — the only supported reviewer today |
+| `"openai"`  | **Supported**       | OpenAI via REST API (`REVIEWER_MODEL`, default `gpt-5.6-sol`) — the only supported reviewer today |
 | `"codex"`   | Reserved (not impl) | OpenAI Codex / ChatGPT                                       |
 | `"gemini"`  | Reserved (not impl) | Google Gemini                                                |
 
 > **Current implementation**: `invoke-agent.sh` does not branch on these field values.
 > The generator role always invokes Claude (`claude -p …`); the reviewer role always calls
-> OpenAI gpt-4o. The fields document intent and enforce the generator ≠ reviewer constraint
+> OpenAI (`REVIEWER_MODEL`, default `gpt-5.6-sol`). The fields document intent and enforce the generator ≠ reviewer constraint
 > at validation time.
 
 ---
