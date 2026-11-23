@@ -6,6 +6,7 @@
 #   (2) REVIEWER_MODEL / REVIEWER_REASONING_EFFORT=none → that model, no reasoning_effort
 #   (3) API error body → exit 1 with the API message, no output file
 #   (4) successful reply → VERDICT written to the output file
+#   (5) a prompt over 128 KiB (one argument's limit) reaches the request whole
 #
 # Usage: bash scripts/sync/tests/test-reviewer-request.sh
 set -uo pipefail
@@ -25,11 +26,11 @@ mkdir -p "$TMPWORK/src/docs" "$TMPWORK/bin"
 echo "# Source" > "$TMPWORK/src/docs/SOURCE.md"
 echo "# Generated" > "$TMPWORK/gen.md"
 
-# curl mock: records the -d body, replies with $MOCK_REPLY
+# curl mock: records the request body (read from stdin), replies with $MOCK_REPLY
 cat > "$TMPWORK/bin/curl" <<'MOCK'
 #!/usr/bin/env bash
 while [[ $# -gt 0 ]]; do
-  [[ "$1" == "-d" ]] && printf '%s' "$2" > "$MOCK_BODY_FILE"
+  [[ "$1" == "--data-binary" && "$2" == "@-" ]] && cat > "$MOCK_BODY_FILE"
   shift
 done
 printf '%s' "$MOCK_REPLY"
@@ -88,6 +89,17 @@ if [[ "$(head -1 "$TMPWORK/out.txt" 2>/dev/null)" == "VERDICT=ACCEPT" ]]; then
   pass "(4) successful reply: VERDICT written"
 else
   fail "(4) successful reply: VERDICT written" "out=$(cat "$TMPWORK/out.txt" 2>/dev/null)"
+fi
+
+# (5)
+rm -f "$TMPWORK/body.json" "$TMPWORK/out.txt"
+{ echo "# Source"; head -c 200000 /dev/zero | tr '\0' 'x'; echo; echo "END-OF-BIG-SOURCE"; } > "$TMPWORK/src/docs/SOURCE.md"
+MOCK_REPLY="$OK_REPLY" run_reviewer 2>/dev/null
+if jq -e '.messages[0].content | contains("END-OF-BIG-SOURCE")' "$TMPWORK/body.json" >/dev/null 2>&1 \
+    && [[ "$(head -1 "$TMPWORK/out.txt" 2>/dev/null)" == "VERDICT=ACCEPT" ]]; then
+  pass "(5) a prompt over 128 KiB reaches the request whole"
+else
+  fail "(5) a prompt over 128 KiB reaches the request whole"
 fi
 
 echo ""
