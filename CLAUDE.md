@@ -159,13 +159,20 @@ Testing skill is live. Scaffold and deploy integration is planned. See `context/
 - Markdown (skill prompts, blueprints, intent skills), Bash (pipeline scripts — existing, no changes), YAML (GitHub Actions — existing triggers) + Auto-ref-update pipeline (001), sources.json v2, manifest.json contracts, `gh` CLI (002-scaffold-redesign)
 - Git-tracked Markdown reference files in `plugins/gcore-fastedge/skills/scaffold/reference/` (002-scaffold-redesign)
 
-- Bash (scripts), YAML (GitHub Actions workflow) + `gh` CLI (pre-installed on ubuntu-latest), `jq` (pre-installed), `claude` CLI (installed at workflow start), OpenAI gpt-4o REST API (`https://api.openai.com/v1/`) via `curl`
+- Bash (scripts), YAML (GitHub Actions workflow) + `gh` CLI (pre-installed on ubuntu-latest), `jq` (pre-installed), `claude` CLI (installed at workflow start), OpenAI REST API (`https://api.openai.com/v1/`) via `curl` (reviewer model `REVIEWER_MODEL`, default `gpt-5.6-sol`)
 - `sources.json` v2 (slim pipeline config) + `manifest.json` (source-side mapping — points at docs/, no content in contract dir)
 - Git annotated tags `refs/tags/ref-update/<repo-id>` (commit baselines, branchless — no committed file)
 - `agent-intent-skills/<repo-id>/<filename>.md` — per-reference-file synthesis instructions injected into generator prompt
 - Contract model: `fastedge-plugin-source/` in source repos contains only manifest.json + .generation-config.md (local maintenance instructions). `docs/` is single source of truth. Pipeline fetches manifest → doc paths → applies intent skills.
 
 ## Recent Changes
+
+- **Removed-section detection** (November 2026): the v0.2.8 fastedge-test sync dropped two backed sections and the reviewer accepted it (it never saw the previous file)
+  - `process-repos.sh`: `removed_headings` compares the previous and generated reference file (headings `#`–`####`, code fences ignored); dropped headings go into the findings and set `SECTIONS_REMOVED`
+  - `manage-pr.sh`: `sections-removed` label (`fbca04`), added/removed like `missing-intent-skill` (shared `toggle_label`)
+  - `invoke-agent.sh` reviewer: optional `--previous-file` and `--intent-file`; criterion 6 (Retention)
+  - Reviewer model: `gpt-5.6-sol` at `reasoning_effort: high` (was gpt-4o at temperature 0); repository variables `REVIEWER_MODEL` / `REVIEWER_REASONING_EFFORT` override it; OpenAI API errors are now printed
+  - **PR labels**: `auto-ref-update`, `needs-review`, `missing-intent-skill`, `sections-removed`
 
 - **Missing intent-skill visibility** (April 2026): Pipeline now warns and labels PRs when agent-intent-skills are absent
   - `process-repos.sh`: yellow `[WARNING]` logged to stderr per mapping entry missing an intent file; `MISSING_INTENT` flag propagated to PR management

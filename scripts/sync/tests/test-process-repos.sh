@@ -544,6 +544,70 @@ fi
 
 run_agents() { OVERALL_VERDICT="ACCEPT"; CHANGED_FILES="plugins/test/ref.md"; }
 
+# ── removed_headings: headings dropped by the new version, code fences ignored ─
+cat > "$TMPWORK/old.md" <<'MD'
+# Title
+## Schema
+### HTTP Port Pinning
+```bash
+# Environment variables
+```
+### Built-In Responder
+## Examples
+MD
+cat > "$TMPWORK/new.md" <<'MD'
+# Title
+## Schema
+```bash
+# Something else
+```
+## Examples
+## See Also
+MD
+removed_out=$(removed_headings "$TMPWORK/old.md" "$TMPWORK/new.md")
+expected=$'### Built-In Responder\n### HTTP Port Pinning'
+if [[ "$removed_out" == "$expected" ]]; then
+  pass "(removed_headings) reports dropped headings, ignores fenced code and additions"
+else
+  fail "(removed_headings) reports dropped headings, ignores fenced code and additions" \
+    "got: '$removed_out'"
+fi
+
+# ── removed_headings: a longer fence holds a shorter one ─────────────────────
+cat > "$TMPWORK/old.md" <<'MD'
+# Title
+````markdown
+```bash
+# old shell comment
+```
+````
+~~~
+```
+# tilde block comment
+~~~
+```~ info string
+# info block comment
+```
+## Dropped
+## Kept
+MD
+cat > "$TMPWORK/new.md" <<'MD'
+# Title
+````markdown
+```bash
+# new shell comment
+```
+````
+## Kept
+MD
+removed_out=$(removed_headings "$TMPWORK/old.md" "$TMPWORK/new.md")
+if [[ "$removed_out" == "## Dropped" ]]; then
+  pass "(removed_headings) a block closes only on a matching fence at least as long"
+else
+  fail "(removed_headings) a block closes only on a matching fence at least as long" \
+    "got: '$removed_out'"
+fi
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 
 echo ""

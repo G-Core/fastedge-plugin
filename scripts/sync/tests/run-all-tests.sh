@@ -11,6 +11,7 @@ SUITES=(
   test-fetch-repo.sh
   test-section-splice.sh
   test-verdict-parse.sh
+  test-reviewer-request.sh
   test-process-repos.sh
   test-manage-pr.sh
   test-docs-index-pipeline.sh

@@ -508,5 +508,41 @@ fi
 
 # =============================================================================
 echo ""
+echo "manage-pr.sh — sections-removed label"
+echo "======================================="
+# =============================================================================
+
+# (26) --sections-removed true → gh pr edit --add-label sections-removed called
+MOCK_DIR_26="$TMPWORK/mock-26"
+make_gh_mock "$MOCK_DIR_26"
+
+output26=$(PATH="$MOCK_DIR_26:$PATH" bash "$MANAGE_PR" \
+  "${COMMON_ARGS[@]}" --sections-removed "true" --base "main" 2>&1) && rc26=0 || rc26=$?
+EDIT_LOG_26="$(cat "$MOCK_DIR_26/pr-edit.log" 2>/dev/null || echo "")"
+
+if [[ "$rc26" -eq 0 ]] && echo "$EDIT_LOG_26" | grep -qF -- "--add-label sections-removed"; then
+  pass "(26) --sections-removed true: sections-removed label added"
+else
+  fail "(26) --sections-removed true: sections-removed label added" \
+    "exit=$rc26, edit_log='$EDIT_LOG_26'"
+fi
+
+# (27) --sections-removed omitted → sections-removed label NOT added
+MOCK_DIR_27="$TMPWORK/mock-27"
+make_gh_mock "$MOCK_DIR_27"
+
+output27=$(PATH="$MOCK_DIR_27:$PATH" bash "$MANAGE_PR" \
+  "${COMMON_ARGS[@]}" --base "main" 2>&1) && rc27=0 || rc27=$?
+EDIT_LOG_27="$(cat "$MOCK_DIR_27/pr-edit.log" 2>/dev/null || echo "")"
+
+if [[ "$rc27" -eq 0 ]] && ! echo "$EDIT_LOG_27" | grep -qF -- "--add-label sections-removed"; then
+  pass "(27) --sections-removed omitted: sections-removed label not added"
+else
+  fail "(27) --sections-removed omitted: sections-removed label not added" \
+    "exit=$rc27, edit_log='$EDIT_LOG_27'"
+fi
+
+# =============================================================================
+echo ""
 echo "Results: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]

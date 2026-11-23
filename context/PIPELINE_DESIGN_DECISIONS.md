@@ -25,9 +25,11 @@ result=$(claude -p "$(cat prompt.md)" --output-format json | jq -r '.result')
 
 ---
 
-## 2. Review Agent — OpenAI gpt-4o
+## 2. Review Agent — OpenAI (gpt-5.6-sol by default)
 
-**Decision**: Use OpenAI `gpt-4o` via `https://api.openai.com/v1/chat/completions` with `OPENAI_API_KEY`.
+**Decision**: Use OpenAI via `https://api.openai.com/v1/chat/completions` with `OPENAI_API_KEY`. Model `gpt-5.6-sol` at `reasoning_effort: high` by default (November 2026); override with the repository variables `REVIEWER_MODEL` and `REVIEWER_REASONING_EFFORT` (`none` for a model without reasoning, such as `gpt-4o`).
+
+**Why not gpt-4o any more**: the fastedge-test v0.2.8 sync dropped two sections the source still documents and gpt-4o accepted it. Finding what is missing across a long prompt (generated file, source, previous version, intent) is where a single-pass model is weakest. Reasoning models take `reasoning_effort` and reject a non-default `temperature`, so the request no longer sends `temperature: 0`.
 
 **Rationale**: The cross-agent review principle is preserved: Claude generates, OpenAI reviews. Previously Kimi K2.5 was used via Gcore's inference API; switched to OpenAI gpt-4o after Kimi access was discontinued. The curl pattern is identical (URL, model name, and auth header change; everything else stays the same).
 
@@ -37,7 +39,7 @@ review_output=$(curl -s https://api.openai.com/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $OPENAI_API_KEY" \
   -d "$(jq -n --arg prompt "$REVIEW_PROMPT" \
-    '{"model":"gpt-4o","messages":[{"role":"user","content":$prompt}],"temperature":0}')" \
+    '{"model":"gpt-5.6-sol","messages":[{"role":"user","content":$prompt}],"reasoning_effort":"high"}')" \
   | jq -r '.choices[0].message.content')
 ```
 

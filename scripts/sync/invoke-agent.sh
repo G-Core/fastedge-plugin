@@ -7,7 +7,7 @@ set -euo pipefail
 #   generator  Load reference file + source files, build prompt, call Claude,
 #              validate and write output.
 #   reviewer   Load generator output + source files, embed review criteria,
-#              call OpenAI gpt-4o via REST API, parse VERDICT/FINDINGS, write output file.
+#              call OpenAI (REVIEWER_MODEL, default gpt-5.6-sol) via REST API, parse VERDICT/FINDINGS, write output file.
 #   splice     Splice generator output into a named section of a reference file
 #              and update traceability frontmatter.
 #
@@ -26,6 +26,8 @@ set -euo pipefail
 #     --input-file <path>             generator output to review
 #     --source-dir <dir>              fetched source files directory
 #     --output-file <path>            write VERDICT and FINDINGS here
+#     --previous-file <path>          optional: current reference file (whole-file updates)
+#     --intent-file <path>            optional: synthesis instructions given to the generator
 #
 # Usage (splice):
 #   invoke-agent.sh --role splice \
@@ -463,6 +465,7 @@ _REVIEW_CRITERIA='Evaluate the proposed reference document update against these 
 3. Agent-consumability: Is the content precise and structured for AI consumption (no vague prose, no marketing language)?
 4. Traceability: Is the frontmatter block present, correctly formatted, and does the commit SHA match the source? Note: the `ref` field is the git tag used for the sparse checkout — do NOT compare it against any version field in package.json or Cargo.toml. Those are npm/crate release versions and are unrelated to the git tag.
 5. Scope compliance: If a section was specified, does the update touch ONLY that section?
+6. Retention (only when a previous version is provided): Compare against the previous version. REJECT if the update drops a section, example or explanatory detail that the source material still documents, or misses a section the synthesis instructions require. Removing content the source no longer backs is correct and is not a finding.
 
 Note: Reference documents are part of a Claude Code plugin and may contain cross-references that are internal to the plugin itself. Plugin skill references (e.g. `/gcore-fastedge:test`) and relative paths to sibling reference files (e.g. `./test-config.md`) are valid plugin-internal links — do NOT flag these as unverifiable against the source repo material. Only flag content that is supposed to reflect the source repo but does not.
 
@@ -478,6 +481,8 @@ FINDINGS: <specific issues found, referenced by section or line>'
 _build_reviewer_prompt() {
   local generated_content="$1"
   local source_content="$2"
+  local previous_content="${3:-}"
+  local intent_content="${4:-}"
 
   cat <<PROMPT
 ## Proposed Reference Document Update
@@ -487,6 +492,14 @@ ${generated_content}
 ## Source Material Used to Generate It
 
 ${source_content}
+PROMPT
+  if [[ -n "$previous_content" ]]; then
+    printf '\n## Previous Version of the Reference Document\n\n%s\n' "$previous_content"
+  fi
+  if [[ -n "$intent_content" ]]; then
+    printf '\n## Synthesis Instructions Given to the Generator\n\n%s\n' "$intent_content"
+  fi
+  cat <<PROMPT
 
 ## Review Instructions
 
@@ -496,6 +509,7 @@ PROMPT
 
 _run_reviewer() {
   local INPUT_FILE="" SOURCE_DIR="" SOURCE_FILES="" OUTPUT_FILE="" SDK_PACKAGE="" SDK_VERSION=""
+  local PREVIOUS_FILE="" INTENT_FILE=""
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -505,6 +519,8 @@ _run_reviewer() {
       --output-file)  OUTPUT_FILE="$2";  shift 2 ;;
       --sdk-package)  SDK_PACKAGE="$2";  shift 2 ;;
       --sdk-version)  SDK_VERSION="$2";  shift 2 ;;
+      --previous-file) PREVIOUS_FILE="$2"; shift 2 ;;
+      --intent-file)  INTENT_FILE="$2";  shift 2 ;;
       *) echo "ERROR: Unknown argument: $1" >&2; exit 1 ;;
     esac
   done
@@ -531,26 +547,34 @@ _run_reviewer() {
     source_content=$(sed "s|\"${SDK_PACKAGE}\": *\"[^\"]*\"|\"${SDK_PACKAGE}\": \"^${SDK_VERSION}\"|g" <<< "$source_content")
   fi
 
-  local prompt
-  prompt=$(_build_reviewer_prompt "$generated_content" "$source_content")
+  local previous_content="" intent_content=""
+  [[ -n "$PREVIOUS_FILE" && -f "$PREVIOUS_FILE" ]] && previous_content=$(cat "$PREVIOUS_FILE")
+  [[ -n "$INTENT_FILE" && -f "$INTENT_FILE" ]] && intent_content=$(cat "$INTENT_FILE")
 
-  echo "INFO: Invoking OpenAI gpt-4o reviewer" >&2
+  local prompt
+  prompt=$(_build_reviewer_prompt "$generated_content" "$source_content" "$previous_content" "$intent_content")
+
+  # Reasoning models (GPT-5 and later) take reasoning_effort, not temperature.
+  # Set REVIEWER_REASONING_EFFORT=none for a model without reasoning (e.g. gpt-4o).
+  local model="${REVIEWER_MODEL:-gpt-5.6-sol}"
+  local effort="${REVIEWER_REASONING_EFFORT:-high}"
+  [[ "$effort" == "none" ]] && effort=""
+  echo "INFO: Invoking OpenAI ${model} reviewer${effort:+ (reasoning effort: ${effort})}" >&2
 
   if [[ -z "${OPENAI_API_KEY:-}" ]]; then
     echo "ERROR: OPENAI_API_KEY is not set. Required for the reviewer role." >&2
     exit 1
   fi
 
-  # Call OpenAI gpt-4o via chat completions API
+  # Call OpenAI via the chat completions API
   local request_body
-  request_body=$(jq -n --arg content "$prompt" '{
-    model: "gpt-4o",
-    messages: [{"role": "user", "content": $content}],
-    temperature: 0
-  }')
+  request_body=$(jq -n --arg content "$prompt" --arg model "$model" --arg effort "$effort" '{
+    model: $model,
+    messages: [{"role": "user", "content": $content}]
+  } + (if $effort == "" then {} else {reasoning_effort: $effort} end)')
 
   local api_response
-  api_response=$(curl -s -f -X POST \
+  api_response=$(curl -sS -X POST \
     "https://api.openai.com/v1/chat/completions" \
     -H "Authorization: Bearer ${OPENAI_API_KEY}" \
     -H "Content-Type: application/json" \
@@ -558,6 +582,14 @@ _run_reviewer() {
     echo "ERROR: OpenAI API call failed (curl exit $?)" >&2
     exit 1
   }
+
+  # Surface API errors (unknown model, no access, bad parameter) instead of an empty reply
+  local api_error
+  api_error=$(printf '%s' "$api_response" | jq -r '.error.message // empty' 2>/dev/null)
+  if [[ -n "$api_error" ]]; then
+    echo "ERROR: OpenAI API error (model ${model}): ${api_error}" >&2
+    exit 1
+  fi
 
   local response_text
   response_text=$(printf '%s' "$api_response" | jq -r '.choices[0].message.content // empty')

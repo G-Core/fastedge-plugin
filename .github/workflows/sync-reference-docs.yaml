@@ -19,7 +19,11 @@ name: Sync Reference Docs
 #
 # Secrets required:
 #   ANTHROPIC_API_KEY  — Claude generator agent
-#   OPENAI_API_KEY     — OpenAI gpt-4o reviewer agent (via api.openai.com)
+#   OPENAI_API_KEY     — OpenAI reviewer agent (via api.openai.com)
+#
+# Optional repository variables:
+#   REVIEWER_MODEL             — OpenAI model for the reviewer (default gpt-5.6-sol)
+#   REVIEWER_REASONING_EFFORT  — reasoning effort (default high; "none" for non-reasoning models)
 #   FASTEDGE_APP_ID          — GitHub App numeric ID (fastedge-plugin-sync)
 #   FASTEDGE_APP_PRIVATE_KEY — GitHub App private key (.pem)
 #                              Token generated via actions/create-github-app-token@v1
@@ -106,6 +110,8 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          REVIEWER_MODEL: ${{ vars.REVIEWER_MODEL }}
+          REVIEWER_REASONING_EFFORT: ${{ vars.REVIEWER_REASONING_EFFORT }}
           # workflow_dispatch inputs (empty for repository_dispatch)
           DRY_RUN: ${{ inputs.dry_run || 'false' }}
           FORCE_RUN: ${{ inputs.force_run || 'false' }}
