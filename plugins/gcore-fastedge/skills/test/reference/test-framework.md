@@ -44,7 +44,7 @@ import type {
 } from '@gcoredev/fastedge-test/test';
 ```
 
-Vitest fixtures are exported from a separate sub-path: `@gcoredev/fastedge-test/vitest` (see Vitest Fixtures section below).
+Vitest fixtures are exported from a separate sub-path: `@gcoredev/fastedge-test/vitest` (see Vitest Fixtures section below). The package root, `@gcoredev/fastedge-test`, exports the low-level runner API (see the runner internals reference).
 
 ---
 
@@ -59,7 +59,7 @@ Vitest fixtures are exported from a separate sub-path: `@gcoredev/fastedge-test/
 | Header assertions | `assertRequestHeader`, `assertResponseHeader` | `assertHttpHeader`, `assertHttpNoHeader` |
 | Properties | Supported via `properties` field in `FlowOptions` | Not applicable |
 | Hook return codes | `assertReturnCode(hookResult, 0)` | Not applicable |
-| Origin mocking | `mockOrigins()` — default config works as-is | `mockOrigins({ allowNetConnect: [/localhost/] })` required |
+| Origin mocking | `mockOrigins()` — default config works as-is | `mockOrigins({ allowNetConnect: [/^127\.0\.0\.1/, /^localhost/] })` required |
 
 ---
 
@@ -128,7 +128,7 @@ Output format:
 
 ### `runTestSuite(suite: TestSuite | ResourceTestSuite): Promise<SuiteResult>`
 
-Executes all test cases sequentially. Each test receives a fresh runner instance (or fresh resource for `ResourceTestSuite`) and its own stores. A thrown error marks that test failed; remaining tests still execute. Returns `SuiteResult` instead of exiting.
+Executes all test cases sequentially. Each test receives a fresh runner instance (or fresh resource for `ResourceTestSuite`) and, by default, its own stores (`stores: false` disables them; a `TestStores` instance passed in is shared by every test). A thrown error marks that test failed; remaining tests still execute. Returns `SuiteResult` instead of exiting.
 
 ```typescript
 interface SuiteResult {
@@ -281,6 +281,15 @@ afterEach(async () => {
     await mocks?.close();
     mocks = null;
   }
+});
+
+it("handles 503 from origin", async () => {
+  mocks!.origin("https://origin.example.com")
+    .intercept({ path: "/api/resource" })
+    .reply(503, "upstream down");
+
+  const result = await runFlow(runner, { url: "https://origin.example.com/api/resource" });
+  assertFinalStatus(result, 503);
 });
 ```
 

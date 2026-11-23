@@ -18,18 +18,19 @@ A practical usage guide. Agents use this to walk developers through launching th
    - npm / any editor: exact `npx @gcoredev/fastedge-test` command, prerequisite (Node.js), what happens
 
 2. **Dual-mode behaviour** — `npx @gcoredev/fastedge-test` has two modes:
-   - No argument → visual debugger UI at `http://localhost:5179` (if port 5179 is busy, the server auto-increments through up to 10 sequential ports; the bound port is written to `.fastedge-debug/.debug-port` and deleted on shutdown)
+   - No argument → visual debugger UI at `http://localhost:5179` (if port 5179 is busy, the server tries up to 50 sequential ports (5179–5228); `PORT` only sets the starting port; the bound port is written to `.fastedge-debug/.debug-port` and deleted on shutdown)
    - Headless test runner → programmatic only: import `@gcoredev/fastedge-test/test` and call `runAndExit(defineTestSuite(...))` — there is no CLI arg mode for running tests
    - Include the exact invocation for each mode
 
 3. **Providing secrets and environment variables** — one-line note that secrets/env vars are not config fields, with a reference to the dotenv configuration guide for the full dotenv setup. Do NOT inline dotenv details — prefix scheme, file options, priority order, and gitignore guidance all belong in the dotenv configuration guide.
 
-4. **What the UI shows** — brief list of panels so agents can describe the debugger to developers:
-   - Request panel (method, URL, headers, body)
-   - Response panel (status, headers, body)
-   - Log stream (filterable by level: trace/debug/info/warn/error/critical)
-   - Hook results (CDN only: onRequestHeaders, onRequestBody, onResponseHeaders, onResponseBody)
-   - Property accesses (CDN only: which properties the filter read)
+4. **What the UI shows** — brief list of panels so agents can describe the debugger to developers (the source covers the UI in one paragraph; this list is the backing):
+   - Request bar and panel: method, URL, headers (tick a row to send it), body
+   - Dotenv: loads env vars and secrets from `.env` files; off by default
+   - Request Context: client and edge location (the edge dc is also the cache bucket), origin (CDN only), explicit properties (CDN only)
+   - Logging: filterable by level (trace/debug/info/warn/error/critical); CDN apps get a tab per hook (onRequestHeaders, onRequestBody, onResponseHeaders, onResponseBody) with Logs, Storage, Inputs (headers, body, properties before the hook) and Outputs (what it changed); HTTP apps have Logs and Storage only
+   - Storage: cache and Edge KV as the app sees them, pausable clock, reset
+   - Response: status, content type, body, headers, preview for HTML and images
 
 5. **What to commit / gitignore** — what is safe to commit (`fastedge-config.test.json` with placeholder values, `.env.example`) vs what must be ignored (`.env`, `.env.secrets`, `.env.variables`, etc.)
 

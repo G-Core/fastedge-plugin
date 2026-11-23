@@ -284,7 +284,7 @@ await runner.cleanup();
 
 #### `callHook` — Proxy-WASM only
 
-Executes a single proxy-wasm hook in isolation. Creates a fresh WASM instance with the request/response state from `hookCall`, invokes the hook export, and returns the resulting state diff and logs.
+Executes a single proxy-wasm hook in isolation. Creates a fresh WASM instance with the request/response state from `hookCall`, invokes the hook export, and returns the resulting state (complete input and output) and logs.
 
 ```typescript
 callHook(hookCall: HookCall): Promise<HookResult>
@@ -315,7 +315,7 @@ await runner.cleanup();
 
 #### `callFullFlow` — Proxy-WASM only
 
-Executes the complete CDN request/response lifecycle: runs all four hooks in sequence with a real HTTP fetch (or built-in responder) between request and response phases.
+Executes the complete CDN request/response lifecycle: runs all four hooks in sequence with a real HTTP fetch (or built-in responder) between request and response phases. The upstream response is generated at runtime — either by a real HTTP fetch against `url`, or by the built-in responder when `url === "built-in"`. There is no caller-provided mock response (unlike `callHook()`, which takes response state in `hookCall`).
 
 **Hook execution order**: `onRequestHeaders` → `onRequestBody` → *(real HTTP fetch or built-in responder)* → `onResponseHeaders` → `onResponseBody`
 
@@ -494,6 +494,8 @@ Paths inside a config file are relative to that file. Paths inside a config obje
 
 ### Resource Config
 
+`ResourceConfigInput` is not exported by name. The accepted shape is:
+
 ```typescript
 type ResourceConfigInput = {
   $schema?: string;
@@ -530,7 +532,7 @@ type ResourceHooks = {
   [hook in CdnHook]?: string | { app: string; interruptOnError?: boolean };
 };
 
-type ResourceOrigin = { url: string } | { builtIn: BuiltInOrigin } | { app: string };
+type ResourceOrigin = { url: string } | { builtIn: BuiltInOrigin } | { app: string }; // BuiltInOrigin: see the test config reference
 
 type CdnHook = "onRequestHeaders" | "onRequestBody" | "onResponseHeaders" | "onResponseBody";
 ```

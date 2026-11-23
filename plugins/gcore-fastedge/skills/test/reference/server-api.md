@@ -13,7 +13,7 @@ The `@gcoredev/fastedge-test` debugger server exposes REST and WebSocket interfa
 
 **Base URL:** `http://localhost:5179`
 
-The port can be overridden via the `PORT` environment variable. When `FASTEDGE_APP_ROOT` (or `WORKSPACE_PATH` if `FASTEDGE_APP_ROOT` is unset) is set, the active port is written to `$FASTEDGE_APP_ROOT/.fastedge-debug/.debug-port` on startup and deleted on shutdown. The file contains `PORT:SHA256_HASH`, where `PORT` is the decimal port number and `SHA256_HASH` is the hex-encoded SHA-256 of the session token. Consumers that only need the port should parse the prefix up to the first colon (e.g. `parseInt(content.split(":")[0], 10)`).
+The port can be overridden via the `PORT` environment variable. The active port is written to `.fastedge-debug/.debug-port` under the app root (`FASTEDGE_APP_ROOT`, else `WORKSPACE_PATH`, else the current working directory) on startup and deleted on shutdown. The file contains `PORT:SHA256_HASH`, where `PORT` is the decimal port number and `SHA256_HASH` is the hex-encoded SHA-256 of the session token. Consumers that only need the port should parse the prefix up to the first colon (e.g. `parseInt(content.split(":")[0], 10)`).
 
 JSON request bodies are limited to 20 MB.
 
@@ -1123,6 +1123,20 @@ curl -X POST http://localhost:5179/api/send \
       "output": {
         "request": { "headers": { "content-type": "application/json" }, "body": "" },
         "response": { "headers": {}, "body": "" }
+      },
+      "properties": { "client.geo.country": "DE" }
+    },
+    "onResponseHeaders": {
+      "returnCode": 0,
+      "logs": [],
+      "input": {
+        "request": { "headers": { "content-type": "application/json" }, "body": "" },
+        "response": { "headers": { "content-type": "application/json" }, "body": "" },
+        "properties": { "client.geo.country": "DE" }
+      },
+      "output": {
+        "request": { "headers": { "content-type": "application/json" }, "body": "" },
+        "response": { "headers": { "content-type": "application/json" }, "body": "" }
       },
       "properties": { "client.geo.country": "DE" }
     }
@@ -2848,7 +2862,7 @@ import { startServer } from "@gcoredev/fastedge-test/server";
 
 The server listens on port `5179` by default. Override with the `PORT` environment variable. When the preferred port is busy, the server tries the next ports in sequence (50 attempts in total) before failing.
 
-When `FASTEDGE_APP_ROOT` is set (or `WORKSPACE_PATH` if `FASTEDGE_APP_ROOT` is unset), the active port is written to `$FASTEDGE_APP_ROOT/.fastedge-debug/.debug-port` on startup and removed on shutdown. The file contains `PORT:SHA256_HASH` — consumers that only need the port should parse the prefix up to the first colon (e.g. `parseInt(content.split(":")[0], 10)`). Use this file to discover the port dynamically in CI or multi-process tooling.
+The active port is written to `.fastedge-debug/.debug-port` under the app root (`FASTEDGE_APP_ROOT`, else `WORKSPACE_PATH`, else the current working directory) on startup and removed on shutdown. The file contains `PORT:SHA256_HASH` — consumers that only need the port should parse the prefix up to the first colon (e.g. `parseInt(content.split(":")[0], 10)`). Use this file to discover the port dynamically in CI or multi-process tooling.
 
 ---
 

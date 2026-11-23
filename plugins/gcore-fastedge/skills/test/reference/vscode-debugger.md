@@ -9,8 +9,8 @@
 
 # FastEdge Visual Debugger
 
-The visual debugger is an **Express + React server** packaged inside `@gcoredev/fastedge-test`.
-The same server is bundled into the FastEdge VSCode extension, so both routes give an identical experience.
+The visual debugger is a local server with a browser UI, shipped in `@gcoredev/fastedge-test`.
+The FastEdge VSCode extension runs the same debugger, so both routes give the same experience.
 
 ---
 
@@ -53,7 +53,7 @@ Custom port:
 PORT=8080 npx fastedge-debug
 ```
 
-Anchor workspace root discovery to a specific starting location by passing a path as the first argument:
+Anchor workspace root discovery to a specific starting location by passing a path as the first argument (if the path is a file, its parent directory is used):
 ```bash
 npx fastedge-debug /path/to/my-app
 ```
@@ -71,12 +71,6 @@ npx fastedge-debug --project-dir ..
 ```
 
 The flag accepts `--project-dir <path>`, `--project-dir=<path>`, and the short alias `-C <path>` / `-C=<path>`. The resolved path drives `WORKSPACE_PATH` and all config, fixture, and dotenv resolution. The flag is removed from the argument list before any positional arguments are read; when `--project-dir` is given, it takes precedence over a positional start path. Passing the flag without a value exits with code `2`.
-
-You can combine it with a fixture path:
-
-```bash
-npx fastedge-debug --project-dir .. ../fixtures/scenario-1.test.json
-```
 
 When omitted, the positional argument (if any) or `process.cwd()` is used as the starting point.
 
@@ -117,7 +111,15 @@ See the dotenv reference for the full setup — prefix scheme, file options, pri
 
 ## What the UI Shows
 
-The UI provides a graphical interface for loading WASM modules, configuring requests, and inspecting results. All UI interactions use the same REST and WebSocket endpoints available to API consumers.
+The page loads a `.wasm`, sends a request (method, URL, headers, body) and shows what happened. Each panel collapses:
+
+- **Dotenv** — load env vars and secrets from `.env` files; off by default
+- **Request Context** — client and edge location (the edge dc is also the cache bucket), the origin (CDN apps) and explicit properties (CDN apps)
+- **Logging** — filterable by log level (trace, debug, info, warn, error, critical). CDN apps get a tab per hook (`onRequestHeaders`, `onRequestBody`, `onResponseHeaders`, `onResponseBody`), each with Logs (return code and log lines), Storage (cache and Edge KV calls), Inputs (headers, body and properties before the hook ran) and Outputs (what the hook changed). HTTP apps have Logs and Storage only
+- **Storage** — the cache and Edge KV as the app sees them, with a pausable clock and a reset
+- **Response** — status, content type, body and headers, with a preview for HTML and images
+
+All UI interactions use the same REST and WebSocket endpoints available to API consumers.
 
 ---
 
@@ -215,7 +217,7 @@ curl http://127.0.0.1:5179/health
 
 The server writes the bound port to `.fastedge-debug/.debug-port` under the app root (`FASTEDGE_APP_ROOT`, else `WORKSPACE_PATH`, else the current working directory), and deletes the file on shutdown.
 
-The file format is `PORT:SHA256_HASH` — the decimal port number, a colon, then the hex-encoded SHA-256 of the session token. To extract just the port:
+The file holds the port, a colon, then a hash used by the VSCode extension. To extract just the port:
 
 ```js
 import fs from "node:fs";
@@ -239,7 +241,7 @@ Check whether a port is occupied:
 lsof -i :5179
 ```
 
-Set `PORT` to a specific value to bypass auto-increment when a predictable port is required.
+`PORT` sets the preferred starting port only; if it is busy, the next ports are still tried. Read the port file or stderr for the port actually bound.
 
 ---
 

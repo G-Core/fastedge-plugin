@@ -40,7 +40,7 @@ The config schema is a union of two variants selected by `appType`:
 | `dotenv` | object | no | — | Dotenv file loading configuration |
 | `dotenv.enabled` | boolean | no | `false` | Whether to load dotenv files before execution |
 | `dotenv.path` | string | no | — | Directory containing the dotenv files (not a file path). If omitted, resolves against the process current working directory |
-| `httpPort` | integer | no | — | HTTP-WASM only. Pin the subprocess to a specific port (1024–65535) instead of dynamic allocation from the 8100–8199 pool. Throws if the port is busy. Not valid on `proxy-wasm` configs |
+| `httpPort` | integer | no | — | HTTP-WASM only. Pin the subprocess to a specific port (1024–65535) instead of dynamic allocation from the 8100–8199 pool. Throws if the port is busy. Not used by `proxy-wasm` configs |
 | `stores` | boolean | no | `true` | Enables the local cache and Edge KV. `false`: CDN cache / KV calls fail; HTTP apps use fastedge-run's own per-process cache |
 | `dc` | string | no | `"local"` | Cache bucket name. Must be a non-empty string. Runners with the same `dc` share cache entries |
 | `client` | object | no | — | Where the client is: a preset plus per-field overrides |
@@ -77,7 +77,7 @@ The config schema is a union of two variants selected by `appType`:
 | `origin.builtIn.bodyFile` | string | no | — | File whose bytes are the body. Relative to the config file |
 | `origin.builtIn.files` | string | no | — | Folder served by request path. Relative to the config file. `files` sets its own status (200, or 404 for missing file); cannot be combined with `status` |
 
-`additionalProperties` is `false` in `wasm`, `dotenv`, `request`, `client`, `edge`, `origin`, and `origin.builtIn`; unrecognised fields fail validation.
+The schema rejects unrecognised fields in `client`, `edge`, `origin` and `origin.builtIn`.
 
 *`wasm` is optional only if you supply the binary manually via a programmatic `wasmBuffer`. It is required for file-based test runs and debugger auto-load.
 
@@ -91,11 +91,11 @@ The JSON Schema `required` arrays drive editor validation. Fields that carry a `
 
 `request.url` (CDN) and `request.path` (HTTP-WASM) are required and have no default.
 
-Supply fields explicitly to avoid editor warnings, or add the `$schema` field and accept that your editor may warn on omission.
+Omitting the defaulted fields passes both editor validation and `loadConfigFile`.
 
 ### HTTP Port Pinning
 
-`httpPort` is an optional integer (1024–65535) available only in HTTP-WASM configs (`appType: "http-wasm"`). It pins the `fastedge-run` subprocess to a fixed port instead of allocating one from the 8100–8199 dynamic pool. The schema rejects `httpPort` on `proxy-wasm` configs.
+`httpPort` is an optional integer (1024–65535) available only in HTTP-WASM configs (`appType: "http-wasm"`). It pins the `fastedge-run` subprocess to a fixed port instead of allocating one from the 8100–8199 dynamic pool. The field is defined only in the `http-wasm` variant; proxy-wasm configs do not use it.
 
 Without `httpPort`, the runner allocates a port from the 8100–8199 range for each run. The allocated port is not stable across runs.
 
