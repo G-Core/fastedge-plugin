@@ -306,3 +306,4 @@ process.kill(process.pid, "SIGTERM");
 - test-framework reference — Programmatic test framework for writing automated WASM tests
 - test-config reference — `fastedge-config.test.json` schema and configuration options
 - dotenv reference — environment variable and secrets injection setup
+- security reference — allowed-folders details and security model
