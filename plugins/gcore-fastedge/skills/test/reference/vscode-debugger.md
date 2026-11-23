@@ -82,7 +82,7 @@ Lets the debugger read a folder outside the workspace, for example a folder of p
 npx fastedge-debug --allow ~/apps/wasm --allow ~/sites/my-site
 ```
 
-The first time a load reads from an allowed folder, the debugger asks in this terminal whether to allow it for the session (the page shows a notice while it waits, and the request fails after 2 minutes without an answer); without a terminal it refuses. Allowed folders are read-only: saves stay inside the workspace. The flag accepts `--allow <dir>` and `--allow=<dir>`; a folder that does not exist is ignored with a warning. See the security reference for allowed-folders details.
+The first time a load reads from an allowed folder, the debugger asks in this terminal whether to allow it for the session (the page shows a notice while it waits, and the request fails after 2 minutes without an answer); without a terminal it refuses. Allowed folders are read-only: saves stay inside the workspace. The flag accepts `--allow <dir>` and `--allow=<dir>`; a folder that does not exist is ignored with a warning.
 
 ---
 
@@ -306,4 +306,3 @@ process.kill(process.pid, "SIGTERM");
 - test-framework reference — Programmatic test framework for writing automated WASM tests
 - test-config reference — `fastedge-config.test.json` schema and configuration options
 - dotenv reference — environment variable and secrets injection setup
-- security reference — allowed-folders details and security model
