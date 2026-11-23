@@ -37,6 +37,7 @@ A concise, decision-dense API cheat-sheet. Not a tutorial. Agents use this to ge
 - Installation prerequisites (Node version, etc.)
 - Package history or changelog
 - Architecture explanation of how the test runner works internally
+- Source doc names for cross-references (`RUNNER reference`): call it "the runner internals reference"
 - Marketing language or feature highlights
 - Anything not directly needed to write a test
 - **Dotenv details** — prefix scheme, file options, priority order all belong in the dotenv configuration guide. Only mention `runnerConfig.dotenv` (`{ enabled, path }`) in `defineTestSuite` with a reference to that guide.

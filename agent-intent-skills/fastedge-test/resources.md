@@ -34,3 +34,4 @@ The reference for multi-app resources: the resource file, how hooks, rules and o
 
 ## Quality bar
 The existing file at `plugins/gcore-fastedge/skills/test/reference/resources.md` sets the quality bar. Keep every field, error and edge mapping the source documents.
+Keep the existing headings (`### Example Resource File`, `### URL Origin`, ``### Echo Origin (`"built-in"`)``, ...) unless the source removes the section; do not reword sentences that are still accurate.
