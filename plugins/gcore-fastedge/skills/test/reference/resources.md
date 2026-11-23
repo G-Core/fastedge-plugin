@@ -43,7 +43,7 @@ An app entry takes these fields:
 
 The full field-by-field schema is in the TEST_CONFIG reference (resource configuration section).
 
-### Example Resource File
+The example below runs three CDN apps on three hooks and serves files from a folder. Requests under `/api/` go to an HTTP app instead.
 
 ```json
 {
@@ -78,7 +78,7 @@ The full field-by-field schema is in the TEST_CONFIG reference (resource configu
 
 Each hook is assigned one of:
 
-- an app name string: `"auth"`
+- an app name: `"auth"`
 - an object: `{ "app": "auth", "interruptOnError": false }`
 
 A hook with no app is skipped, and the request passes through it unchanged.
@@ -88,7 +88,7 @@ A hook with no app is skipped, and the request passes through it unchanged.
 - with `interruptOnError: true`, the client gets status 531
 - with `interruptOnError: false`, the request goes on as if the hook had not run
 
-Hooks require CDN (proxy-wasm) apps. Assigning an HTTP app to a hook is a load error.
+Hooks need CDN (proxy-wasm) apps. Assigning an HTTP app to a hook is a load error.
 
 ## Rules
 
@@ -105,19 +105,19 @@ The result of a request names the rule that matched (index, `name`, `match`), or
 
 The origin is declared in `main.origin` and can be overridden per rule.
 
-| Origin   | Declared as                                      | What answers                                                      |
-| -------- | ------------------------------------------------ | ----------------------------------------------------------------- |
-| URL      | `{ "url": "https://backend.example.com" }`       | a real fetch to that host, with the request's path and query      |
-| Echo     | `{ "url": "built-in" }`                          | the echo responder                                                |
-| Folder   | `{ "builtIn": { "files": "../site" } }`          | the file under the folder named by the request path (200 or 404)  |
-| Fixed    | `{ "builtIn": { "status": 200, "body": "ok" } }` | the declared response                                             |
-| HTTP app | `{ "app": "api" }`                               | the HTTP app of the resource                                      |
+| Origin   | Declared as                                      | What answers                                                     |
+| -------- | ------------------------------------------------ | ---------------------------------------------------------------- |
+| URL      | `{ "url": "https://backend.example.com" }`       | a real fetch to that host, with the request's path and query     |
+| Echo     | `{ "url": "built-in" }`                          | the echo responder                                               |
+| Folder   | `{ "builtIn": { "files": "../site" } }`          | the file under the folder named by the request path (200 or 404) |
+| Fixed    | `{ "builtIn": { "status": 200, "body": "ok" } }` | the declared response                                            |
+| HTTP app | `{ "app": "api" }`                               | the HTTP app of the resource                                     |
 
-### URL Origin
+### URL
 
 The request's path and query are forwarded to the origin's host, as a CDN forwards them. The URL the client asked for (the request's `url`) is not fetched. Redirects are not followed: a 3xx reaches the response hooks unchanged. An unreachable origin gives status 0 with `Fetch Failed` and the error text as the body, and the response hooks do not run.
 
-### Echo Origin (`"built-in"`)
+### Echo (`"built-in"`)
 
 The echo answers 200 with a JSON body describing the request: `{ method, reqHeaders, reqBody, requestUrl }`. The request headers `x-debugger-status` and `x-debugger-content` still change its status and body, but they are deprecated. Declare a `builtIn` origin instead.
 
@@ -197,7 +197,7 @@ The routes the page uses are listed in the API reference.
 
 ### `createResource(fileOrObject, options?)`
 
-Loads a resource from a file (paths relative to it) or an object (paths relative to the current directory). Returns a `Resource`.
+Loads a resource from a file (paths relative to it) or an object (paths relative to the current directory), and returns a `Resource`.
 
 ```typescript
 import { createResource } from '@gcoredev/fastedge-test';

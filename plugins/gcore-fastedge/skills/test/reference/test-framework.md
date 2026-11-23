@@ -44,7 +44,7 @@ import type {
 } from '@gcoredev/fastedge-test/test';
 ```
 
-Vitest fixtures are exported from a separate sub-path: `@gcoredev/fastedge-test/vitest` (see Vitest Fixtures section below). The package root, `@gcoredev/fastedge-test`, exports the low-level runner API (see the runner internals reference).
+Vitest fixtures are exported from a separate sub-path: `@gcoredev/fastedge-test/vitest` (see Vitest Fixtures section below). The package root, `@gcoredev/fastedge-test`, exports the low-level runner API (see the RUNNER reference).
 
 ---
 
