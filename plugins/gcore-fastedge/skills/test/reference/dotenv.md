@@ -2,9 +2,9 @@
   auto-updated: true
   sources:
     - id: fastedge-test
-      ref: v0.2.8
-      commit: 81ae6516cac618afe50414ca97c579c11df28e7e
-      updated: 2026-11-05
+      ref: v0.3.1
+      commit: ccc68985ba8dcb688c077c04f2a3762ee34f944d
+      updated: 2026-11-23
 -->
 
 # Dotenv — Runtime Secrets and Environment Variables
