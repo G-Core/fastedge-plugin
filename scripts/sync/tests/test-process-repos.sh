@@ -573,6 +573,41 @@ else
     "got: '$removed_out'"
 fi
 
+# ── removed_headings: a longer fence holds a shorter one ─────────────────────
+cat > "$TMPWORK/old.md" <<'MD'
+# Title
+````markdown
+```bash
+# old shell comment
+```
+````
+~~~
+```
+# tilde block comment
+~~~
+```~ info string
+# info block comment
+```
+## Dropped
+## Kept
+MD
+cat > "$TMPWORK/new.md" <<'MD'
+# Title
+````markdown
+```bash
+# new shell comment
+```
+````
+## Kept
+MD
+removed_out=$(removed_headings "$TMPWORK/old.md" "$TMPWORK/new.md")
+if [[ "$removed_out" == "## Dropped" ]]; then
+  pass "(removed_headings) a block closes only on a matching fence at least as long"
+else
+  fail "(removed_headings) a block closes only on a matching fence at least as long" \
+    "got: '$removed_out'"
+fi
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 
 echo ""

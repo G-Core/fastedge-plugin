@@ -116,10 +116,20 @@ read_manifest() {
 # removed_headings <old-file> <new-file>
 # Prints, one per line, the Markdown headings (#..####) of old-file that new-file
 # no longer has. Lines inside fenced code blocks are ignored (shell comments
-# in examples look like headings).
+# in examples look like headings). A block closes only on a bare fence of the
+# opening character, at least as long (a ```` block may hold ``` examples).
 removed_headings() {
   local old="$1" new="$2"
-  _headings() { awk '/^(```|~~~)/{f=!f; next} !f && /^#{1,4} /' "$1" | sort -u; }
+  _headings() {
+    awk '
+      match($0, /^ ? ? ?(````*|~~~~*)/) {
+        run = substr($0, RSTART, RLENGTH); sub(/^ */, "", run)
+        bare = $0; sub(/^ */, "", bare); sub(/[ \t\r]*$/, "", bare)
+        if (open == "") { open = substr(run, 1, 1); len = length(run); next }
+        if (substr(run, 1, 1) == open && length(run) >= len && bare == run) { open = ""; next }
+      }
+      open == "" && /^#{1,4} /' "$1" | sort -u
+  }
   comm -23 <(_headings "$old") <(_headings "$new")
 }
 
