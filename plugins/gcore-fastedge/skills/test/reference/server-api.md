@@ -2,9 +2,9 @@
   auto-updated: true
   sources:
     - id: fastedge-test
-      ref: main
-      commit: 93d8046c3b98a65b18e189d435f760c8861d481f
-      updated: 2026-09-09
+      ref: v0.2.8
+      commit: 81ae6516cac618afe50414ca97c579c11df28e7e
+      updated: 2026-11-05
 -->
 
 # Server API — REST and WebSocket Endpoints
@@ -15,7 +15,9 @@ The `@gcoredev/fastedge-test` debugger server exposes REST and WebSocket interfa
 
 The port can be overridden via the `PORT` environment variable. When `WORKSPACE_PATH` is set, the active port is written to `$WORKSPACE_PATH/.fastedge-debug/.debug-port` on startup and deleted on shutdown. The file contains `PORT:SHA256_HASH`, where `PORT` is the decimal port number and `SHA256_HASH` is the hex-encoded SHA-256 of the session token. Consumers that only need the port should parse the prefix up to the first colon (e.g. `parseInt(content.split(":")[0], 10)`).
 
-> **Note on header values.** Response-side and hook-result headers use `Record<string, string | string[]>` — single-valued headers are a `string`, multi-valued headers (notably `Set-Cookie` per RFC 6265) are a `string[]`. Request-side header inputs are single-valued `Record<string, string>`.
+JSON request bodies are limited to 20 MB.
+
+> **Note on header values.** Response-side and hook-result headers use `Record<string, string | string[]>` — single-valued headers are a `string`, multi-valued headers (notably `Set-Cookie` per RFC 6265) are a `string[]`. HTTP-WASM response headers additionally allow `undefined` values (`Record<string, string | string[] | undefined>`), though `undefined` entries are dropped during JSON serialization. Request-side header inputs are single-valued `Record<string, string>`.
 
 ---
 
@@ -37,6 +39,8 @@ The fragment after `#token=` is your session token.
 x-fastedge-token: <token>
 ```
 
+A missing or incorrect token returns `401`.
+
 **WebSocket** — two mechanisms exist, tried in preference order:
 
 1. **`Sec-WebSocket-Protocol: fastedge-token.<token>`** (preferred) — the token is embedded in the subprotocol list rather than the URL, keeping it out of proxy and server access logs. The server echoes the subprotocol back on accept.
@@ -49,10 +53,13 @@ const ws = new WebSocket(
 );
 ```
 
+All `/api/*` requests also validate the `Host` header. Requests whose `Host` is not a loopback name (or the host configured through `FASTEDGE_EXPECTED_HOST`) return `403` with `Invalid Host`.
+
 **Environment variables related to authentication and binding:**
 
 | Variable | Default | Description |
 |---|---|---|
+| `PORT` | `5179` | Preferred starting port; the next 49 ports are tried if it is in use. |
 | `FASTEDGE_DEBUG_TOKEN` | unset | Inject a known token instead of generating one. When set, the `Open:` URL is not printed to stderr. |
 | `FASTEDGE_BIND_HOST` | `127.0.0.1` | Interface the HTTP server binds to. |
 | `FASTEDGE_EXPECTED_HOST` | unset | Extra hostname (suffix match) allowed in `Host` / `Origin` headers — for Codespaces forwarded URLs. |
@@ -135,27 +142,36 @@ curl -H "x-fastedge-token: <token>" http://localhost:5179/api/client-count
 }
 ```
 
+**Error Responses**
+
+| Status | Condition |
+|---|---|
+| `401` | Missing or invalid `x-fastedge-token` |
+| `403` | `Host` header not allowed |
+
 ---
 
 ### WASM Loading
 
 #### POST /api/load
 
-Loads a WASM binary into the runner. Accepts a file path or base64-encoded binary. Automatically detects `http-wasm` or `proxy-wasm` type.
+Loads a WASM binary into the runner. Accepts a file path or base64-encoded binary. Automatically detects `http-wasm` or `proxy-wasm` type. Any previously loaded module is cleaned up first.
 
-**Request Body** — exactly one of `wasmPath` or `wasmBase64` must be provided; providing both is an error.
+**Request Body** — exactly one of `wasmPath` or `wasmBase64` must be provided; providing neither or both returns `400`.
 
 ```typescript
 {
-  wasmPath?: string;      // Absolute path to a .wasm file on the server filesystem
-  wasmBase64?: string;    // Base64-encoded WASM binary; mutually exclusive with wasmPath
+  wasmPath?: string;    // Path to a .wasm file; must resolve inside the workspace root
+                        // (WORKSPACE_PATH if set, otherwise the server's working directory)
+  wasmBase64?: string;  // Base64-encoded WASM binary; mutually exclusive with wasmPath
   dotenv?: {
-    enabled?: boolean;    // Whether to load .env files for this module
-    path?: string;        // Directory containing .env files (defaults to server CWD)
+    enabled?: boolean;  // Whether to load .env files for this module (default: false)
+    path?: string;      // Directory containing .env files. Relative paths resolve against the
+                        // workspace root and must stay inside it. Defaults to the workspace root.
   };
-  httpPort?: number;      // HTTP-WASM only. Pin the runner subprocess to this port (1024–65535).
-                          // Load fails immediately if the port is already in use.
-                          // Ignored for proxy-wasm modules.
+  httpPort?: number;    // HTTP-WASM only. Pin the runner subprocess to this port (1024–65535).
+                        // Load fails immediately if the port is already in use.
+                        // Ignored for proxy-wasm modules.
 }
 ```
 
@@ -165,7 +181,7 @@ Loads a WASM binary into the runner. Accepts a file path or base64-encoded binar
 {
   ok: true;
   wasmType: "http-wasm" | "proxy-wasm";
-  resolvedPath?: string;  // Absolute path used when wasmPath was provided
+  resolvedPath?: string;  // Normalized absolute path; present only when wasmPath was provided
 }
 ```
 
@@ -232,9 +248,12 @@ curl -X POST http://localhost:5179/api/load \
 
 | Status | Condition |
 |---|---|
-| `400` | Validation failed, missing both `wasmPath` and `wasmBase64`, invalid path, or path does not end in `.wasm` |
-| `400` | `httpPort` is specified and already in use (HTTP-WASM only) |
-| `500` | WASM load failed or runner initialization error |
+| `400` | Body failed validation (neither or both of `wasmPath` and `wasmBase64`, or `httpPort` out of range) |
+| `400` | `wasmPath` is invalid, does not exist, is outside the workspace root, or does not end in `.wasm` |
+| `400` | `dotenv.path` resolves outside the workspace root or contains a symlink that escapes it |
+| `500` | WASM load or runner initialization failed, including `httpPort` already in use |
+
+If a load fails with `500`, the previously loaded module is discarded and no module is loaded.
 
 ---
 
@@ -250,7 +269,8 @@ Requires a WASM module already loaded via `POST /api/load`.
 {
   dotenv: {
     enabled: boolean;   // Whether dotenv loading should be enabled
-    path?: string;      // Directory containing .env files (defaults to server CWD)
+    path?: string;      // Directory containing .env files. Relative paths resolve against the
+                        // workspace root and must stay inside it. Defaults to the workspace root.
   };
 }
 ```
@@ -284,7 +304,9 @@ curl -X PATCH http://localhost:5179/api/dotenv \
 
 | Status | Condition |
 |---|---|
-| `400` | `dotenv.enabled` is not a boolean, or no WASM module is loaded |
+| `400` | Body failed validation (`dotenv.enabled` missing or not a boolean) |
+| `400` | No WASM module is loaded |
+| `400` | `dotenv.path` resolves outside the workspace root or contains an escaping symlink |
 | `500` | Failed to apply dotenv settings |
 
 ---
@@ -297,27 +319,24 @@ Executes a request through the loaded WASM module. Behavior differs by runner ty
 
 Requires a WASM module loaded via `POST /api/load`. Accepts optional `X-Source` header.
 
-**Request Body — HTTP-WASM**
+**Request Body**
 
-Provide either `path` (preferred) or `url` (legacy). When `path` is given, it is used directly as the request path (e.g. `/api/hello?q=1`). When only `url` is given, the path and query string are extracted from it.
+The server destructures `{ url, path, method, headers, body }` from the top level of the body. For Proxy-WASM it additionally reads `{ request, properties }`. Fields that do not apply to the loaded runner type are ignored.
 
 ```typescript
 {
+  // HTTP-WASM
   path?: string;                     // Request path and query string (preferred)
-  url?: string;                      // Full URL — path and query extracted (legacy fallback)
   method?: string;                   // HTTP method (default: "GET")
   headers?: Record<string, string>;  // Request headers (default: {})
   body?: string;                     // Request body (default: "")
-}
-```
 
-**Request Body — Proxy-WASM**
+  // Both runner types
+  url?: string;                      // HTTP-WASM: absolute URL, path and query extracted
+                                     //   (legacy fallback when path is absent).
+                                     // Proxy-WASM: request URL, or "built-in" (required).
 
-The top-level `url` field is required. The upstream response is generated at runtime — either by a real fetch against `url`, or by the built-in responder when `url === "built-in"`. The full CDN flow is controlled via nested `request` and `properties` fields.
-
-```typescript
-{
-  url: string;                          // Request URL, or "built-in" (required)
+  // Proxy-WASM
   request?: {
     method?: string;                    // HTTP method (default: "GET")
     headers?: Record<string, string>;   // Request headers (default: {})
@@ -327,6 +346,20 @@ The top-level `url` field is required. The upstream response is generated at run
 }
 ```
 
+| Field | HTTP-WASM | Proxy-WASM |
+|---|---|---|
+| `path` | Used (preferred over `url`) | Ignored |
+| `url` | Used if `path` is absent | Required |
+| `method` | Used | Ignored (use `request.method`) |
+| `headers` | Used | Ignored (use `request.headers`) |
+| `body` | Used | Ignored (use `request.body`) |
+| `request` | Ignored | Used |
+| `properties` | Ignored | Used |
+
+For HTTP-WASM, when `path` is given it is used directly as the request path (e.g. `/api/hello?q=1`). When only `url` is given, the path and query string are extracted from it.
+
+For Proxy-WASM, the upstream response is generated at runtime — either by a real fetch against `url`, or by the built-in responder when `url === "built-in"`.
+
 **Response — HTTP-WASM**
 
 ```typescript
@@ -335,7 +368,7 @@ The top-level `url` field is required. The upstream response is generated at run
   result: {
     status: number;
     statusText: string;
-    headers: Record<string, string | string[]>;
+    headers: Record<string, string | string[]>;  // Node's IncomingHttpHeaders shape
     body: string;
     contentType: string | null;
     isBase64?: boolean;
@@ -358,11 +391,11 @@ The top-level `url` field is required. The upstream response is generated at run
     contentType: string;
     isBase64?: boolean;
   };
-  calculatedProperties?: Record<string, unknown>;  // Keys follow request.* pattern
+  calculatedProperties?: Record<string, unknown>;
 }
 ```
 
-`calculatedProperties` keys: `request.url`, `request.host`, `request.path`, `request.query`, `request.scheme`, `request.extension`, `request.method`.
+`calculatedProperties` keys: `request.url`, `request.host`, `request.path`, `request.query`, `request.scheme`, `request.extension`, `request.method`. `request.path` includes the query string; `request.query` is the query portion without the leading `?`.
 
 **HookResult type** (used across multiple endpoints):
 
@@ -462,7 +495,11 @@ curl -X POST http://localhost:5179/api/execute \
   "calculatedProperties": {
     "request.url": "https://example.com/page",
     "request.host": "example.com",
-    "request.path": "/page"
+    "request.path": "/page",
+    "request.query": "",
+    "request.scheme": "https",
+    "request.extension": "",
+    "request.method": "GET"
   }
 }
 ```
@@ -471,7 +508,9 @@ curl -X POST http://localhost:5179/api/execute \
 
 | Status | Condition |
 |---|---|
-| `400` | No WASM module loaded, or missing `path`/`url` for HTTP-WASM, or missing `url` for Proxy-WASM |
+| `400` | No WASM module is loaded |
+| `400` | HTTP-WASM: `path`/`url` missing, or `url` is not an absolute URL |
+| `400` | Proxy-WASM: `url` missing or not a string |
 | `500` | Execution failed |
 
 ---
@@ -495,11 +534,11 @@ Requires a WASM module loaded via `POST /api/load`.
     headers: Record<string, string>;  // default: {}
     body: string;                     // default: ""
   };
-  properties: Record<string, unknown>;  // required; use {} if none
+  properties?: Record<string, unknown>; // defaults to {} when omitted
 }
 ```
 
-`request` and `response` default to `{ headers: {}, body: "" }` if omitted.
+`request` and `response` default to `{ headers: {}, body: "" }` if omitted. The published `api-call` JSON schema lists `properties` as required; the server accepts a body without it and uses `{}`.
 
 **Response**
 
@@ -509,6 +548,8 @@ Requires a WASM module loaded via `POST /api/load`.
   result: HookResult;
 }
 ```
+
+`HookResult` has the same shape as documented under `POST /api/execute`.
 
 **Example**
 
@@ -564,8 +605,9 @@ curl -X POST http://localhost:5179/api/call \
 
 | Status | Condition |
 |---|---|
-| `400` | Validation failed (invalid hook name, missing `properties`), or no WASM module loaded |
-| `500` | Hook execution failed |
+| `400` | Body failed validation (invalid `hook`, malformed `request` or `response`) |
+| `400` | No WASM module is loaded |
+| `500` | Hook execution failed, including calling a hook on an HTTP-WASM module |
 
 ---
 
@@ -581,16 +623,18 @@ Requires a WASM module loaded via `POST /api/load`. Accepts optional `X-Source` 
 
 ```typescript
 {
-  url: string | "built-in";               // Full request URL, or "built-in" to use the built-in responder
+  url: string | "built-in";             // Full request URL, or "built-in" to use the built-in responder
   request?: {
-    method?: string;                      // HTTP method (default: "GET")
+    method?: string;                    // HTTP method (default: "GET")
     url?: string;
-    headers?: Record<string, string>;     // Request headers (default: {})
-    body?: string;                        // Request body (default: "")
+    headers?: Record<string, string>;   // Request headers (default: {})
+    body?: string;                      // Request body (default: "")
   };
-  properties: Record<string, unknown>;    // CDN properties (required; use {} if none)
+  properties?: Record<string, unknown>; // CDN properties; defaults to {} when omitted
 }
 ```
+
+The published `api-send` JSON schema lists `properties` as required; the server accepts a body without it and uses `{}`.
 
 **Response**
 
@@ -610,7 +654,7 @@ Requires a WASM module loaded via `POST /api/load`. Accepts optional `X-Source` 
 }
 ```
 
-`HookResult` has the same shape as documented under `POST /api/call`. `hookResults` is keyed by hook name. `calculatedProperties` keys follow the `request.*` pattern.
+`HookResult` has the same shape as documented under `POST /api/execute`. `calculatedProperties` uses the same `request.*` keys listed under `POST /api/execute`.
 
 **Example**
 
@@ -675,7 +719,11 @@ curl -X POST http://localhost:5179/api/send \
   "calculatedProperties": {
     "request.url": "https://example.com/api/resource",
     "request.host": "example.com",
-    "request.path": "/api/resource"
+    "request.path": "/api/resource",
+    "request.query": "",
+    "request.scheme": "https",
+    "request.extension": "",
+    "request.method": "POST"
   }
 }
 ```
@@ -684,8 +732,9 @@ curl -X POST http://localhost:5179/api/send \
 
 | Status | Condition |
 |---|---|
-| `400` | Validation failed (missing `url` or `properties`), or no WASM module loaded |
-| `500` | Execution failed |
+| `400` | Body failed validation (`url` missing or neither `"built-in"` nor a valid URL) |
+| `400` | No WASM module is loaded |
+| `500` | Execution failed, including use against an HTTP-WASM module |
 
 ---
 
@@ -693,7 +742,7 @@ curl -X POST http://localhost:5179/api/send \
 
 #### GET /api/config
 
-Reads `fastedge-config.test.json` from the `.fastedge-debug/` directory (relative to `WORKSPACE_PATH` if set, otherwise the current working directory) and returns it with a validation result.
+Reads `fastedge-config.test.json` from the `.fastedge-debug/` directory (relative to `WORKSPACE_PATH` if set, otherwise the current working directory) and returns it with a validation result. A relative `dotenv.path` in the file is returned as an absolute path resolved against the config file's directory.
 
 **Response**
 
@@ -708,6 +757,8 @@ Reads `fastedge-config.test.json` from the `.fastedge-debug/` directory (relativ
   };
 }
 ```
+
+`config` is returned as stored, even when `valid` is `false`.
 
 **TestConfig type** — discriminated union on `appType`:
 
@@ -776,13 +827,13 @@ curl -H "x-fastedge-token: <token>" http://localhost:5179/api/config
 
 | Status | Condition |
 |---|---|
-| `404` | `fastedge-config.test.json` does not exist |
+| `404` | `fastedge-config.test.json` is missing or cannot be parsed |
 
 ---
 
 #### POST /api/config
 
-Saves the provided configuration to `.fastedge-debug/fastedge-config.test.json` (relative to `WORKSPACE_PATH` if set, otherwise the current working directory). Broadcasts a WebSocket event to connected clients when `properties` is included.
+Saves the provided configuration to `.fastedge-debug/fastedge-config.test.json` (relative to `WORKSPACE_PATH` if set, otherwise the current working directory). The directory is created if it does not exist. If the config includes a `properties` field, a WebSocket event is broadcast to connected clients.
 
 Accepts optional `X-Source` header.
 
@@ -794,7 +845,7 @@ Accepts optional `X-Source` header.
 }
 ```
 
-The `config` object must match one of the two `TestConfig` variants. `appType` and `properties` are required in both variants. `request` is required and its shape depends on `appType`: `path` for `"http-wasm"`, `url` for `"proxy-wasm"`.
+The `config` object must match one of the two `TestConfig` variants. `appType` defaults to `"proxy-wasm"` when omitted. `request` is required and its shape depends on `appType`: `path` for `"http-wasm"`, `url` for `"proxy-wasm"`.
 
 **Response**
 
@@ -838,21 +889,23 @@ curl -X POST http://localhost:5179/api/config \
 
 | Status | Condition |
 |---|---|
-| `400` | Validation failed (missing `config.appType`, `config.request`, or `config.properties`) |
+| `400` | Body failed validation (`config` does not match either `TestConfig` variant) |
 | `500` | File write failed |
 
 ---
 
 #### POST /api/config/save-as
 
-Saves the provided configuration to a file path previously vended by the save dialog. The path must have been registered by `/api/config/show-save-dialog` first; unregistered paths are rejected with `403`. The path is single-use — it is removed from the pending set once consumed. Creates intermediate directories as needed.
+Saves the provided configuration to a file path previously approved by the host application's save dialog. Paths are single-use: each approved path is removed once consumed. Creates intermediate directories as needed.
+
+Approved paths are only issued when the server runs inside a host application that provides a save dialog (Electron). In a plain Node.js or CLI session no path is ever approved, so every request to this endpoint with a valid body returns `403`. Use `POST /api/config` to save configuration programmatically.
 
 **Request Body**
 
 ```typescript
 {
-  config: object;     // The configuration object to serialize as JSON
-  filePath: string;   // A path previously returned by the save dialog
+  config: TestConfig;  // The configuration to serialize as JSON; same shape as POST /api/config
+  filePath: string;    // A path previously approved by the host's save dialog
 }
 ```
 
@@ -897,8 +950,8 @@ curl -X POST http://localhost:5179/api/config/save-as \
 
 | Status | Condition |
 |---|---|
-| `400` | Missing `config` or `filePath` |
-| `403` | `filePath` was not vended by the save dialog (or was already used) |
+| `400` | Body failed validation (`config` invalid or `filePath` missing) |
+| `403` | `filePath` was not approved by the host's save dialog, or was already used |
 | `500` | File write or directory creation failed |
 
 ---
@@ -932,11 +985,11 @@ Serves a JSON Schema file by name. The `:name` parameter is the schema name with
 **Example**
 
 ```bash
-curl http://localhost:5179/api/schema/api-send
+curl -H "x-fastedge-token: <token>" http://localhost:5179/api/schema/api-send
 ```
 
 ```bash
-curl http://localhost:5179/api/schema/fastedge-config.test
+curl -H "x-fastedge-token: <token>" http://localhost:5179/api/schema/fastedge-config.test
 ```
 
 **Using the schema in a config file**
@@ -981,7 +1034,8 @@ When a request body fails schema validation (Zod), `error` is a flattened Zod er
 | Status | Meaning |
 |---|---|
 | `400` | Invalid request body, missing required fields, or precondition not met (e.g. no WASM loaded) |
-| `403` | Host/token check failed, or a save-as path was not vended by the save dialog |
+| `401` | Missing or invalid `x-fastedge-token` header on an `/api/*` request |
+| `403` | `Host` header not allowed, or a save-as path was not approved by the host's save dialog |
 | `404` | Resource not found (config file, schema file) |
 | `500` | Internal server error during execution or I/O |
 
@@ -996,12 +1050,16 @@ The server accepts the session token via two mechanisms, tried in this order:
 1. **`Sec-WebSocket-Protocol: fastedge-token.<token>`** (preferred) — the token is embedded in the subprotocol list, keeping it out of URLs and proxy access logs. The server echoes the matching subprotocol back on accept.
 2. **`?token=<token>` query parameter** (fallback) — for legacy or non-browser tooling that cannot set subprotocols. Avoid in new consumers: the token appears in server and proxy logs.
 
+A handshake is rejected if the token is missing or incorrect, or if the client offers subprotocols and none of them starts with `fastedge-token.`.
+
+**Preferred: subprotocol**
+
 ```javascript
 const token = new URL(location.href).hash.slice("#token=".length);
-const ws = new WebSocket(`ws://127.0.0.1:5179/ws`, [`fastedge-token.${token}`]);
+const ws = new WebSocket("ws://localhost:5179/ws", [`fastedge-token.${token}`]);
 ```
 
-Fallback URL form:
+**Fallback: query parameter**
 
 ```
 ws://127.0.0.1:<port>/ws?token=<token>
@@ -1012,26 +1070,29 @@ ws://127.0.0.1:<port>/ws?token=<token>
 Connect to:
 
 ```
-ws://127.0.0.1:{port}/ws
+ws://localhost:{port}/ws
 ```
 
-Default port: `5179`.
+Default port: `5179`. Pass the token via one of the two mechanisms described above.
 
 ```javascript
 const token = new URL(location.href).hash.slice("#token=".length);
-const ws = new WebSocket(`ws://127.0.0.1:5179/ws`, [`fastedge-token.${token}`]);
+const ws = new WebSocket("ws://localhost:5179/ws", [`fastedge-token.${token}`]);
 
-ws.addEventListener('message', (event) => {
+ws.addEventListener("message", (event) => {
   const msg = JSON.parse(event.data);
   console.log(msg.type, msg.data);
 });
 ```
 
+Browser connections are subject to an origin check. Origins on `localhost`, `127.0.0.1`, and `vscode-webview://` are accepted. Other hosts are accepted only if they match the host configured via `FASTEDGE_EXPECTED_HOST`. Clients that send no `Origin` header (e.g. Node.js test tooling) are not subject to the origin check.
+
 ### Lifecycle
 
-1. **Connect** — server validates the token and origin, then immediately sends a `connection_status` event confirming the connection and current client count.
+1. **Connect** — server validates the token and origin, then immediately sends a `connection_status` event to the new client with the current client count. It then broadcasts an updated `connection_status` to all connected clients, including the new one.
 2. **Ping / pong** — server sends WebSocket `ping` frames every 15 seconds. Clients that have not responded within 30 seconds are terminated. Standard WebSocket clients handle pong automatically.
 3. **Disconnect** — when a client disconnects, the server broadcasts an updated `connection_status` to remaining clients.
+4. **Server shutdown** — the server closes all connections with close code `1000` and reason `Server shutting down`.
 
 ### Event Envelope
 
@@ -1041,7 +1102,7 @@ Every event shares a common envelope:
 interface BaseEvent {
   type: string;       // event discriminant
   timestamp: number;  // Unix ms
-  source: 'ui' | 'ai_agent' | 'api' | 'system';
+  source: "ui" | "ai_agent" | "api" | "system";
   data: object;       // event-specific payload
 }
 ```
@@ -1054,14 +1115,14 @@ Fired when a WASM binary has been loaded and is ready to handle requests.
 
 ```typescript
 {
-  type: 'wasm_loaded';
+  type: "wasm_loaded";
   timestamp: number;
-  source: 'ui' | 'ai_agent' | 'api' | 'system';
+  source: "ui" | "ai_agent" | "api" | "system";
   data: {
     filename: string;
     size: number;                          // File size in bytes
     runnerPort?: number | null;            // Port the runner is listening on, if applicable
-    wasmType: 'proxy-wasm' | 'http-wasm';
+    wasmType: "proxy-wasm" | "http-wasm";
     resolvedPath?: string | null;          // Absolute filesystem path to the loaded binary
   };
 }
@@ -1092,9 +1153,9 @@ Fired when the server begins processing an incoming request through the WASM fil
 
 ```typescript
 {
-  type: 'request_started';
+  type: "request_started";
   timestamp: number;
-  source: 'ui' | 'ai_agent' | 'api' | 'system';
+  source: "ui" | "ai_agent" | "api" | "system";
   data: {
     url: string;
     method: string;
@@ -1129,9 +1190,9 @@ Fired after each individual Proxy-WASM hook completes. Multiple events are emitt
 
 ```typescript
 {
-  type: 'hook_executed';
+  type: "hook_executed";
   timestamp: number;
-  source: 'ui' | 'ai_agent' | 'api' | 'system';
+  source: "ui" | "ai_agent" | "api" | "system";
   data: {
     hook: string;               // e.g. "onRequestHeaders"
     returnCode: number | null;  // Return code from the WASM filter, or null if unavailable
@@ -1179,9 +1240,9 @@ Fired when all hook phases have completed and a final response is available. `ho
 
 ```typescript
 {
-  type: 'request_completed';
+  type: "request_completed";
   timestamp: number;
-  source: 'ui' | 'ai_agent' | 'api' | 'system';
+  source: "ui" | "ai_agent" | "api" | "system";
   data: {
     hookResults: Record<string, any>;  // Keyed by hook name
     finalResponse: {
@@ -1230,9 +1291,9 @@ Fired when request processing fails before a response can be produced.
 
 ```typescript
 {
-  type: 'request_failed';
+  type: "request_failed";
   timestamp: number;
-  source: 'ui' | 'ai_agent' | 'api' | 'system';
+  source: "ui" | "ai_agent" | "api" | "system";
   data: {
     error: string;     // Short error message
     details?: string;  // Extended error detail or stack trace, if available
@@ -1262,9 +1323,9 @@ Fired when the set of active properties changes (e.g. after a properties configu
 
 ```typescript
 {
-  type: 'properties_updated';
+  type: "properties_updated";
   timestamp: number;
-  source: 'ui' | 'ai_agent' | 'api' | 'system';
+  source: "ui" | "ai_agent" | "api" | "system";
   data: {
     properties: Record<string, string>;  // Full current property map after the update
   };
@@ -1297,9 +1358,9 @@ Fired when an http-wasm filter finishes processing a request and a response is a
 
 ```typescript
 {
-  type: 'http_wasm_request_completed';
+  type: "http_wasm_request_completed";
   timestamp: number;
-  source: 'ui' | 'ai_agent' | 'api' | 'system';
+  source: "ui" | "ai_agent" | "api" | "system";
   data: {
     response: {
       status: number;
@@ -1341,9 +1402,9 @@ Fired in real-time as the http-wasm filter emits log lines during execute and li
 
 ```typescript
 {
-  type: 'http_wasm_log';
+  type: "http_wasm_log";
   timestamp: number;
-  source: 'ui' | 'ai_agent' | 'api' | 'system';
+  source: "ui" | "ai_agent" | "api" | "system";
   data: {
     level: number;    // Log level (follows proxy-wasm log level conventions)
     message: string;
@@ -1369,13 +1430,13 @@ Fired in real-time as the http-wasm filter emits log lines during execute and li
 
 #### connection_status
 
-Fired in three situations: (1) immediately after a client connects (sent only to that client), (2) when any client connects or disconnects (broadcast to all clients), (3) in response to a client `ping` message.
+Fired in three situations: (1) immediately after a client connects (sent only to that client), (2) when any client connects or disconnects (broadcast to all clients), (3) in response to a client `ping` message. The server always sets `source` to `"system"` for this event.
 
 ```typescript
 {
-  type: 'connection_status';
+  type: "connection_status";
   timestamp: number;
-  source: 'system';
+  source: "system";
   data: {
     connected: boolean;  // Always true when received
     clientCount: number; // Total connected clients including this one
@@ -1401,7 +1462,7 @@ Fired in three situations: (1) immediately after a client connects (sent only to
 
 ### Client Messages
 
-The server accepts one client-to-server message type.
+The server accepts one client-to-server message type. Messages must be JSON text. Unparseable messages and unrecognised message types are ignored.
 
 #### ping
 
@@ -1422,10 +1483,10 @@ All other operations (loading WASM, triggering requests, updating properties) ar
 Start the debugger server programmatically via the `@gcoredev/fastedge-test/server` export:
 
 ```javascript
-import { startServer } from '@gcoredev/fastedge-test/server';
+import { startServer } from "@gcoredev/fastedge-test/server";
 ```
 
-The server listens on port `5179` by default. Override with the `PORT` environment variable. When the preferred port is busy, the server tries up to 10 sequential ports before failing.
+The server listens on port `5179` by default. Override with the `PORT` environment variable. When the preferred port is busy, the server tries the next ports in sequence (50 attempts in total) before failing.
 
 When `WORKSPACE_PATH` is set, the active port is written to `$WORKSPACE_PATH/.fastedge-debug/.debug-port` on startup and removed on shutdown. The file contains `PORT:SHA256_HASH` — consumers that only need the port should parse the prefix up to the first colon (e.g. `parseInt(content.split(":")[0], 10)`). Use this file to discover the port dynamically in CI or multi-process tooling.
 

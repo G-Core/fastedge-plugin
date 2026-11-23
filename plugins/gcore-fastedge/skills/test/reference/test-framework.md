@@ -2,9 +2,9 @@
   auto-updated: true
   sources:
     - id: fastedge-test
-      ref: main
-      commit: 93d8046c3b98a65b18e189d435f760c8861d481f
-      updated: 2026-09-09
+      ref: v0.2.8
+      commit: 81ae6516cac618afe50414ca97c579c11df28e7e
+      updated: 2026-11-05
 -->
 
 # FastEdge Test Framework API
@@ -254,7 +254,14 @@ For CDN/proxy-wasm tests using `runFlow` only, the default config is correct —
 let mocks: MockOriginsHandle | null = null;
 
 beforeEach(() => { mocks = mockOrigins(); });
-afterEach(async () => { await mocks?.close(); mocks = null; });
+afterEach(async () => {
+  try {
+    mocks?.assertAllCalled();
+  } finally {
+    await mocks?.close();
+    mocks = null;
+  }
+});
 
 it("handles 503 from origin", async () => {
   mocks!.origin("https://origin.example.com")
@@ -263,7 +270,6 @@ it("handles 503 from origin", async () => {
 
   const result = await runFlow(runner, { url: "https://origin.example.com/api/resource" });
   assertFinalStatus(result, 503);
-  mocks!.assertAllCalled();
 });
 ```
 
@@ -387,6 +393,6 @@ await runAndExit(defineTestSuite({
 
 - RUNNER — Low-level `IWasmRunner` interface, `RunnerConfig`, and `callFullFlow`
 - TEST_CONFIG — `fastedge-config.test.json` schema and `loadConfigFile` config options
-- DOTENV — `dotenvEnabled` option details: prefix scheme, file options, priority order
+- DOTENV — `runnerConfig.dotenv` option details: prefix scheme, file options, priority order
 - DEBUGGER — Interactive debugger server for step-through WASM execution
 - API — REST API for running tests via HTTP
