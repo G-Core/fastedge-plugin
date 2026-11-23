@@ -1125,6 +1125,20 @@ curl -X POST http://localhost:5179/api/send \
         "response": { "headers": {}, "body": "" }
       },
       "properties": { "client.geo.country": "DE" }
+    },
+    "onResponseHeaders": {
+      "returnCode": 0,
+      "logs": [],
+      "input": {
+        "request": { "headers": { "content-type": "application/json" }, "body": "" },
+        "response": { "headers": { "content-type": "application/json" }, "body": "" },
+        "properties": { "client.geo.country": "DE" }
+      },
+      "output": {
+        "request": { "headers": { "content-type": "application/json" }, "body": "" },
+        "response": { "headers": { "content-type": "application/json" }, "body": "" }
+      },
+      "properties": { "client.geo.country": "DE" }
     }
   },
   "finalResponse": {

@@ -111,7 +111,7 @@ See the dotenv reference for the full setup — prefix scheme, file options, pri
 
 ## What the UI Shows
 
-The page loads a `.wasm`, sends a request (method, URL, headers, body) and shows what happened. Each panel collapses:
+The page loads a `.wasm`, sends a request (method, URL, headers, body; only ticked header rows are sent) and shows what happened. Each panel collapses:
 
 - **Dotenv** — load env vars and secrets from `.env` files; off by default
 - **Request Context** — client and edge location (the edge dc is also the cache bucket), the origin (CDN apps) and explicit properties (CDN apps)

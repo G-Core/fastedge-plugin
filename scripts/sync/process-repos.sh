@@ -529,6 +529,7 @@ process_repo() {
   # ── dry_run gate ──────────────────────────────────────────────────────────
   if [[ "$DRY_RUN" == "true" ]]; then
     echo "INFO: dry_run=true — skipping writes, PR, and baseline for ${REPO_ID}"
+    [[ -s "${STAGING_DIR}/combined-findings.txt" ]] && { echo "Reviewer findings:"; cat "${STAGING_DIR}/combined-findings.txt"; }
     SUMMARY_ROWS+="| ${REPO_ID} | 🔍 dry-run $(verdict_icon "$OVERALL_VERDICT") | ${RESOLVED_REF} | writes skipped |"$'\n'
     return 0
   fi
