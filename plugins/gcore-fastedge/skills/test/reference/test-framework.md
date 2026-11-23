@@ -97,7 +97,7 @@ defineTestSuite({
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `dotenv.enabled` | `boolean` | Enable dotenv loading before each test — see the DOTENV reference |
+| `dotenv.enabled` | `boolean` | Enable dotenv loading before each test — see the dotenv configuration guide |
 | `dotenv.path` | `string` | Directory to load dotenv files from; defaults to process CWD |
 | `enforceProductionPropertyRules` | `boolean` | Deprecated and ignored: production property rules always apply |
 | `runnerType` | `"http-wasm" \| "proxy-wasm"` | Override automatic WASM type detection |

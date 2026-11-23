@@ -105,13 +105,13 @@ The result of a request names the rule that matched (index, `name`, `match`), or
 
 The origin is declared in `main.origin` and can be overridden per rule.
 
-| Origin   | Declared as                                      | What answers                                                      |
-| -------- | ------------------------------------------------ | ----------------------------------------------------------------- |
-| URL      | `{ "url": "https://backend.example.com" }`       | a real fetch to that host, with the request's path and query      |
-| Echo     | `{ "url": "built-in" }`                          | the echo responder                                                |
-| Folder   | `{ "builtIn": { "files": "../site" } }`          | the file under the folder named by the request path (200 or 404)  |
-| Fixed    | `{ "builtIn": { "status": 200, "body": "ok" } }` | the declared response                                             |
-| HTTP app | `{ "app": "api" }`                               | the HTTP app of the resource                                      |
+| Origin   | Declared as                                      | What answers                                                     |
+| -------- | ------------------------------------------------ | ---------------------------------------------------------------- |
+| URL      | `{ "url": "https://backend.example.com" }`       | a real fetch to that host, with the request's path and query     |
+| Echo     | `{ "url": "built-in" }`                          | the echo responder                                               |
+| Folder   | `{ "builtIn": { "files": "../site" } }`          | the file under the folder named by the request path (200 or 404) |
+| Fixed    | `{ "builtIn": { "status": 200, "body": "ok" } }` | the declared response                                            |
+| HTTP app | `{ "app": "api" }`                               | the HTTP app of the resource                                     |
 
 ### URL Origin
 
