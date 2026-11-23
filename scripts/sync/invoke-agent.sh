@@ -428,9 +428,10 @@ _run_generator() {
 
   echo "INFO: Invoking Claude generator for ${REPO_ID}${SECTION:+ / ${SECTION}}" >&2
 
-  # Invoke Claude and extract .result from JSON output
+  # Invoke Claude and extract .result from JSON output. The prompt goes on stdin: as an argument,
+  # one over 128 KiB (MAX_ARG_STRLEN) fails with "Argument list too long".
   local result
-  result=$(claude -p "$(cat "$prompt_file")" --output-format json --allowedTools "" 2>/dev/null \
+  result=$(claude -p --output-format json --allowedTools "" < "$prompt_file" 2>/dev/null \
     | jq -r '.result // empty') || {
     echo "ERROR: Claude invocation failed" >&2
     exit 1
@@ -566,11 +567,12 @@ _run_reviewer() {
     exit 1
   fi
 
-  # Call OpenAI via the chat completions API
+  # Call OpenAI via the chat completions API. Prompt and body go through stdin, not arguments:
+  # an argument over 128 KiB (MAX_ARG_STRLEN) fails with "Argument list too long".
   local request_body
-  request_body=$(jq -n --arg content "$prompt" --arg model "$model" --arg effort "$effort" '{
+  request_body=$(printf '%s' "$prompt" | jq -Rs --arg model "$model" --arg effort "$effort" '{
     model: $model,
-    messages: [{"role": "user", "content": $content}]
+    messages: [{"role": "user", "content": .}]
   } + (if $effort == "" then {} else {reasoning_effort: $effort} end)')
 
   local api_response
@@ -578,7 +580,7 @@ _run_reviewer() {
     "https://api.openai.com/v1/chat/completions" \
     -H "Authorization: Bearer ${OPENAI_API_KEY}" \
     -H "Content-Type: application/json" \
-    -d "$request_body") || {
+    --data-binary @- <<< "$request_body") || {
     echo "ERROR: OpenAI API call failed (curl exit $?)" >&2
     exit 1
   }
