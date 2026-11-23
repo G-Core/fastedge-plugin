@@ -35,6 +35,7 @@ A practical usage guide. Agents use this to walk developers through launching th
 5. **What to commit / gitignore** — what is safe to commit (`fastedge-config.test.json` with placeholder values, `.env.example`) vs what must be ignored (`.env`, `.env.secrets`, `.env.variables`, etc.)
 
 ## What to exclude
+- References to a security reference or `SECURITY.md`: the plugin has no such reference; state the allowed-folders behaviour inline
 - Bundling details or how the VSCode extension packages the server
 - Port scanning / server identity logic (implementation detail)
 - Architecture of the Express server or React frontend

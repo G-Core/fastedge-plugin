@@ -42,7 +42,7 @@ defineTestSuite({
 
 ## Prefix Scheme
 
-All values in a single `.env` file use the `FASTEDGE_VAR_` prefix to declare their type. The prefix is stripped before injection — the app reads the unprefixed name.
+In a single `.env` file, a key may use a `FASTEDGE_VAR_` prefix to declare its type; an unprefixed key is an env var. The prefix is stripped before injection — the app reads the unprefixed name.
 
 | Prefix                     | Type                 | How app reads it                    | App types          |
 | -------------------------- | -------------------- | ----------------------------------- | ------------------ |
@@ -99,6 +99,7 @@ The following rules apply equally to CDN (proxy-wasm) and HTTP-WASM apps — the
 - Any other `FASTEDGE_VAR_` key in `.env` (e.g. headers, KV) is neither an env var nor a secret.
 - Keys starting with `FASTEDGE_VAR_` inside `.env.variables` or `.env.secrets` are skipped.
 - `.env` is read first. For the same key, `.env` wins over `.env.variables` and `.env.secrets`.
+- Dotenv files are the only source: there is no `RunnerConfig` env-var field and no `fastedge-config.test.json` fallback.
 
 ---
 

@@ -37,10 +37,10 @@ The config schema is a union of two variants selected by `appType`:
 | `request.headers` | object | no | `{}` | Key/value map of request headers. All keys and values must be strings |
 | `request.body` | string | no | `""` | Request body as a plain string |
 | `properties` | object | no | `{}` | CDN property key-value pairs passed to the WASM execution context. Values may be any JSON type |
+| `httpPort` | integer | no | — | HTTP-WASM only. Pin the subprocess to a specific port (1024–65535) instead of dynamic allocation from the 8100–8199 pool. Throws if the port is busy. Not used by `proxy-wasm` configs |
 | `dotenv` | object | no | — | Dotenv file loading configuration |
 | `dotenv.enabled` | boolean | no | `false` | Whether to load dotenv files before execution |
 | `dotenv.path` | string | no | — | Directory containing the dotenv files (not a file path). If omitted, resolves against the process current working directory |
-| `httpPort` | integer | no | — | HTTP-WASM only. Pin the subprocess to a specific port (1024–65535) instead of dynamic allocation from the 8100–8199 pool. Throws if the port is busy. Not used by `proxy-wasm` configs |
 | `stores` | boolean | no | `true` | Enables the local cache and Edge KV. `false`: CDN cache / KV calls fail; HTTP apps use fastedge-run's own per-process cache |
 | `dc` | string | no | `"local"` | Cache bucket name. Must be a non-empty string. Runners with the same `dc` share cache entries |
 | `client` | object | no | — | Where the client is: a preset plus per-field overrides |
@@ -77,7 +77,7 @@ The config schema is a union of two variants selected by `appType`:
 | `origin.builtIn.bodyFile` | string | no | — | File whose bytes are the body. Relative to the config file |
 | `origin.builtIn.files` | string | no | — | Folder served by request path. Relative to the config file. `files` sets its own status (200, or 404 for missing file); cannot be combined with `status` |
 
-The schema rejects unrecognised fields in `client`, `edge`, `origin` and `origin.builtIn`.
+The schema rejects unrecognised fields in `client`, `edge`, `origin`, and `origin.builtIn`.
 
 *`wasm` is optional only if you supply the binary manually via a programmatic `wasmBuffer`. It is required for file-based test runs and debugger auto-load.
 
@@ -197,7 +197,7 @@ To declare the response in the config instead, set `origin.builtIn`. It takes pr
 }
 ```
 
-`appType` must be `"http-wasm"` — there is no runtime default for this variant. Use `request.path` (not `request.url`); the WASM module acts as the origin server and receives only the path portion of the request. `properties` is still present; use `{}` when no CDN properties are needed. To pin the subprocess to a fixed port (e.g. for Codespaces or Docker port-forwarding), add `"httpPort": 8250`.
+`appType` must be `"http-wasm"` — there is no runtime default for this variant. Use `request.path` (not `request.url`); the WASM module acts as the origin server and receives only the path portion of the request. To pin the subprocess to a fixed port (e.g. for Codespaces or Docker port-forwarding), add `"httpPort": 8250`.
 
 ---
 

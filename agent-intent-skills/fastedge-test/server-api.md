@@ -21,7 +21,9 @@ A complete API reference for the debugger server's REST and WebSocket interfaces
 
 2. **WebSocket Protocol** — connection URL, message format (JSON), event types, and payload schemas for each event type.
 
-3. **Server startup** — how to start the server programmatically via `@gcoredev/fastedge-test/server` export, the default port (5179), port auto-increment behaviour (tries up to 10 sequential ports when the preferred port is busy), and the `.fastedge-debug/.debug-port` file that records the bound port at runtime.
+3. **Server startup** — how to start the server programmatically via `@gcoredev/fastedge-test/server` export, the default port (5179), port auto-increment behaviour (tries up to 50 sequential ports, 5179–5228, when the preferred port is busy; `PORT` only sets the starting port), and the `.fastedge-debug/.debug-port` file that records the bound port at runtime (under `FASTEDGE_APP_ROOT`, else `WORKSPACE_PATH`, else the current working directory).
+
+Keep every example response complete: the `POST /api/send` example shows both the `onRequestHeaders` and the `onResponseHeaders` hook results, as the source does.
 
 ## What to exclude
 - Test framework API (`defineTestSuite`, `runAndExit`, etc.) — belongs in the test framework reference

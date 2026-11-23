@@ -2868,8 +2868,8 @@ The active port is written to `.fastedge-debug/.debug-port` under the app root (
 
 ## See Also
 
-- API reference: REST endpoints for triggering requests, loading WASM, and managing configuration
-- WEBSOCKET reference: WebSocket protocol and event types
-- DEBUGGER reference: Server startup, configuration, and environment variables
-- TEST_FRAMEWORK reference: Programmatic test framework API
-- RUNNER reference: Runner API and WASM type detection
+- REST endpoints reference: loading WASM, triggering requests, managing configuration
+- WebSocket protocol reference: event types and payload schemas
+- Debugger reference: server startup, configuration, and environment variables
+- Test framework reference: programmatic test framework API
+- Runner reference: runner API and WASM type detection

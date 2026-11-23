@@ -82,7 +82,7 @@ Lets the debugger read a folder outside the workspace, for example a folder of p
 npx fastedge-debug --allow ~/apps/wasm --allow ~/sites/my-site
 ```
 
-The first time a load reads from an allowed folder, the debugger asks in this terminal whether to allow it for the session (the page shows a notice while it waits, and the request fails after 2 minutes without an answer); without a terminal it refuses. Allowed folders are read-only: saves stay inside the workspace. The flag accepts `--allow <dir>` and `--allow=<dir>`; a folder that does not exist is ignored with a warning. See the security reference for allowed-folders details.
+The first time a load reads from an allowed folder, the debugger asks in this terminal whether to allow it for the session (the page shows a notice while it waits, and the request fails after 2 minutes without an answer); without a terminal it refuses. Allowed folders are read-only: saves stay inside the workspace. The flag accepts `--allow <dir>` and `--allow=<dir>`; a folder that does not exist is ignored with a warning.
 
 ---
 
@@ -111,7 +111,7 @@ See the dotenv reference for the full setup — prefix scheme, file options, pri
 
 ## What the UI Shows
 
-The page loads a `.wasm`, sends a request (method, URL, headers, body) and shows what happened. Each panel collapses:
+The page loads a `.wasm`, sends a request (method, URL, headers, body; only ticked header rows are sent) and shows what happened. Each panel collapses:
 
 - **Dotenv** — load env vars and secrets from `.env` files; off by default
 - **Request Context** — client and edge location (the edge dc is also the cache bucket), the origin (CDN apps) and explicit properties (CDN apps)
