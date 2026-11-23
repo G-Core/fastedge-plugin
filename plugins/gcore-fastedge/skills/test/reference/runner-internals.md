@@ -92,7 +92,7 @@ import type {
 ### ProxyWasmRunner (proxy-wasm)
 
 - **On `load()`**: Compiles the WASM module once and loads dotenv files.
-- **Per hook call**: Creates a fresh `WebAssembly.Instance` for each `callHook()` or `callFullFlow()` invocation — provides isolation between executions.
+- **Per hook call**: Creates a fresh `WebAssembly.Instance` for each hook it runs, whether through `callHook()` or `callFullFlow()`, so hooks in one full flow do not share memory.
 - **On `cleanup()`**: Terminates the runner's worker thread. The runner cannot be loaded again: create a new one.
 - **On `applyDotenv()`**: Resets the secret and dictionary stores to empty; re-reads dotenv files. The compiled WASM module is not recompiled. Dictionary keys supplied by the edge request context are kept as defaults beneath the dotenv values.
 

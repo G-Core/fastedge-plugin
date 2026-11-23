@@ -2860,7 +2860,7 @@ Start the debugger server programmatically via the `@gcoredev/fastedge-test/serv
 import { startServer } from "@gcoredev/fastedge-test/server";
 ```
 
-The server listens on port `5179` by default. Override with the `PORT` environment variable. When the preferred port is busy, the server tries the next ports in sequence (50 attempts in total) before failing.
+The server listens on port `5179` by default. Override with the `PORT` environment variable. When the preferred port is busy, the server tries the next ports in sequence (50 attempts in total: 5179–5228 by default) before failing.
 
 The active port is written to `.fastedge-debug/.debug-port` under the app root (`FASTEDGE_APP_ROOT`, else `WORKSPACE_PATH`, else the current working directory) on startup and removed on shutdown. The file contains `PORT:SHA256_HASH` — consumers that only need the port should parse the prefix up to the first colon (e.g. `parseInt(content.split(":")[0], 10)`). Use this file to discover the port dynamically in CI or multi-process tooling.
 

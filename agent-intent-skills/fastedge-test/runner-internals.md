@@ -18,7 +18,7 @@ A reference for the runner's internal API. Agents use this when the high-level t
 
 1. **Runner Lifecycle** — how a runner instance is created, how it loads WASM, and how it executes requests. Include the sequence of operations.
 
-2. **WASM Instance Management** — how instances are created, reused, and disposed. Memory limits, timeout behavior.
+2. **WASM Instance Management** — how instances are created, reused, and disposed. Memory limits, timeout behavior. A proxy-wasm runner creates a fresh instance for every hook it runs, including each hook of one `callFullFlow()`.
 
 3. **Direct API** — if the runner exposes methods beyond `execute()` and `runFlow()`, document them here with signatures and return types.
 
